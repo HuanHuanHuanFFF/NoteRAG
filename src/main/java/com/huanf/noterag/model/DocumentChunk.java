@@ -18,5 +18,6 @@ public class DocumentChunk {
     private String headingPath;
     private String content;
     private Integer charCount;
+    private Integer tokenCount;
     private Instant createdAt;
 }

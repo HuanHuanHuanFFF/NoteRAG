@@ -12,12 +12,15 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.document.DocumentTransformer;
 import org.springframework.stereotype.Component;
 
+import com.huanf.noterag.util.EstimatedTokenCounter;
+import com.huanf.noterag.util.EstimatedTokenCounter.TokenCounts;
+
 @Component
 public class MarkdownChunkTransformer implements DocumentTransformer {
 
-    public static final int MIN_TARGET_CHARS = 300;
-    public static final int MAX_TARGET_CHARS = 800;
-    public static final int HARD_MAX_CHARS = 1000;
+    public static final int MIN_TARGET_TOKENS = 300;
+    public static final int MAX_TARGET_TOKENS = 800;
+    public static final int HARD_MAX_TOKENS = 1000;
     public static final int OVERLAP_CHARS = 80;
 
     private static final Pattern ATX_HEADING = Pattern.compile("^[ \\t]{0,3}(#{1,6})[ \\t]+(.+?)[ \\t]*$");
@@ -103,6 +106,7 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
      */
     private int appendSectionChunks(Document source, Section section, int chunkIndex, List<Document> chunks) {
         StringBuilder current = new StringBuilder();
+        TokenCounts currentTokenCounts = TokenCounts.EMPTY;
         boolean hasBodyText = false;
 
         for (String paragraph : section.paragraphs()) {
@@ -110,72 +114,84 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
             if (remaining.isEmpty()) {
                 continue;
             }
+            TokenCounts remainingTokenCounts = EstimatedTokenCounter.count(remaining);
 
-            if (hasBodyText && shouldEmitBeforeAppend(current, remaining)) {
-                chunkIndex = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
+            if (hasBodyText && shouldEmitBeforeAppend(currentTokenCounts, remainingTokenCounts)) {
+                EmitResult result = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
+                chunkIndex = result.nextChunkIndex();
+                currentTokenCounts = result.currentTokenCounts();
                 hasBodyText = false;
             }
 
             while (!remaining.isEmpty()) {
-                int separatorLength = current.isEmpty() ? 0 : PARAGRAPH_SEPARATOR.length();
-                int available = currentChunkLimit(current) - current.length() - separatorLength;
+                int currentTokenCount = currentTokenCounts.estimate();
+                int availableTokens = currentChunkLimit(currentTokenCount) - currentTokenCount;
 
-                if (available <= 0) {
-                    chunkIndex = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
+                if (availableTokens <= 0) {
+                    EmitResult result = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
+                    chunkIndex = result.nextChunkIndex();
+                    currentTokenCounts = result.currentTokenCounts();
                     hasBodyText = false;
                     continue;
                 }
 
-                if (remaining.length() <= available) {
+                if (remainingTokenCounts.estimate() <= availableTokens) {
                     appendParagraph(current, remaining);
+                    currentTokenCounts = currentTokenCounts.plus(remainingTokenCounts);
                     hasBodyText = true;
                     remaining = "";
+                    remainingTokenCounts = TokenCounts.EMPTY;
                 } else {
-                    String piece = remaining.substring(0, available).stripTrailing();
+                    String piece = takeByEstimatedTokens(remaining, availableTokens).stripTrailing();
                     if (piece.isEmpty()) {
-                        piece = remaining.substring(0, available);
+                        piece = takeByEstimatedTokens(remaining, availableTokens);
                     }
                     appendParagraph(current, piece);
-                    chunkIndex = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
+                    EmitResult result = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
+                    chunkIndex = result.nextChunkIndex();
+                    currentTokenCounts = result.currentTokenCounts();
                     hasBodyText = false;
                     remaining = remaining.substring(piece.length()).stripLeading();
+                    remainingTokenCounts = EstimatedTokenCounter.count(remaining);
                 }
             }
         }
 
         if (hasBodyText && !current.isEmpty()) {
-            chunkIndex = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, false);
+            EmitResult result = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, false);
+            chunkIndex = result.nextChunkIndex();
         }
 
         return chunkIndex;
     }
 
     /**
-     * 判断追加段落前是否应该先输出当前 chunk。800 是软上限，1000 是硬上限。
+     * 判断追加段落前是否应该先输出当前 chunk。800 tokens 是软上限，1000 tokens 是硬上限。
      */
-    private boolean shouldEmitBeforeAppend(StringBuilder current, String paragraph) {
-        if (current.isEmpty()) {
-            return paragraph.length() > HARD_MAX_CHARS;
+    private boolean shouldEmitBeforeAppend(TokenCounts currentTokenCounts, TokenCounts paragraphTokenCounts) {
+        int currentTokenCount = currentTokenCounts.estimate();
+        if (currentTokenCount == 0) {
+            return paragraphTokenCounts.estimate() > HARD_MAX_TOKENS;
         }
 
-        int candidateLength = current.length() + PARAGRAPH_SEPARATOR.length() + paragraph.length();
-        if (candidateLength <= MAX_TARGET_CHARS) {
+        int candidateTokenCount = currentTokenCounts.plus(paragraphTokenCounts).estimate();
+        if (candidateTokenCount <= MAX_TARGET_TOKENS) {
             return false;
         }
-        return current.length() >= MIN_TARGET_CHARS || candidateLength > HARD_MAX_CHARS;
+        return currentTokenCount >= MIN_TARGET_TOKENS || candidateTokenCount > HARD_MAX_TOKENS;
     }
 
     /**
-     * 根据当前 chunk 长度选择本轮可用上限：低于软下限时允许接近硬上限，减少小碎片。
+     * 根据当前 chunk token 数选择本轮可用上限：低于软下限时允许接近硬上限，减少小碎片。
      */
-    private int currentChunkLimit(StringBuilder current) {
-        return current.length() < MIN_TARGET_CHARS ? HARD_MAX_CHARS : MAX_TARGET_CHARS;
+    private int currentChunkLimit(int currentTokenCount) {
+        return currentTokenCount < MIN_TARGET_TOKENS ? HARD_MAX_TOKENS : MAX_TARGET_TOKENS;
     }
 
     /**
      * 将当前缓冲区输出为 Spring AI Document，并按需把右侧 overlap 写回缓冲区。
      */
-    private int emitChunk(
+    private EmitResult emitChunk(
             Document source,
             String headingPath,
             StringBuilder current,
@@ -185,23 +201,33 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
         String chunkText = current.toString().strip();
         if (chunkText.isEmpty()) {
             current.setLength(0);
-            return chunkIndex;
+            return new EmitResult(chunkIndex, TokenCounts.EMPTY);
         }
 
-        chunks.add(new Document(chunkText, buildMetadata(source, headingPath, chunkIndex, chunkText.length())));
+        TokenCounts chunkTokenCounts = EstimatedTokenCounter.count(chunkText);
+        int tokenCount = chunkTokenCounts.estimate();
+        chunks.add(new Document(chunkText, buildMetadata(source, headingPath, chunkIndex, chunkText.length(), tokenCount)));
         current.setLength(0);
 
+        TokenCounts currentTokenCounts = TokenCounts.EMPTY;
         if (keepOverlap) {
-            current.append(rightOverlap(chunkText));
+            String overlap = rightOverlap(chunkText);
+            current.append(overlap);
+            currentTokenCounts = EstimatedTokenCounter.count(overlap);
         }
 
-        return chunkIndex + 1;
+        return new EmitResult(chunkIndex + 1, currentTokenCounts);
     }
 
     /**
      * 构建输出 metadata：先复制源 metadata，再写入 chunk 相关字段。
      */
-    private Map<String, Object> buildMetadata(Document source, String headingPath, int chunkIndex, int charCount) {
+    private Map<String, Object> buildMetadata(
+            Document source,
+            String headingPath,
+            int chunkIndex,
+            int charCount,
+            int tokenCount) {
         Map<String, Object> metadata = new LinkedHashMap<>();
         if (source.getMetadata() != null) {
             metadata.putAll(source.getMetadata());
@@ -209,6 +235,7 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
         metadata.put("headingPath", headingPath);
         metadata.put("chunkIndex", chunkIndex);
         metadata.put("charCount", charCount);
+        metadata.put("tokenCount", tokenCount);
         return metadata;
     }
 
@@ -220,6 +247,35 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
             current.append(PARAGRAPH_SEPARATOR);
         }
         current.append(paragraph);
+    }
+
+    /**
+     * 从当前段落左侧截取估算 token 不超过上限的前缀，不跨段落预计算。
+     */
+    private String takeByEstimatedTokens(String text, int maxTokens) {
+        if (maxTokens <= 0 || text == null || text.isBlank()) {
+            return "";
+        }
+
+        TokenCounts counts = TokenCounts.EMPTY;
+        int end = 0;
+
+        for (int i = 0; i < text.length(); ) {
+            int codePoint = text.codePointAt(i);
+            int next = i + Character.charCount(codePoint);
+
+            TokenCounts nextCounts = counts.plus(codePoint);
+
+            if (nextCounts.estimate() > maxTokens) {
+                break;
+            }
+
+            counts = nextCounts;
+            end = next;
+            i = next;
+        }
+
+        return text.substring(0, end);
     }
 
     /**
@@ -297,10 +353,15 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
      * 取当前 chunk 右侧文本，作为下一个 chunk 的 overlap。
      */
     private String rightOverlap(String text) {
-        if (text.length() <= OVERLAP_CHARS) {
+        int codePointCount = text.codePointCount(0, text.length());
+        if (codePointCount <= OVERLAP_CHARS) {
             return text;
         }
-        return text.substring(text.length() - OVERLAP_CHARS);
+        int beginIndex = text.offsetByCodePoints(text.length(), -OVERLAP_CHARS);
+        return text.substring(beginIndex);
+    }
+
+    private record EmitResult(int nextChunkIndex, TokenCounts currentTokenCounts) {
     }
 
     /**

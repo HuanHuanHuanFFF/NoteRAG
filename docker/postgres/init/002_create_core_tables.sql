@@ -10,8 +10,12 @@ CREATE TABLE IF NOT EXISTS documents (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    char_count INTEGER NOT NULL,
+    token_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT documents_char_count_non_negative CHECK (char_count >= 0),
+    CONSTRAINT documents_token_count_non_negative CHECK (token_count >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS document_chunks (
@@ -21,9 +25,11 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     heading_path TEXT,
     content TEXT NOT NULL,
     char_count INTEGER NOT NULL,
+    token_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT document_chunks_chunk_index_non_negative CHECK (chunk_index >= 0),
     CONSTRAINT document_chunks_char_count_non_negative CHECK (char_count >= 0),
+    CONSTRAINT document_chunks_token_count_non_negative CHECK (token_count >= 0),
     CONSTRAINT document_chunks_document_id_chunk_index_key UNIQUE (document_id, chunk_index)
 );
 

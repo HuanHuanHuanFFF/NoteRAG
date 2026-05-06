@@ -15,6 +15,8 @@ public class Document {
     private Long id;
     private String title;
     private String content;
+    private Integer charCount;
+    private Integer tokenCount;
     private Instant createdAt;
     private Instant updatedAt;
 }
