@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS document_chunks (
     id BIGSERIAL PRIMARY KEY,
     document_id BIGINT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL,
+    heading_path TEXT,
     content TEXT NOT NULL,
     char_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

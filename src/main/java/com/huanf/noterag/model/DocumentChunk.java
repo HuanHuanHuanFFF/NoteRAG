@@ -15,6 +15,7 @@ public class DocumentChunk {
     private Long id;
     private Long documentId;
     private Integer chunkIndex;
+    private String headingPath;
     private String content;
     private Integer charCount;
     private Instant createdAt;
