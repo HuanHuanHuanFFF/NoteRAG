@@ -17,9 +17,11 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
 
     public static final int MIN_TARGET_CHARS = 300;
     public static final int MAX_TARGET_CHARS = 800;
+    public static final int HARD_MAX_CHARS = 1000;
     public static final int OVERLAP_CHARS = 80;
 
     private static final Pattern ATX_HEADING = Pattern.compile("^[ \\t]{0,3}(#{1,6})[ \\t]+(.+?)[ \\t]*$");
+    private static final Pattern FENCED_CODE_BLOCK = Pattern.compile("^[ \\t]{0,3}(`{3,}|~{3,}).*");
     private static final String PARAGRAPH_SEPARATOR = "\n\n";
     private static final String HEADING_SEPARATOR = " > ";
     private static final String EMPTY_HEADING_PATH = "";
@@ -42,13 +44,12 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
         }
 
         List<Document> chunks = new ArrayList<>();
-        int chunkIndex = 0;
-
         for (Document document : documents) {
             if (document == null || document.getText() == null || document.getText().isBlank()) {
                 continue;
             }
 
+            int chunkIndex = 0;
             for (Section section : parseSections(document.getText())) {
                 chunkIndex = appendSectionChunks(document, section, chunkIndex, chunks);
             }
@@ -66,11 +67,14 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
         List<String> paragraphs = new ArrayList<>();
         StringBuilder paragraph = new StringBuilder();
         String headingPath = EMPTY_HEADING_PATH;
+        String activeFence = null;
 
         String normalized = markdown.replace("\r\n", "\n").replace('\r', '\n');
         for (String line : normalized.split("\n", -1)) {
+            activeFence = updateActiveFence(activeFence, line);
+
             Matcher heading = ATX_HEADING.matcher(line);
-            if (heading.matches()) {
+            if (activeFence == null && heading.matches()) {
                 flushParagraph(paragraph, paragraphs);
                 addSection(sections, headingPath, paragraphs);
                 paragraphs = new ArrayList<>();
@@ -78,7 +82,7 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
                 continue;
             }
 
-            if (line.isBlank()) {
+            if (line.isBlank() && activeFence == null) {
                 flushParagraph(paragraph, paragraphs);
                 continue;
             }
@@ -107,14 +111,14 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
                 continue;
             }
 
-            if (hasBodyText && wouldExceedMax(current, remaining)) {
+            if (hasBodyText && shouldEmitBeforeAppend(current, remaining)) {
                 chunkIndex = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
                 hasBodyText = false;
             }
 
             while (!remaining.isEmpty()) {
                 int separatorLength = current.isEmpty() ? 0 : PARAGRAPH_SEPARATOR.length();
-                int available = MAX_TARGET_CHARS - current.length() - separatorLength;
+                int available = currentChunkLimit(current) - current.length() - separatorLength;
 
                 if (available <= 0) {
                     chunkIndex = emitChunk(source, section.headingPath(), current, chunkIndex, chunks, true);
@@ -147,13 +151,25 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
     }
 
     /**
-     * 判断把段落追加到当前缓冲区后是否会超过 chunk 最大长度。
+     * 判断追加段落前是否应该先输出当前 chunk。800 是软上限，1000 是硬上限。
      */
-    private boolean wouldExceedMax(StringBuilder current, String paragraph) {
+    private boolean shouldEmitBeforeAppend(StringBuilder current, String paragraph) {
         if (current.isEmpty()) {
-            return paragraph.length() > MAX_TARGET_CHARS;
+            return paragraph.length() > HARD_MAX_CHARS;
         }
-        return current.length() + PARAGRAPH_SEPARATOR.length() + paragraph.length() > MAX_TARGET_CHARS;
+
+        int candidateLength = current.length() + PARAGRAPH_SEPARATOR.length() + paragraph.length();
+        if (candidateLength <= MAX_TARGET_CHARS) {
+            return false;
+        }
+        return current.length() >= MIN_TARGET_CHARS || candidateLength > HARD_MAX_CHARS;
+    }
+
+    /**
+     * 根据当前 chunk 长度选择本轮可用上限：低于软下限时允许接近硬上限，减少小碎片。
+     */
+    private int currentChunkLimit(StringBuilder current) {
+        return current.length() < MIN_TARGET_CHARS ? HARD_MAX_CHARS : MAX_TARGET_CHARS;
     }
 
     /**
@@ -224,6 +240,27 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
         if (!paragraphs.isEmpty()) {
             sections.add(new Section(headingPath, paragraphs));
         }
+    }
+
+    /**
+     * 更新 fenced code block 状态。只有相同类型且长度不短于 opening fence 的行才能关闭代码块。
+     */
+    private String updateActiveFence(String activeFence, String line) {
+        Matcher fence = FENCED_CODE_BLOCK.matcher(line);
+        if (!fence.matches()) {
+            return activeFence;
+        }
+
+        String marker = fence.group(1);
+        if (activeFence == null) {
+            return marker;
+        }
+
+        char activeFenceChar = activeFence.charAt(0);
+        if (marker.charAt(0) == activeFenceChar && marker.length() >= activeFence.length()) {
+            return null;
+        }
+        return activeFence;
     }
 
     /**
