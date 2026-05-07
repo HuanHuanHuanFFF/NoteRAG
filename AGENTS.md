@@ -1,34 +1,59 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
-NoteRAG is a lightweight RAG service for personal Markdown notes. The codebase uses Java 17, Spring Boot 3, MyBatis, PostgreSQL, and pgvector. Main code lives under `src/main/java/com/huanf/noterag`, with future feature slices expected in `controller/`, `service/`, `client/`, `mapper/`, `model/`, `dto/`, and `config/`. Runtime settings are in `src/main/resources/application.properties`. Tests mirror the main package under `src/test/java/com/huanf/noterag`. Build output stays in `target/`.
+## NoteRAG Engineering Goal
+NoteRAG is a lightweight RAG service for personal Markdown technical notes. Keep the v1 goal narrow and runnable:
 
-## Build, Test, and Development Commands
-Use the Maven wrapper to keep builds consistent:
+`Markdown import -> chunking -> token estimate -> embedding -> pgvector storage -> TopK retrieval -> prompt assembly -> LLM answer -> answer + sources`
+
+Every change should move this chain forward or make one link safer. Do not turn the project into a generic knowledge platform.
+
+## Layer Responsibilities
+- `controller/`: HTTP boundary only. Validate request shape, call services, return DTOs. Do not place chunking, prompt assembly, database decisions, or model-call logic here.
+- `service/`: Application workflow orchestration, such as import and query flows.
+- Chunking services/components: Markdown parsing, heading path handling, overlap, `charCount`, and estimated `tokenCount`.
+- `client/` or Spring AI adapter components: embedding/chat model calls. Spring AI is for model integration; NoteRAG still explicitly controls chunk strategy, storage schema, retrieval results, and prompt assembly.
+- `mapper/`: MyBatis persistence only. Keep SQL explicit and predictable; do not hide business rules in mapper methods.
+- `model/`: Database-shaped entities such as `Document`, `DocumentChunk`, and persisted vector records. No workflow logic.
+- `dto/`: API request/response objects, including `answer + sources`.
+- `config/`: Spring, datasource, pgvector, and model configuration wiring.
+
+## Project Structure
+Main code lives under `src/main/java/com/huanf/noterag`. Tests mirror packages under `src/test/java/com/huanf/noterag`. PostgreSQL initialization SQL lives in `docker/postgres/init/`. Runtime configuration belongs in `src/main/resources/application.properties` or external environment variables; do not hardcode passwords, URLs, API keys, or model secrets in code.
+
+## Database Change Rules
+When changing table fields or persistence shape, update all related surfaces in the same change:
+
+`docker/postgres/init/*.sql`, `model/`, mapper SQL/result mappings, DTOs if exposed, and tests.
+
+For document/chunk data, keep `char_count`, `token_count`, `heading_path`, `chunk_index`, and document-chunk association consistent. If an initialized Docker volume already exists, remember that `CREATE TABLE IF NOT EXISTS` will not migrate old tables; either document a reset or add a real migration before relying on new columns.
+
+## Testing Focus
+Use JUnit 5 and Spring Boot test support. Prioritize tests around NoteRAG failure points:
+
+- Markdown heading parsing and fenced code blocks using both ``` and ~~~
+- chunk overlap, chunk index reset per document, `charCount`, and `tokenCount`
+- document to chunk association and mapper result mapping
+- embedding failure handling and clear error boundaries
+- TopK retrieval ordering and returned `sources`
+- final `/api/query` response shape: `answer + sources`
+
+Run `.\mvnw.cmd test` before committing meaningful behavior changes.
+
+## Scope Guardrails
+For v1, do not add users, authentication, authorization, multi-tenancy, PDF/Word import, crawlers, Redis, MQ, object storage, agent workflows, advanced reranking, or complex frontend work unless explicitly requested. Keep imports to Markdown file/text, storage to PostgreSQL + pgvector, retrieval to TopK, and answer generation to a direct LLM call.
+
+## Design Bias
+Prefer a clear, working RAG loop over premature architecture. Do not add interfaces, factories, event systems, generic platforms, or "enterprise" layers unless a real current requirement needs them. Keep abstractions small and named after NoteRAG concepts, not framework patterns.
+
+## Basic Commands & Style
+Use Java 17, Spring Boot 3, MyBatis, PostgreSQL + pgvector, and Spring AI. Keep Java formatting conventional: 4-space indentation, `PascalCase` classes, `camelCase` methods/fields, constructor injection, and package base `com.huanf.noterag`.
+
+Common commands:
 
 ```powershell
 .\mvnw.cmd test
-```
-Runs unit and integration tests.
-
-```powershell
 .\mvnw.cmd spring-boot:run
-```
-Starts the app locally; the health check is `GET /api/health`.
-
-```powershell
 .\mvnw.cmd package
 ```
-Compiles, tests, and produces the runnable JAR in `target/`.
 
-## Coding Style & Naming Conventions
-Use standard Java formatting: 4-space indentation, same-line braces, `PascalCase` for classes, `camelCase` for methods and fields, and lowercase package names. Keep the base package aligned with the repo, `com.huanf.noterag`. Name REST controllers with a `Controller` suffix, request/response objects with clear `Request` or `Response` suffixes, and keep endpoint paths under `/api/...`. Prefer constructor injection and small, single-purpose services.
-
-## Testing Guidelines
-Use JUnit 5 with Spring Boot test support. Keep test names ending in `*Tests` and place them beside the package they cover. Focus tests on the first version's core flow: health, Markdown import, chunking, query plumbing, and repository access. Run `.\mvnw.cmd test` before opening a PR.
-
-## Commit & Pull Request Guidelines
-There is no established commit history yet, so use short imperative commits such as `Add import-text endpoint` or `Wire pgvector repository`. Keep each commit scoped to one step in the RAG pipeline. PRs should state what changed, how it was tested, and any API behavior changes. Include request/response examples when an endpoint changes.
-
-## Scope Guardrails
-This first version should stay narrow: Markdown import, chunking, embedding, pgvector storage, TopK retrieval, LLM answer generation, and `answer + sources` output. Avoid adding users, multi-tenant logic, PDF/Word import, crawlers, agents, Redis, MQ, or advanced reranking unless the scope is explicitly expanded.
+Keep commits scoped to one RAG-chain step, for example `feat(chunk): add token estimation` or `feat(query): return answer sources`.
