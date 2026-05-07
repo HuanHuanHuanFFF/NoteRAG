@@ -9,8 +9,9 @@ Every change should move this chain forward or make one link safer. Do not turn 
 
 ## Layer Responsibilities
 - `controller/`: HTTP boundary only. Validate request shape, call services, return DTOs. Do not place chunking, prompt assembly, database decisions, or model-call logic here.
-- `service/`: Application workflow orchestration, such as import and query flows.
+- `service/`: Application workflow orchestration, such as import and query flows. For document import, persist the source document first, obtain its database ID, then run chunking.
 - Chunking services/components: Markdown parsing, heading path handling, overlap, `charCount`, and estimated `tokenCount`.
+- `chunk/` transformer contract: source `Document` metadata must contain the persisted document ID. Chunking components must preserve that ID into each chunk metadata so later storage, batch import, or async chunk workers can map chunks back to the source document.
 - `client/` or Spring AI adapter components: embedding/chat model calls. Spring AI is for model integration; NoteRAG still explicitly controls chunk strategy, storage schema, retrieval results, and prompt assembly.
 - `mapper/`: MyBatis persistence only. Keep SQL explicit and predictable; do not hide business rules in mapper methods.
 - `model/`: Database-shaped entities such as `Document`, `DocumentChunk`, and persisted vector records. No workflow logic.
@@ -25,7 +26,7 @@ When changing table fields or persistence shape, update all related surfaces in 
 
 `docker/postgres/init/*.sql`, `model/`, mapper SQL/result mappings, DTOs if exposed, and tests.
 
-For document/chunk data, keep `char_count`, `token_count`, `heading_path`, `chunk_index`, and document-chunk association consistent. If an initialized Docker volume already exists, remember that `CREATE TABLE IF NOT EXISTS` will not migrate old tables; either document a reset or add a real migration before relying on new columns.
+For document/chunk data, keep `char_count`, `token_count`, `heading_path`, `chunk_index`, and document-chunk association consistent. Document import must follow `insert document -> get id -> pass id in metadata -> chunk -> persist chunks`. If an initialized Docker volume already exists, remember that `CREATE TABLE IF NOT EXISTS` will not migrate old tables; either document a reset or add a real migration before relying on new columns.
 
 ## Testing Focus
 Use JUnit 5 and Spring Boot test support. Prioritize tests around NoteRAG failure points:

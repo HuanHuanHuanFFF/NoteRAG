@@ -190,10 +190,10 @@ final class MarkdownChunker {
         if (sourceMetadata != null) {
             metadata.putAll(sourceMetadata);
         }
-        metadata.put("headingPath", headingPath);
-        metadata.put("chunkIndex", chunkIndex);
-        metadata.put("charCount", charCount);
-        metadata.put("tokenCount", tokenCount);
+        metadata.put(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, headingPath);
+        metadata.put(MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY, chunkIndex);
+        metadata.put(MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY, charCount);
+        metadata.put(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, tokenCount);
         return metadata;
     }
 

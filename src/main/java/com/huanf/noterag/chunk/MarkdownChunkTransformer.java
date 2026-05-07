@@ -16,6 +16,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class MarkdownChunkTransformer implements DocumentTransformer {
 
+    public static final String DOCUMENT_ID_METADATA_KEY = "documentId";
+    public static final String CHUNK_INDEX_METADATA_KEY = "chunkIndex";
+    public static final String HEADING_PATH_METADATA_KEY = "headingPath";
+    public static final String CHAR_COUNT_METADATA_KEY = "charCount";
+    public static final String TOKEN_COUNT_METADATA_KEY = "tokenCount";
+
     private final MarkdownSectionParser parser;
     private final MarkdownChunker chunker;
 
@@ -37,6 +43,10 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
 
     /**
      * 将输入文档逐篇转换成 chunk；chunkIndex 在每篇文档内从 0 开始。
+     *
+     * <p>调用方必须在 source metadata 中传入已持久化的 {@value #DOCUMENT_ID_METADATA_KEY}。
+     * Transformer 会把该标识原样复制到每个 chunk metadata，供后续入库、批处理或异步 chunk
+     * 流程回收来源 document 归属。</p>
      */
     @Override
     public List<Document> apply(List<Document> documents) {
@@ -49,6 +59,7 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
             if (document == null || document.getText() == null || document.getText().isBlank()) {
                 continue;
             }
+            validateRequiredMetadata(document);
 
             List<MarkdownSection> sections = parser.parse(document.getText());
             List<Document> chunked = chunker.chunk(document.getMetadata(), sections);
@@ -56,5 +67,11 @@ public class MarkdownChunkTransformer implements DocumentTransformer {
         }
 
         return chunks;
+    }
+
+    private void validateRequiredMetadata(Document document) {
+        if (document.getMetadata() == null || !document.getMetadata().containsKey(DOCUMENT_ID_METADATA_KEY)) {
+            throw new IllegalArgumentException("source metadata must contain documentId");
+        }
     }
 }

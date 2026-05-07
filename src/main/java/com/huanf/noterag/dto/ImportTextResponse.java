@@ -13,4 +13,6 @@ public class ImportTextResponse {
 
     private Long documentId;
     private Integer chunkCount;
+    private Integer charCount;
+    private Integer tokenCount;
 }
