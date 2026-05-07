@@ -13,12 +13,12 @@ public enum CodeStatus {
     INTERNAL_ERROR(50000, "服务器内部错误", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final int code;
-    private final String msg;
+    private final String message;
     private final HttpStatus httpStatus;
 
-    CodeStatus(int code, String msg, HttpStatus httpStatus) {
+    CodeStatus(int code, String message, HttpStatus httpStatus) {
         this.code = code;
-        this.msg = msg;
+        this.message = message;
         this.httpStatus = httpStatus;
     }
 
@@ -27,7 +27,7 @@ public enum CodeStatus {
     }
 
     public String getMsg() {
-        return msg;
+        return message;
     }
 
     public HttpStatus getHttpStatus() {

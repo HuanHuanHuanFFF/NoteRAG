@@ -14,30 +14,16 @@ public final class Responses {
      * 返回默认成功响应。
      */
     public static ResponseEntity<Body<Void>> ok() {
-        return ok(CodeStatus.SUCCESS.getMsg());
-    }
-
-    /**
-     * 返回自定义消息的成功响应。
-     */
-    public static ResponseEntity<Body<Void>> ok(String msg) {
         return ResponseEntity.status(CodeStatus.SUCCESS.getHttpStatus())
-                .body(new Body<>(CodeStatus.SUCCESS.getCode(), msg, null));
+                .body(new Body<>(CodeStatus.SUCCESS.getCode(), CodeStatus.SUCCESS.getMsg(), null));
     }
 
     /**
      * 返回携带数据的成功响应。
      */
     public static <T> ResponseEntity<Body<T>> ok(T data) {
-        return ok(CodeStatus.SUCCESS.getMsg(), data);
-    }
-
-    /**
-     * 返回自定义消息和数据的成功响应。
-     */
-    public static <T> ResponseEntity<Body<T>> ok(String msg, T data) {
         return ResponseEntity.status(CodeStatus.SUCCESS.getHttpStatus())
-                .body(new Body<>(CodeStatus.SUCCESS.getCode(), msg, data));
+                .body(new Body<>(CodeStatus.SUCCESS.getCode(), CodeStatus.SUCCESS.getMsg(), data));
     }
 
     /**
@@ -50,14 +36,14 @@ public final class Responses {
     /**
      * 按状态码和消息返回失败响应，data 固定为 null。
      */
-    public static ResponseEntity<Body<Void>> fail(CodeStatus codeStatus, String msg) {
+    public static ResponseEntity<Body<Void>> fail(CodeStatus codeStatus, String message) {
         return ResponseEntity.status(codeStatus.getHttpStatus())
-                .body(new Body<>(codeStatus.getCode(), msg, null));
+                .body(new Body<>(codeStatus.getCode(), message, null));
     }
 
     /**
      * 统一响应体结构。
      */
-    public record Body<T>(int code, String msg, T data) {
+    public record Body<T>(int code, String message, T data) {
     }
 }
