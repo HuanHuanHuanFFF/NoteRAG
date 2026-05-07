@@ -10,10 +10,10 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentChunk {
+public class NoteChunk {
 
     private Long id;
-    private Long documentId;
+    private Long noteId;
     private Integer chunkIndex;
     private String headingPath;
     private String content;

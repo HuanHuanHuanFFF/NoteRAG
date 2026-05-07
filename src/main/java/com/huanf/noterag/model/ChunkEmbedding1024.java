@@ -13,7 +13,7 @@ import lombok.Setter;
 public class ChunkEmbedding1024 {
 
     private Long id;
-    private Long chunkId;
+    private Long noteChunkId;
     private Long embeddingModelId;
     private float[] embedding;
     private Instant createdAt;

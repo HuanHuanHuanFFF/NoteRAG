@@ -12,10 +12,10 @@ import org.springframework.test.context.TestPropertySource;
 
 import com.huanf.noterag.dto.ImportTextRequest;
 import com.huanf.noterag.dto.ImportTextResponse;
-import com.huanf.noterag.mapper.DocumentChunkMapper;
-import com.huanf.noterag.mapper.DocumentMapper;
-import com.huanf.noterag.model.Document;
-import com.huanf.noterag.model.DocumentChunk;
+import com.huanf.noterag.mapper.NoteChunkMapper;
+import com.huanf.noterag.mapper.NoteMapper;
+import com.huanf.noterag.model.Note;
+import com.huanf.noterag.model.NoteChunk;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
 @SpringBootTest
@@ -34,16 +34,16 @@ import com.huanf.noterag.util.EstimatedTokenCounter;
         "spring.ai.model.audio.transcription=none",
         "spring.ai.model.moderation=none"
 })
-    class DocumentImportServiceIntegrationTests {
+    class NoteImportServiceIntegrationTests {
 
     @Autowired
-    private DocumentImportService documentImportService;
+    private NoteImportService noteImportService;
 
     @Autowired
-    private DocumentMapper documentMapper;
+    private NoteMapper noteMapper;
 
     @Autowired
-    private DocumentChunkMapper documentChunkMapper;
+    private NoteChunkMapper noteChunkMapper;
 
     @Test
     void importTextPersistsDocumentAndChunks() {
@@ -58,30 +58,30 @@ import com.huanf.noterag.util.EstimatedTokenCounter;
                 """;
         String normalizedContent = rawContent.replace("\r\n", "\n").replace('\r', '\n');
 
-        ImportTextResponse response = documentImportService.importText(new ImportTextRequest("  Java Guide  ", rawContent));
+        ImportTextResponse response = noteImportService.importText(new ImportTextRequest("  Java Guide  ", rawContent));
 
         assertThat(response.getDocumentId()).isNotNull();
         assertThat(response.getChunkCount()).isEqualTo(2);
         assertThat(response.getCharCount()).isEqualTo(normalizedContent.length());
         assertThat(response.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
 
-        Document savedDocument = documentMapper.findById(response.getDocumentId());
-        assertThat(savedDocument).isNotNull();
-        assertThat(savedDocument.getTitle()).isEqualTo("Java Guide");
-        assertThat(savedDocument.getContent()).isEqualTo(normalizedContent);
-        assertThat(savedDocument.getCharCount()).isEqualTo(normalizedContent.length());
-        assertThat(savedDocument.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
+        Note savedNote = noteMapper.findById(response.getDocumentId());
+        assertThat(savedNote).isNotNull();
+        assertThat(savedNote.getTitle()).isEqualTo("Java Guide");
+        assertThat(savedNote.getContent()).isEqualTo(normalizedContent);
+        assertThat(savedNote.getCharCount()).isEqualTo(normalizedContent.length());
+        assertThat(savedNote.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
 
-        List<DocumentChunk> savedChunks = documentChunkMapper.findByDocumentId(response.getDocumentId());
+        List<NoteChunk> savedChunks = noteChunkMapper.findByDocumentId(response.getDocumentId());
         assertThat(savedChunks).hasSize(2);
         assertThat(savedChunks)
-                .extracting(DocumentChunk::getDocumentId)
+                .extracting(NoteChunk::getNoteId)
                 .containsOnly(response.getDocumentId());
         assertThat(savedChunks)
-                .extracting(DocumentChunk::getChunkIndex)
+                .extracting(NoteChunk::getChunkIndex)
                 .containsExactly(0, 1);
         assertThat(savedChunks)
-                .extracting(DocumentChunk::getHeadingPath)
+                .extracting(NoteChunk::getHeadingPath)
                 .containsExactly("Java", "Java > Collections");
         assertThat(savedChunks.get(0).getContent()).isEqualTo("Java notes.");
         assertThat(savedChunks.get(0).getCharCount()).isEqualTo("Java notes.".length());
@@ -93,7 +93,7 @@ import com.huanf.noterag.util.EstimatedTokenCounter;
 
     @Test
     void importTextRejectsBlankTitleAfterNormalization() {
-        assertThatThrownBy(() -> documentImportService.importText(new ImportTextRequest("   ", "# Java\n\nnotes")))
+        assertThatThrownBy(() -> noteImportService.importText(new ImportTextRequest("   ", "# Java\n\nnotes")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("title must not be blank");
     }

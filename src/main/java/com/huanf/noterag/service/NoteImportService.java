@@ -3,31 +3,33 @@ package com.huanf.noterag.service;
 import java.util.List;
 import java.util.Map;
 
+import com.huanf.noterag.model.NoteChunk;
+import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.huanf.noterag.chunk.MarkdownChunkTransformer;
 import com.huanf.noterag.dto.ImportTextRequest;
 import com.huanf.noterag.dto.ImportTextResponse;
-import com.huanf.noterag.mapper.DocumentChunkMapper;
-import com.huanf.noterag.mapper.DocumentMapper;
-import com.huanf.noterag.model.Document;
+import com.huanf.noterag.mapper.NoteChunkMapper;
+import com.huanf.noterag.mapper.NoteMapper;
+import com.huanf.noterag.model.Note;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
 @Service
-public class DocumentImportService {
+public class NoteImportService {
 
-    private final DocumentMapper documentMapper;
-    private final DocumentChunkMapper documentChunkMapper;
+    private final NoteMapper noteMapper;
+    private final NoteChunkMapper noteChunkMapper;
     private final MarkdownChunkTransformer markdownChunkTransformer;
 
-    public DocumentImportService(
-            DocumentMapper documentMapper,
-            DocumentChunkMapper documentChunkMapper,
+    public NoteImportService(
+            NoteMapper noteMapper,
+            NoteChunkMapper noteChunkMapper,
             MarkdownChunkTransformer markdownChunkTransformer
     ) {
-        this.documentMapper = documentMapper;
-        this.documentChunkMapper = documentChunkMapper;
+        this.noteMapper = noteMapper;
+        this.noteChunkMapper = noteChunkMapper;
         this.markdownChunkTransformer = markdownChunkTransformer;
     }
 
@@ -44,28 +46,28 @@ public class DocumentImportService {
         int charCount = content.length();
         int tokenCount = EstimatedTokenCounter.estimate(content);
 
-        Document document = new Document();
-        document.setTitle(title);
-        document.setContent(content);
-        document.setCharCount(charCount);
-        document.setTokenCount(tokenCount);
-        documentMapper.insert(document);
+        Note note = new Note();
+        note.setTitle(title);
+        note.setContent(content);
+        note.setCharCount(charCount);
+        note.setTokenCount(tokenCount);
+        noteMapper.insert(note);
 
-        List<org.springframework.ai.document.Document> chunkDocuments = markdownChunkTransformer.transform(
-                List.of(new org.springframework.ai.document.Document(
+        List<Document> chunkDocuments = markdownChunkTransformer.transform(
+                List.of(new Document(
                         content,
-                        Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, document.getId()))));
+                        Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, note.getId()))));
 
-        List<com.huanf.noterag.model.DocumentChunk> chunks = chunkDocuments
+        List<NoteChunk> chunks = chunkDocuments
                 .stream()
                 .map(this::toDocumentChunk)
                 .toList();
 
         if (!chunks.isEmpty()) {
-            documentChunkMapper.batchInsert(chunks);
+            noteChunkMapper.batchInsert(chunks);
         }
 
-        return new ImportTextResponse(document.getId(), chunks.size(), charCount, tokenCount);
+        return new ImportTextResponse(note.getId(), chunks.size(), charCount, tokenCount);
     }
 
     /**
@@ -74,15 +76,15 @@ public class DocumentImportService {
      * <p>documentId 统一从 chunk metadata 读取，而不是由外层额外传参，
      * 这样可以保持 chunk 归属关系跟随 chunk 一起流转。</p>
      */
-    private com.huanf.noterag.model.DocumentChunk toDocumentChunk(org.springframework.ai.document.Document chunk) {
-        com.huanf.noterag.model.DocumentChunk documentChunk = new com.huanf.noterag.model.DocumentChunk();
-        documentChunk.setDocumentId(readLongMetadata(chunk.getMetadata(), MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY));
-        documentChunk.setChunkIndex(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY));
-        documentChunk.setHeadingPath((String) chunk.getMetadata().get(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY));
-        documentChunk.setContent(chunk.getText());
-        documentChunk.setCharCount(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY));
-        documentChunk.setTokenCount(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY));
-        return documentChunk;
+    private NoteChunk toDocumentChunk(Document chunk) {
+        NoteChunk noteChunk = new NoteChunk();
+        noteChunk.setNoteId(readLongMetadata(chunk.getMetadata(), MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY));
+        noteChunk.setChunkIndex(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY));
+        noteChunk.setHeadingPath((String) chunk.getMetadata().get(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY));
+        noteChunk.setContent(chunk.getText());
+        noteChunk.setCharCount(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY));
+        noteChunk.setTokenCount(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY));
+        return noteChunk;
     }
 
     private Long readLongMetadata(Map<String, Object> metadata, String key) {

@@ -6,7 +6,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TABLE IF NOT EXISTS documents (
+CREATE TABLE IF NOT EXISTS notes (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
@@ -14,23 +14,23 @@ CREATE TABLE IF NOT EXISTS documents (
     token_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT documents_char_count_non_negative CHECK (char_count >= 0),
-    CONSTRAINT documents_token_count_non_negative CHECK (token_count >= 0)
+    CONSTRAINT notes_char_count_non_negative CHECK (char_count >= 0),
+    CONSTRAINT notes_token_count_non_negative CHECK (token_count >= 0)
 );
 
-CREATE TABLE IF NOT EXISTS document_chunks (
+CREATE TABLE IF NOT EXISTS note_chunks (
     id BIGSERIAL PRIMARY KEY,
-    document_id BIGINT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    note_id BIGINT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL,
     heading_path TEXT,
     content TEXT NOT NULL,
     char_count INTEGER NOT NULL,
     token_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT document_chunks_chunk_index_non_negative CHECK (chunk_index >= 0),
-    CONSTRAINT document_chunks_char_count_non_negative CHECK (char_count >= 0),
-    CONSTRAINT document_chunks_token_count_non_negative CHECK (token_count >= 0),
-    CONSTRAINT document_chunks_document_id_chunk_index_key UNIQUE (document_id, chunk_index)
+    CONSTRAINT note_chunks_chunk_index_non_negative CHECK (chunk_index >= 0),
+    CONSTRAINT note_chunks_char_count_non_negative CHECK (char_count >= 0),
+    CONSTRAINT note_chunks_token_count_non_negative CHECK (token_count >= 0),
+    CONSTRAINT note_chunks_note_id_chunk_index_key UNIQUE (note_id, chunk_index)
 );
 
 CREATE TABLE IF NOT EXISTS embedding_models (
@@ -48,10 +48,10 @@ CREATE TABLE IF NOT EXISTS embedding_models (
     CONSTRAINT embedding_models_provider_model_dimension_key UNIQUE (provider, model_name, dimension)
 );
 
-DROP TRIGGER IF EXISTS trg_documents_set_updated_at ON documents;
+DROP TRIGGER IF EXISTS trg_notes_set_updated_at ON notes;
 
-CREATE TRIGGER trg_documents_set_updated_at
-BEFORE UPDATE ON documents
+CREATE TRIGGER trg_notes_set_updated_at
+BEFORE UPDATE ON notes
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
@@ -64,11 +64,11 @@ EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE IF NOT EXISTS chunk_embeddings_1024 (
     id BIGSERIAL PRIMARY KEY,
-    chunk_id BIGINT NOT NULL REFERENCES document_chunks(id) ON DELETE CASCADE,
+    note_chunk_id BIGINT NOT NULL REFERENCES note_chunks(id) ON DELETE CASCADE,
     embedding_model_id BIGINT NOT NULL REFERENCES embedding_models(id) ON DELETE RESTRICT,
     embedding vector(1024) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chunk_embeddings_1024_chunk_model_key UNIQUE (chunk_id, embedding_model_id)
+    CONSTRAINT chunk_embeddings_1024_note_chunk_model_key UNIQUE (note_chunk_id, embedding_model_id)
 );
 
 CREATE OR REPLACE FUNCTION ensure_chunk_embedding_1024_model_dimension()
