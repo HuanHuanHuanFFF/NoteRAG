@@ -1,4 +1,4 @@
-package com.huanf.noterag.service;
+package com.huanf.noterag.chunk;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -6,11 +6,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 
+import com.huanf.noterag.config.ChunkingProperties;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
 class MarkdownChunkTransformerTests {
 
-    private final MarkdownChunkTransformer transformer = new MarkdownChunkTransformer();
+    private final ChunkingProperties chunkingProperties = defaultChunkingProperties();
+    private final MarkdownChunkTransformer transformer =
+            new MarkdownChunkTransformer(new MarkdownSectionParser(), new MarkdownChunker(chunkingProperties));
 
     @Test
     void transformKeepsHeadingPathMetadata() {
@@ -25,6 +28,7 @@ class MarkdownChunkTransformerTests {
                 """);
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
@@ -53,6 +57,7 @@ class MarkdownChunkTransformerTests {
                 """);
 
         List<Document> chunks = transformer.transform(List.of(first, second));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
@@ -76,11 +81,12 @@ class MarkdownChunkTransformerTests {
                 """.formatted("中".repeat(790), "文".repeat(750)));
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks)
                 .extracting(Document::getText)
-                .noneMatch(text -> text.length() == MarkdownChunkTransformer.OVERLAP_CHARS);
+                .noneMatch(text -> text.length() == chunkingProperties.getOverlapChars());
         assertThat(chunks)
                 .allSatisfy(chunk -> assertThat(chunk.getMetadata().get("tokenCount"))
                         .isInstanceOf(Integer.class));
@@ -100,6 +106,7 @@ class MarkdownChunkTransformerTests {
                 """.formatted("中".repeat(180), "文".repeat(700)));
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getText()).hasSize(882);
@@ -114,6 +121,7 @@ class MarkdownChunkTransformerTests {
         String markdown = "# English\n\n" + String.join("\n\n", java.util.Collections.nCopies(1200, "a"));
 
         List<Document> chunks = transformer.transform(List.of(new Document(markdown)));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getMetadata())
@@ -130,13 +138,14 @@ class MarkdownChunkTransformerTests {
                 """.formatted("中".repeat(1200)));
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry("headingPath", "Hard Limit")
                 .containsEntry("charCount", 1000)
-                .containsEntry("tokenCount", MarkdownChunkTransformer.HARD_MAX_TOKENS);
-        assertThat(chunks.get(1).getText()).startsWith("中".repeat(MarkdownChunkTransformer.OVERLAP_CHARS));
+                .containsEntry("tokenCount", chunkingProperties.getHardMaxTokens());
+        assertThat(chunks.get(1).getText()).startsWith("中".repeat(chunkingProperties.getOverlapChars()));
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry("headingPath", "Hard Limit")
                 .containsEntry("tokenCount", 280);
@@ -152,10 +161,11 @@ class MarkdownChunkTransformerTests {
                 """.formatted(firstChunk, "尾".repeat(100)));
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
-                .containsEntry("tokenCount", MarkdownChunkTransformer.HARD_MAX_TOKENS);
+                .containsEntry("tokenCount", chunkingProperties.getHardMaxTokens());
         assertThat(chunks.get(1).getText())
                 .startsWith("中".repeat(35) + "😀".repeat(44) + "文");
     }
@@ -180,6 +190,7 @@ class MarkdownChunkTransformerTests {
                 """);
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
@@ -206,6 +217,7 @@ class MarkdownChunkTransformerTests {
                 """);
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getMetadata())
@@ -232,6 +244,7 @@ class MarkdownChunkTransformerTests {
                 """);
 
         List<Document> chunks = transformer.transform(List.of(source));
+        printChunks(chunks);
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
@@ -243,6 +256,63 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry("headingPath", "Java > Real Heading")
                 .containsEntry("tokenCount", EstimatedTokenCounter.estimate(chunks.get(1).getText()));
+    }
+
+    @Test
+    void parserClosesFencedCodeBlockOnlyWithFenceLengthAtLeastOpeningLength() {
+        MarkdownSectionParser parser = new MarkdownSectionParser();
+
+        List<MarkdownSection> markdownSections = parser.parse("""
+                # Java
+
+                ````java
+                # Not A Heading
+                ```
+                ## Still Not A Heading
+                ````
+
+                ## Real Heading
+
+                Real content.
+                """);
+        printSections(markdownSections);
+
+        assertThat(markdownSections).hasSize(2);
+        assertThat(markdownSections.get(0).headingPath()).isEqualTo("Java");
+        assertThat(markdownSections.get(0).paragraphs()).singleElement()
+                .satisfies(paragraph -> assertThat(paragraph)
+                        .contains("# Not A Heading")
+                        .contains("## Still Not A Heading"));
+        assertThat(markdownSections.get(1).headingPath()).isEqualTo("Java > Real Heading");
+    }
+
+    @Test
+    void parserDoesNotCloseFencedCodeBlockWhenBackticksHaveTrailingText() {
+        MarkdownSectionParser parser = new MarkdownSectionParser();
+
+        List<MarkdownSection> markdownSections = parser.parse("""
+                # Java
+
+                ```java
+                # Not A Heading
+                ```oops
+                ## Still Not A Heading
+                ```
+
+                ## Real Heading
+
+                Real content.
+                """);
+        printSections(markdownSections);
+
+        assertThat(markdownSections).hasSize(2);
+        assertThat(markdownSections.get(0).headingPath()).isEqualTo("Java");
+        assertThat(markdownSections.get(0).paragraphs()).singleElement()
+                .satisfies(paragraph -> assertThat(paragraph)
+                        .contains("# Not A Heading")
+                        .contains("```oops")
+                        .contains("## Still Not A Heading"));
+        assertThat(markdownSections.get(1).headingPath()).isEqualTo("Java > Real Heading");
     }
 
     @Test
@@ -272,8 +342,11 @@ class MarkdownChunkTransformerTests {
                 """);
 
         List<Document> chunks = transformer.transform(List.of(source));
-
+        printChunks(chunks);
         assertThat(chunks).isNotEmpty();
+    }
+
+    private void printChunks(List<Document> chunks) {
         for (Document chunk : chunks) {
             System.out.println("----- chunk -----");
             System.out.println("chunkIndex=" + chunk.getMetadata().get("chunkIndex"));
@@ -282,5 +355,25 @@ class MarkdownChunkTransformerTests {
             System.out.println("tokenCount=" + chunk.getMetadata().get("tokenCount"));
             System.out.println(chunk.getText());
         }
+    }
+
+    private void printSections(List<MarkdownSection> markdownSections) {
+        for (MarkdownSection markdownSection : markdownSections) {
+            System.out.println("----- section -----");
+            System.out.println("headingPath=" + markdownSection.headingPath());
+            for (String paragraph : markdownSection.paragraphs()) {
+                System.out.println("[paragraph]");
+                System.out.println(paragraph);
+            }
+        }
+    }
+
+    private ChunkingProperties defaultChunkingProperties() {
+        ChunkingProperties properties = new ChunkingProperties();
+        properties.setMinTargetTokens(300);
+        properties.setMaxTargetTokens(800);
+        properties.setHardMaxTokens(1000);
+        properties.setOverlapChars(80);
+        return properties;
     }
 }

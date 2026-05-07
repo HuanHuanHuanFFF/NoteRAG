@@ -33,6 +33,16 @@ class EstimatedTokenCounterTests {
     }
 
     @Test
+    void classifiedCountsCanBeEstimatedAfterCombining() {
+        EstimatedTokenCounter.TokenCounts counts = new EstimatedTokenCounter.TokenCounts(0, 3, 1)
+                .plus(new EstimatedTokenCounter.TokenCounts(0, 1, 1));
+
+        assertThat(counts.estimate()).isEqualTo(2);
+        assertThat(EstimatedTokenCounter.estimate(counts.cjkCount(), counts.asciiCount(), counts.otherCount()))
+                .isEqualTo(2);
+    }
+
+    @Test
     void estimateRoundsOtherNonAsciiCharactersUpByTwo() {
         assertThat(EstimatedTokenCounter.estimate("éΩ😀")).isEqualTo(2);
     }
@@ -45,6 +55,7 @@ class EstimatedTokenCounterTests {
     @Test
     void estimateReturnsZeroForNullOrBlank() {
         assertThat(EstimatedTokenCounter.estimate(null)).isZero();
+        assertThat(EstimatedTokenCounter.estimate("")).isZero();
         assertThat(EstimatedTokenCounter.estimate(" \n\t")).isZero();
     }
 }
