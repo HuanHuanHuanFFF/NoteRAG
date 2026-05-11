@@ -1,0 +1,45 @@
+@baseUrl = http://localhost:9000
+
+### Import text - success from generated JSON
+# Source Markdown: ./payloads/import-text.md
+# Regenerate body after editing Markdown:
+# node ./src/test/http/scripts/build-import-text-body.mjs
+# Expected: 200 OK
+POST {{baseUrl}}/api/note-imports/text
+Content-Type: application/json
+Accept: application/json
+
+< ./payloads/import-text.generated.json
+
+### Import text - blank title
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/note-imports/text
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "",
+  "content": "# Java\n\nJava notes."
+}
+
+### Import text - blank content
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/note-imports/text
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Java Guide",
+  "content": ""
+}
+
+### Import text - malformed JSON
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/note-imports/text
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Java Guide",
+  "content": "# Java\n\nJava notes.
+}

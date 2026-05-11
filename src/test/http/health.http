@@ -1,0 +1,7 @@
+@baseUrl = http://localhost:9000
+
+### Health - success
+# Expected: 200 OK
+GET {{baseUrl}}/api/health
+Accept: text/plain
+
