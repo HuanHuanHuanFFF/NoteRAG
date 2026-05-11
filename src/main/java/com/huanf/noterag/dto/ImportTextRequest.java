@@ -18,6 +18,6 @@ public class ImportTextRequest {
     private String title;
 
     @NotBlank
-    @Size(max = 1_000_000)
+    @Size(max = 100_000)
     private String content;
 }
