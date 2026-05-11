@@ -1,10 +1,12 @@
 package com.huanf.noterag.common.result;
 
+import lombok.Getter;
 import org.springframework.http.HttpStatus;
 
 /**
  * 统一业务状态码，负责绑定业务码、默认消息和 HTTP 状态。
  */
+@Getter
 public enum CodeStatus {
     SUCCESS(0, "success", HttpStatus.OK),
     INVALID_REQUEST(40001, "请求参数错误", HttpStatus.BAD_REQUEST),
@@ -14,6 +16,7 @@ public enum CodeStatus {
     NOT_ACCEPTABLE(40600, "响应媒体类型不支持", HttpStatus.NOT_ACCEPTABLE),
     UNSUPPORTED_MEDIA_TYPE(41500, "请求媒体类型不支持", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     CHUNK_METADATA_INVALID(50001, "Chunk metadata 异常", HttpStatus.INTERNAL_SERVER_ERROR),
+    EMBEDDING_FAILED(50201, "Embedding 服务调用失败", HttpStatus.BAD_GATEWAY),
     INTERNAL_ERROR(50000, "服务器内部错误", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final int code;
@@ -24,17 +27,5 @@ public enum CodeStatus {
         this.code = code;
         this.message = message;
         this.httpStatus = httpStatus;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public HttpStatus getHttpStatus() {
-        return httpStatus;
     }
 }
