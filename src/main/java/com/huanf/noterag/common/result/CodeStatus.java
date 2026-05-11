@@ -8,7 +8,11 @@ import org.springframework.http.HttpStatus;
 public enum CodeStatus {
     SUCCESS(0, "success", HttpStatus.OK),
     INVALID_REQUEST(40001, "请求参数错误", HttpStatus.BAD_REQUEST),
+    NOT_FOUND(40400, "资源不存在", HttpStatus.NOT_FOUND),
     DOCUMENT_NOT_FOUND(40401, "文档不存在", HttpStatus.NOT_FOUND),
+    METHOD_NOT_ALLOWED(40500, "请求方法不支持", HttpStatus.METHOD_NOT_ALLOWED),
+    NOT_ACCEPTABLE(40600, "响应媒体类型不支持", HttpStatus.NOT_ACCEPTABLE),
+    UNSUPPORTED_MEDIA_TYPE(41500, "请求媒体类型不支持", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     CHUNK_METADATA_INVALID(50001, "Chunk metadata 异常", HttpStatus.INTERNAL_SERVER_ERROR),
     INTERNAL_ERROR(50000, "服务器内部错误", HttpStatus.INTERNAL_SERVER_ERROR);
 
@@ -26,7 +30,7 @@ public enum CodeStatus {
         return code;
     }
 
-    public String getMsg() {
+    public String getMessage() {
         return message;
     }
 

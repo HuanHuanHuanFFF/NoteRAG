@@ -13,7 +13,7 @@ public class BusinessException extends RuntimeException {
      * 使用状态码默认消息创建业务异常。
      */
     public BusinessException(CodeStatus codeStatus) {
-        super(codeStatus.getMsg());
+        super(codeStatus.getMessage());
         this.codeStatus = codeStatus;
     }
 
