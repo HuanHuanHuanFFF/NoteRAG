@@ -1,8 +1,10 @@
 package com.huanf.noterag;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -21,6 +23,9 @@ import org.springframework.test.context.TestPropertySource;
         "spring.ai.model.moderation=none"
 })
 class NoteRagApplicationTests {
+
+    @MockitoBean
+    private EmbeddingModel embeddingModel;
 
     @Test
     void contextLoads() {

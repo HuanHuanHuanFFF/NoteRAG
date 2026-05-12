@@ -6,9 +6,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.huanf.noterag.dto.ImportTextRequest;
 import com.huanf.noterag.dto.ImportTextResponse;
@@ -34,7 +36,10 @@ import com.huanf.noterag.util.EstimatedTokenCounter;
         "spring.ai.model.audio.transcription=none",
         "spring.ai.model.moderation=none"
 })
-    class NoteImportServiceIntegrationTests {
+class NoteImportServiceIntegrationTests {
+
+    @MockitoBean
+    private EmbeddingModel embeddingModel;
 
     @Autowired
     private NoteImportService noteImportService;

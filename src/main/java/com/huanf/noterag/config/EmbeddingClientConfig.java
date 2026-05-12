@@ -1,7 +1,7 @@
 package com.huanf.noterag.config;
 
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,8 +17,7 @@ import com.huanf.noterag.client.SpringAiEmbeddingClient;
 public class EmbeddingClientConfig {
 
     @Bean
-    @ConditionalOnBean(EmbeddingModel.class)
-    public EmbeddingClient embeddingClient(EmbeddingModel embeddingModel) {
-        return new SpringAiEmbeddingClient(embeddingModel);
+    public EmbeddingClient embeddingClient(ObjectProvider<EmbeddingModel> embeddingModelProvider) {
+        return new SpringAiEmbeddingClient(embeddingModelProvider.getObject());
     }
 }
