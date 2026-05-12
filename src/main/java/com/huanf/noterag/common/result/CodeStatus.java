@@ -16,7 +16,11 @@ public enum CodeStatus {
     NOT_ACCEPTABLE(40600, "响应媒体类型不支持", HttpStatus.NOT_ACCEPTABLE),
     UNSUPPORTED_MEDIA_TYPE(41500, "请求媒体类型不支持", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     CHUNK_METADATA_INVALID(50001, "Chunk metadata 异常", HttpStatus.INTERNAL_SERVER_ERROR),
+    EMBEDDING_DIMENSION_UNSUPPORTED(50002, "Embedding 维度暂不支持", HttpStatus.INTERNAL_SERVER_ERROR),
+    EMBEDDING_MODEL_NOT_FOUND(50003, "Embedding 模型配置不存在", HttpStatus.INTERNAL_SERVER_ERROR),
+    EMBEDDING_CONFIG_INVALID(50004, "Embedding configuration invalid", HttpStatus.INTERNAL_SERVER_ERROR),
     EMBEDDING_FAILED(50201, "Embedding 服务调用失败", HttpStatus.BAD_GATEWAY),
+    EMBEDDING_RESULT_INVALID(50202, "Embedding 结果异常", HttpStatus.BAD_GATEWAY),
     INTERNAL_ERROR(50000, "服务器内部错误", HttpStatus.INTERNAL_SERVER_ERROR);
 
     private final int code;

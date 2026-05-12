@@ -1,5 +1,7 @@
 package com.huanf.noterag.config;
 
+import java.util.List;
+
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
@@ -18,6 +20,16 @@ public class EmbeddingClientConfig {
 
     @Bean
     public EmbeddingClient embeddingClient(ObjectProvider<EmbeddingModel> embeddingModelProvider) {
-        return new SpringAiEmbeddingClient(embeddingModelProvider.getObject());
+        return new EmbeddingClient() {
+            @Override
+            public float[] embed(String text) {
+                return new SpringAiEmbeddingClient(embeddingModelProvider.getObject()).embed(text);
+            }
+
+            @Override
+            public List<float[]> embedAll(List<String> texts) {
+                return new SpringAiEmbeddingClient(embeddingModelProvider.getObject()).embedAll(texts);
+            }
+        };
     }
 }
