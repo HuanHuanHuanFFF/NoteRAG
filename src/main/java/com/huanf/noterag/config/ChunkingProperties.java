@@ -1,5 +1,7 @@
 package com.huanf.noterag.config;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -12,6 +14,8 @@ import jakarta.validation.constraints.Min;
  *
  * <p>这些参数控制 chunk 的目标大小、硬上限和 overlap，方便在本地调参与测试。</p>
  */
+@Setter
+@Getter
 @Component
 @ConfigurationProperties(prefix = "noterag.chunking")
 @Validated
@@ -28,38 +32,6 @@ public class ChunkingProperties {
 
     @Min(0)
     private int overlapChars = 80;
-
-    public int getMinTargetTokens() {
-        return minTargetTokens;
-    }
-
-    public void setMinTargetTokens(int minTargetTokens) {
-        this.minTargetTokens = minTargetTokens;
-    }
-
-    public int getMaxTargetTokens() {
-        return maxTargetTokens;
-    }
-
-    public void setMaxTargetTokens(int maxTargetTokens) {
-        this.maxTargetTokens = maxTargetTokens;
-    }
-
-    public int getHardMaxTokens() {
-        return hardMaxTokens;
-    }
-
-    public void setHardMaxTokens(int hardMaxTokens) {
-        this.hardMaxTokens = hardMaxTokens;
-    }
-
-    public int getOverlapChars() {
-        return overlapChars;
-    }
-
-    public void setOverlapChars(int overlapChars) {
-        this.overlapChars = overlapChars;
-    }
 
     /**
      * 软下限不能大于软上限。
