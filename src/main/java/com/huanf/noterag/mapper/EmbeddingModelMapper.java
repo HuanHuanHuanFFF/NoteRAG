@@ -13,6 +13,7 @@ public interface EmbeddingModelMapper {
             SELECT id,
                    provider,
                    model_name AS modelName,
+                   display_name AS displayName,
                    dimension,
                    distance_metric AS distanceMetric,
                    base_url AS baseUrl,

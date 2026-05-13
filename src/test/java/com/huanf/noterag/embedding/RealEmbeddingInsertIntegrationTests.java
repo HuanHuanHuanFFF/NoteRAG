@@ -114,17 +114,18 @@ class RealEmbeddingInsertIntegrationTests {
 
         return jdbcTemplate.queryForObject("""
                 INSERT INTO embedding_models
-                    (provider, model_name, dimension, distance_metric, base_url, enabled)
+                    (provider, model_name, display_name, dimension, distance_metric, base_url, enabled)
                 VALUES
-                    (?, ?, ?, 'cosine', ?, true)
+                    (?, ?, ?, ?, 'cosine', ?, true)
                 ON CONFLICT (provider, model_name, dimension)
                 DO UPDATE SET
+                    display_name = EXCLUDED.display_name,
                     distance_metric = EXCLUDED.distance_metric,
                     base_url = EXCLUDED.base_url,
                     enabled = true,
                     updated_at = now()
                 RETURNING id
-                """, Long.class, "openai", modelName, EXPECTED_DIMENSION, baseUrl);
+                """, Long.class, "openai", modelName, "阿里云 text-embedding-v4 1024", EXPECTED_DIMENSION, baseUrl);
     }
 
     private static String envOrDefault(String name, String defaultValue) {

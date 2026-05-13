@@ -1,21 +1,31 @@
 package com.huanf.noterag.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.huanf.noterag.mapper.NoteChunkMapper;
+import com.huanf.noterag.model.NoteChunk;
+import com.huanf.noterag.service.NoteEmbeddingService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -39,8 +49,23 @@ class NoteImportControllerIntegrationTests {
     @MockitoBean
     private EmbeddingModel embeddingModel;
 
+    @MockitoBean
+    private NoteEmbeddingService noteEmbeddingService;
+
+    @MockitoBean
+    private NoteChunkMapper noteChunkMapper;
+
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUpNoteChunkMapper() {
+        when(noteChunkMapper.batchInsertReturning(any())).thenAnswer(invocation ->
+                insertChunksReturning(invocation.getArgument(0)));
+    }
 
     @Test
     void importTextWrapsSuccessResponse() throws Exception {
@@ -128,5 +153,44 @@ class NoteImportControllerIntegrationTests {
         mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("NoteRAG is running"));
+    }
+
+    private List<NoteChunk> insertChunksReturning(List<NoteChunk> chunks) {
+        for (NoteChunk chunk : chunks) {
+            jdbcTemplate.update("""
+                    INSERT INTO note_chunks (note_id, chunk_index, heading_path, content, char_count, token_count)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    chunk.getNoteId(),
+                    chunk.getChunkIndex(),
+                    chunk.getHeadingPath(),
+                    chunk.getContent(),
+                    chunk.getCharCount(),
+                    chunk.getTokenCount());
+        }
+        return jdbcTemplate.query("""
+                SELECT id,
+                       note_id,
+                       chunk_index,
+                       heading_path,
+                       content,
+                       char_count,
+                       token_count,
+                       created_at
+                FROM note_chunks
+                WHERE note_id = ?
+                ORDER BY chunk_index
+                """, (rs, rowNum) -> {
+            NoteChunk chunk = new NoteChunk();
+            chunk.setId(rs.getLong("id"));
+            chunk.setNoteId(rs.getLong("note_id"));
+            chunk.setChunkIndex(rs.getInt("chunk_index"));
+            chunk.setHeadingPath(rs.getString("heading_path"));
+            chunk.setContent(rs.getString("content"));
+            chunk.setCharCount(rs.getInt("char_count"));
+            chunk.setTokenCount(rs.getInt("token_count"));
+            chunk.setCreatedAt(rs.getTimestamp("created_at").toInstant());
+            return chunk;
+        }, chunks.get(0).getNoteId());
     }
 }

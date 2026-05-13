@@ -24,6 +24,26 @@ public interface NoteChunkMapper {
     })
     int batchInsert(@Param("chunks") List<NoteChunk> chunks);
 
+    @Select({
+            "<script>",
+            "INSERT INTO note_chunks (note_id, chunk_index, heading_path, content, char_count, token_count)",
+            "VALUES",
+            "<foreach collection='chunks' item='chunk' separator=','>",
+            "(#{chunk.noteId}, #{chunk.chunkIndex}, #{chunk.headingPath}, #{chunk.content},",
+            "#{chunk.charCount}, #{chunk.tokenCount})",
+            "</foreach>",
+            "RETURNING id,",
+            "          note_id AS noteId,",
+            "          chunk_index AS chunkIndex,",
+            "          heading_path AS headingPath,",
+            "          content,",
+            "          char_count AS charCount,",
+            "          token_count AS tokenCount,",
+            "          created_at AS createdAt",
+            "</script>"
+    })
+    List<NoteChunk> batchInsertReturning(@Param("chunks") List<NoteChunk> chunks);
+
     @Select("""
             SELECT id,
                    note_id AS noteId,

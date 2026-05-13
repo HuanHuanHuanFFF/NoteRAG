@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS embedding_models (
     id BIGSERIAL PRIMARY KEY,
     provider TEXT NOT NULL,
     model_name TEXT NOT NULL,
+    display_name TEXT NOT NULL,
     dimension INTEGER NOT NULL,
     distance_metric TEXT NOT NULL DEFAULT 'cosine',
     base_url TEXT,
@@ -61,6 +62,15 @@ CREATE TRIGGER trg_embedding_models_set_updated_at
 BEFORE UPDATE ON embedding_models
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+
+INSERT INTO embedding_models (provider, model_name, display_name, dimension, distance_metric, base_url, enabled)
+VALUES ('openai', 'text-embedding-v4', '阿里云 text-embedding-v4 1024', 1024, 'cosine', 'https://dashscope.aliyuncs.com/compatible-mode', true)
+ON CONFLICT (provider, model_name, dimension)
+DO UPDATE SET display_name = EXCLUDED.display_name,
+              distance_metric = EXCLUDED.distance_metric,
+              base_url = EXCLUDED.base_url,
+              enabled = true,
+              updated_at = now();
 
 CREATE TABLE IF NOT EXISTS chunk_embeddings_1024 (
     id BIGSERIAL PRIMARY KEY,

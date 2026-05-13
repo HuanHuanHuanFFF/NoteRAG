@@ -3,17 +3,19 @@ package com.huanf.noterag.service;
 import java.util.List;
 import java.util.Map;
 
-import com.huanf.noterag.model.NoteChunk;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.huanf.noterag.chunk.MarkdownChunkTransformer;
+import com.huanf.noterag.common.exception.BusinessException;
+import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.dto.ImportTextRequest;
 import com.huanf.noterag.dto.ImportTextResponse;
 import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
 import com.huanf.noterag.model.Note;
+import com.huanf.noterag.model.NoteChunk;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
 @Service
@@ -22,15 +24,21 @@ public class NoteImportService {
     private final NoteMapper noteMapper;
     private final NoteChunkMapper noteChunkMapper;
     private final MarkdownChunkTransformer markdownChunkTransformer;
+    private final NoteEmbeddingService noteEmbeddingService;
+    private final TransactionTemplate transactionTemplate;
 
     public NoteImportService(
             NoteMapper noteMapper,
             NoteChunkMapper noteChunkMapper,
-            MarkdownChunkTransformer markdownChunkTransformer
+            MarkdownChunkTransformer markdownChunkTransformer,
+            NoteEmbeddingService noteEmbeddingService,
+            TransactionTemplate transactionTemplate
     ) {
         this.noteMapper = noteMapper;
         this.noteChunkMapper = noteChunkMapper;
         this.markdownChunkTransformer = markdownChunkTransformer;
+        this.noteEmbeddingService = noteEmbeddingService;
+        this.transactionTemplate = transactionTemplate;
     }
 
     /**
@@ -39,13 +47,24 @@ public class NoteImportService {
      * <p>流程约束固定为：先入库 document，拿到持久化 ID，再把该 ID 放入 source metadata 后执行 chunk。
      * 这样后续即使扩展为批处理或异步 chunk，chunk 结果也仍然可以通过 metadata 回溯到源 document。</p>
      */
-    @Transactional
     public ImportTextResponse importText(ImportTextRequest request) {
         String title = normalizeTitle(request.getTitle());
         String content = normalizeContent(request.getContent());
         int charCount = content.length();
         int tokenCount = EstimatedTokenCounter.estimate(content);
 
+        SavedChunks savedChunks = transactionTemplate.execute(status ->
+                saveNoteAndChunks(title, content, charCount, tokenCount));
+        if (savedChunks == null) {
+            throw new BusinessException(CodeStatus.INTERNAL_ERROR, "Import transaction returned no result");
+        }
+
+        noteEmbeddingService.embedAndStore(savedChunks.chunks());
+
+        return new ImportTextResponse(savedChunks.noteId(), savedChunks.chunks().size(), charCount, tokenCount);
+    }
+
+    private SavedChunks saveNoteAndChunks(String title, String content, int charCount, int tokenCount) {
         Note note = new Note();
         note.setTitle(title);
         note.setContent(content);
@@ -56,18 +75,34 @@ public class NoteImportService {
         List<Document> chunkDocuments = markdownChunkTransformer.transform(
                 List.of(new Document(
                         content,
-                        Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, note.getId()))));
+                        Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, note.getId()))
+                ));
 
         List<NoteChunk> chunks = chunkDocuments
                 .stream()
                 .map(this::toDocumentChunk)
                 .toList();
 
-        if (!chunks.isEmpty()) {
-            noteChunkMapper.batchInsert(chunks);
+        if (chunks.isEmpty()) {
+            throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID, "Markdown chunker returned no chunks");
         }
 
-        return new ImportTextResponse(note.getId(), chunks.size(), charCount, tokenCount);
+        List<NoteChunk> savedChunks = noteChunkMapper.batchInsertReturning(chunks);
+        validateSavedChunks(chunks, savedChunks);
+        return new SavedChunks(note.getId(), savedChunks);
+    }
+
+    private void validateSavedChunks(List<NoteChunk> chunks, List<NoteChunk> savedChunks) {
+        if (savedChunks == null || savedChunks.size() != chunks.size()) {
+            throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID,
+                    "Saved chunk count mismatch after insert returning");
+        }
+        for (int i = 0; i < savedChunks.size(); i++) {
+            if (savedChunks.get(i).getId() == null) {
+                throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID,
+                        "Saved chunk[%d].id must not be null after insert returning".formatted(i));
+            }
+        }
     }
 
     /**
@@ -123,5 +158,8 @@ public class NoteImportService {
             throw new IllegalArgumentException("content must not be blank");
         }
         return normalized;
+    }
+
+    private record SavedChunks(Long noteId, List<NoteChunk> chunks) {
     }
 }

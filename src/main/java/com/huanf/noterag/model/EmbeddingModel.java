@@ -15,6 +15,7 @@ public class EmbeddingModel {
     private Long id;
     private String provider;
     private String modelName;
+    private String displayName;
     private Integer dimension;
     private String distanceMetric;
     private String baseUrl;

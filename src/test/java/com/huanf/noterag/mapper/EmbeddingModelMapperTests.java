@@ -32,10 +32,10 @@ class EmbeddingModelMapperTests {
     void findEnabledBySpecMapsSqlColumnsToModelFields() {
         jdbcTemplate.update("""
                 INSERT INTO embedding_models
-                    (provider, model_name, dimension, distance_metric, base_url, enabled)
+                    (provider, model_name, display_name, dimension, distance_metric, base_url, enabled)
                 VALUES
-                    (?, ?, ?, ?, ?, ?)
-                """, "openai", "text-embedding-3-large", 1024, "cosine", "https://api.example.test", true);
+                    (?, ?, ?, ?, ?, ?, ?)
+                """, "openai", "text-embedding-3-large", "OpenAI embedding 3 large", 1024, "cosine", "https://api.example.test", true);
 
         EmbeddingModel model = embeddingModelMapper.findEnabledBySpec(
                 "openai", "text-embedding-3-large", 1024, "cosine");
@@ -44,6 +44,7 @@ class EmbeddingModelMapperTests {
         assertThat(model.getId()).isNotNull();
         assertThat(model.getProvider()).isEqualTo("openai");
         assertThat(model.getModelName()).isEqualTo("text-embedding-3-large");
+        assertThat(model.getDisplayName()).isEqualTo("OpenAI embedding 3 large");
         assertThat(model.getDimension()).isEqualTo(1024);
         assertThat(model.getDistanceMetric()).isEqualTo("cosine");
         assertThat(model.getBaseUrl()).isEqualTo("https://api.example.test");
@@ -56,10 +57,10 @@ class EmbeddingModelMapperTests {
     void findEnabledBySpecIgnoresDisabledModel() {
         jdbcTemplate.update("""
                 INSERT INTO embedding_models
-                    (provider, model_name, dimension, distance_metric, enabled)
+                    (provider, model_name, display_name, dimension, distance_metric, enabled)
                 VALUES
-                    (?, ?, ?, ?, ?)
-                """, "openai", "disabled-model", 1024, "cosine", false);
+                    (?, ?, ?, ?, ?, ?)
+                """, "openai", "disabled-model", "Disabled model", 1024, "cosine", false);
 
         EmbeddingModel model = embeddingModelMapper.findEnabledBySpec(
                 "openai", "disabled-model", 1024, "cosine");
