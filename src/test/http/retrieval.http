@@ -1,0 +1,100 @@
+@baseUrl = http://localhost:9000
+
+### Retrieval search - HashMap conflict handling
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "HashMap如何避免冲突?",
+  "topN": 10
+}
+
+### Retrieval search - HashMap structure
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "Java HashMap底层是什么结构?",
+  "topN": 10
+}
+
+### Retrieval search - ConcurrentHashMap locking
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "ConcurrentHashMap put时是怎么加锁的?",
+  "topN": 10
+}
+
+### Retrieval search - HashMap treeify threshold
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "HashMap什么时候会把链表转成红黑树?",
+  "topN": 10
+}
+
+### Retrieval search - HashMap capacity power of two
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "HashMap为什么容量必须是2的幂?",
+  "topN": 10
+}
+
+### Retrieval search - HashMap thread safety
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "HashMap为什么不是线程安全的?",
+  "topN": 10
+}
+
+### Retrieval search - ConcurrentHashMap compound operation
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "ConcurrentHashMap的多个方法组合起来是原子的吗?",
+  "topN": 10
+}
+
+### Retrieval search - invalid blank question
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": " ",
+  "topN": 10
+}
+
+### Retrieval search - invalid TopN
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "Redis 持久化怎么选?",
+  "topN": 0
+}

@@ -23,6 +23,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.huanf.noterag.client.EmbeddingClient;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
+import com.huanf.noterag.config.EmbeddingProperties;
 import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
 import com.huanf.noterag.model.ChunkEmbedding1024;
 import com.huanf.noterag.model.EmbeddingModel;
@@ -32,11 +33,13 @@ class NoteEmbeddingServiceTests {
 
     private final EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
     private final EmbeddingModelResolver embeddingModelResolver = mock(EmbeddingModelResolver.class);
+    private final EmbeddingProperties embeddingProperties = embeddingProperties(10);
     private final ChunkEmbedding1024Mapper chunkEmbedding1024Mapper = mock(ChunkEmbedding1024Mapper.class);
     private final TransactionTemplate transactionTemplate = transactionTemplate();
     private final NoteEmbeddingService noteEmbeddingService = new NoteEmbeddingService(
             embeddingClient,
             embeddingModelResolver,
+            embeddingProperties,
             chunkEmbedding1024Mapper,
             transactionTemplate);
 
@@ -87,6 +90,40 @@ class NoteEmbeddingServiceTests {
     }
 
     @Test
+    void embedAndStoreCallsEmbeddingClientInConfiguredBatchesAndKeepsOrder() {
+        embeddingProperties.setBatchSize(2);
+        NoteChunk firstChunk = noteChunk(11L, "first");
+        NoteChunk secondChunk = noteChunk(12L, "second");
+        NoteChunk thirdChunk = noteChunk(13L, "third");
+        float[] firstEmbedding = embedding(1.0f);
+        float[] secondEmbedding = embedding(2.0f);
+        float[] thirdEmbedding = embedding(3.0f);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
+        when(embeddingClient.embedAll(any()))
+                .thenReturn(List.of(firstEmbedding, secondEmbedding))
+                .thenReturn(List.of(thirdEmbedding));
+        when(chunkEmbedding1024Mapper.insert(any(ChunkEmbedding1024.class))).thenReturn(1);
+
+        int inserted = noteEmbeddingService.embedAndStore(
+                "Java Guide",
+                List.of(firstChunk, secondChunk, thirdChunk));
+
+        assertThat(inserted).isEqualTo(3);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<String>> embeddingTextsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(embeddingClient, times(2)).embedAll(embeddingTextsCaptor.capture());
+        assertThat(embeddingTextsCaptor.getAllValues())
+                .extracting(List::size)
+                .containsExactly(2, 1);
+
+        ArgumentCaptor<ChunkEmbedding1024> storedCaptor = ArgumentCaptor.forClass(ChunkEmbedding1024.class);
+        verify(chunkEmbedding1024Mapper, times(3)).insert(storedCaptor.capture());
+        assertThat(storedCaptor.getAllValues())
+                .extracting(ChunkEmbedding1024::getEmbedding)
+                .containsExactly(firstEmbedding, secondEmbedding, thirdEmbedding);
+    }
+
+    @Test
     void embedAndStoreReturnsZeroForEmptyChunks() {
         int inserted = noteEmbeddingService.embedAndStore("Java Guide", List.of());
 
@@ -117,16 +154,48 @@ class NoteEmbeddingServiceTests {
     }
 
     @Test
-    void embedAndStoreFailsWhenEmbeddingResultCountMismatch() {
+    void embedAndStoreFailsWhenEmbeddingResultCountMismatchAcrossBatches() {
+        embeddingProperties.setBatchSize(1);
         when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
         when(embeddingClient.embedAll(any()))
-                .thenReturn(List.of(embedding(1.0f)));
+                .thenReturn(List.of(embedding(1.0f)))
+                .thenReturn(List.of());
 
         assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide",
                 List.of(noteChunk(11L, "first"), noteChunk(12L, "second"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_RESULT_INVALID);
-                    assertThat(exception).hasMessageContaining("Embedding result count mismatch");
+                    assertThat(exception).hasMessage("Embedding batch result count mismatch at chunk index 1: expected=1, actual=0");
+                });
+        verifyNoInteractions(chunkEmbedding1024Mapper);
+    }
+
+    @Test
+    void embedAndStoreFailsWhenBatchEmbeddingResultIsNull() {
+        embeddingProperties.setBatchSize(2);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
+        when(embeddingClient.embedAll(any())).thenReturn(null);
+
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide",
+                List.of(noteChunk(11L, "first"), noteChunk(12L, "second"))))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_RESULT_INVALID);
+                    assertThat(exception).hasMessage("Embedding batch result count mismatch at chunk index 0: expected=2, actual=null");
+                });
+        verifyNoInteractions(chunkEmbedding1024Mapper);
+    }
+
+    @Test
+    void embedAndStoreFailsWhenBatchEmbeddingResultCountMismatch() {
+        embeddingProperties.setBatchSize(2);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
+        when(embeddingClient.embedAll(any())).thenReturn(List.of(embedding(1.0f)));
+
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide",
+                List.of(noteChunk(11L, "first"), noteChunk(12L, "second"))))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_RESULT_INVALID);
+                    assertThat(exception).hasMessage("Embedding batch result count mismatch at chunk index 0: expected=2, actual=1");
                 });
         verifyNoInteractions(chunkEmbedding1024Mapper);
     }
@@ -175,6 +244,12 @@ class NoteEmbeddingServiceTests {
         model.setId(id);
         model.setDimension(dimension);
         return model;
+    }
+
+    private static EmbeddingProperties embeddingProperties(int batchSize) {
+        EmbeddingProperties properties = new EmbeddingProperties();
+        properties.setBatchSize(batchSize);
+        return properties;
     }
 
     private static float[] embedding(float firstValue) {

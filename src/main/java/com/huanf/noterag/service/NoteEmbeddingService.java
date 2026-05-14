@@ -1,5 +1,6 @@
 package com.huanf.noterag.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -8,6 +9,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.huanf.noterag.client.EmbeddingClient;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
+import com.huanf.noterag.config.EmbeddingProperties;
 import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
 import com.huanf.noterag.model.ChunkEmbedding1024;
 import com.huanf.noterag.model.EmbeddingModel;
@@ -26,17 +28,20 @@ public class NoteEmbeddingService {
 
     private final EmbeddingClient embeddingClient;
     private final EmbeddingModelResolver embeddingModelResolver;
+    private final EmbeddingProperties embeddingProperties;
     private final ChunkEmbedding1024Mapper chunkEmbedding1024Mapper;
     private final TransactionTemplate transactionTemplate;
 
     public NoteEmbeddingService(
             EmbeddingClient embeddingClient,
             EmbeddingModelResolver embeddingModelResolver,
+            EmbeddingProperties embeddingProperties,
             ChunkEmbedding1024Mapper chunkEmbedding1024Mapper,
             TransactionTemplate transactionTemplate
     ) {
         this.embeddingClient = embeddingClient;
         this.embeddingModelResolver = embeddingModelResolver;
+        this.embeddingProperties = embeddingProperties;
         this.chunkEmbedding1024Mapper = chunkEmbedding1024Mapper;
         this.transactionTemplate = transactionTemplate;
     }
@@ -55,11 +60,27 @@ public class NoteEmbeddingService {
                         chunk.getHeadingPath(),
                         chunk.getContent()))
                 .toList();
-        List<float[]> embeddings = embeddingClient.embedAll(embeddingTexts);
+        List<float[]> embeddings = embedInBatches(embeddingTexts);
         validateEmbeddingResults(embeddings, chunks.size(), embeddingModel.getDimension());
 
         Integer inserted = transactionTemplate.execute(status -> insertEmbeddings(chunks, embeddings, embeddingModel.getId()));
         return inserted == null ? 0 : inserted;
+    }
+
+    /**
+     * 按 provider 限制分批调用 embedding API，并保持返回向量顺序与输入 chunk 顺序一致。
+     */
+    private List<float[]> embedInBatches(List<String> embeddingTexts) {
+        int batchSize = embeddingProperties.getBatchSize();
+        List<float[]> embeddings = new ArrayList<>(embeddingTexts.size());
+        for (int fromIndex = 0; fromIndex < embeddingTexts.size(); fromIndex += batchSize) {
+            int toIndex = Math.min(fromIndex + batchSize, embeddingTexts.size());
+            List<String> batchTexts = embeddingTexts.subList(fromIndex, toIndex);
+            List<float[]> batchEmbeddings = embeddingClient.embedAll(batchTexts);
+            validateEmbeddingBatchResults(batchEmbeddings, batchTexts.size(), fromIndex);
+            embeddings.addAll(batchEmbeddings);
+        }
+        return embeddings;
     }
 
     /**
@@ -120,6 +141,19 @@ public class NoteEmbeddingService {
                         "Embedding dimension mismatch at index %d: expected=%d, actual=%s"
                                 .formatted(i, expectedDimension, embedding == null ? "null" : embedding.length));
             }
+        }
+    }
+
+    /**
+     * 每批 embedding 返回后立即校验数量，避免 provider 返回异常结构时产生 NPE 或延迟报错。
+     */
+    private void validateEmbeddingBatchResults(List<float[]> batchEmbeddings, int expectedSize, int batchStartIndex) {
+        if (batchEmbeddings == null || batchEmbeddings.size() != expectedSize) {
+            throw new BusinessException(CodeStatus.EMBEDDING_RESULT_INVALID,
+                    "Embedding batch result count mismatch at chunk index %d: expected=%d, actual=%s"
+                            .formatted(batchStartIndex,
+                                    expectedSize,
+                                    batchEmbeddings == null ? "null" : batchEmbeddings.size()));
         }
     }
 }

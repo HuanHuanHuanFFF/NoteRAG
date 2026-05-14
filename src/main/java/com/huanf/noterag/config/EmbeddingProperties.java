@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Min;
 
 @Setter
 @Getter
@@ -43,6 +44,18 @@ public class EmbeddingProperties {
      */
     private String distanceMetric = "cosine";
 
+    /**
+     * 批量调用 embedding API 时每次提交的文本数量。
+     */
+    @Min(1)
+    private int batchSize = 10;
+
+    /**
+     * 当前 embedding provider 允许的最大 batch size，用于防止误配置。
+     */
+    @Min(1)
+    private int maxBatchSize = 10;
+
     @AssertTrue(message = "provider must not be blank when embedding is enabled")
     public boolean isProviderValidWhenEnabled() {
         return !enabled || hasText(provider);
@@ -61,6 +74,11 @@ public class EmbeddingProperties {
     @AssertTrue(message = "dimension must be greater than 0 when embedding is enabled")
     public boolean isDimensionValidWhenEnabled() {
         return !enabled || (dimension != null && dimension > 0);
+    }
+
+    @AssertTrue(message = "batchSize must be less than or equal to maxBatchSize")
+    public boolean isBatchSizeNotGreaterThanMaxBatchSize() {
+        return batchSize <= maxBatchSize;
     }
 
     private boolean hasText(String value) {
