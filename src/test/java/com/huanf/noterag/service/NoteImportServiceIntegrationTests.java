@@ -3,6 +3,7 @@ package com.huanf.noterag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -118,7 +119,7 @@ class NoteImportServiceIntegrationTests {
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<NoteChunk>> chunksCaptor = ArgumentCaptor.forClass(List.class);
-        verify(noteEmbeddingService).embedAndStore(chunksCaptor.capture());
+        verify(noteEmbeddingService).embedAndStore(eq("Java Guide"), chunksCaptor.capture());
         assertThat(chunksCaptor.getValue()).hasSize(2);
         assertThat(chunksCaptor.getValue())
                 .extracting(NoteChunk::getId)
@@ -137,7 +138,7 @@ class NoteImportServiceIntegrationTests {
         BusinessException embeddingException = new BusinessException(
                 CodeStatus.EMBEDDING_FAILED,
                 "embedding failed");
-        when(noteEmbeddingService.embedAndStore(any())).thenThrow(embeddingException);
+        when(noteEmbeddingService.embedAndStore(any(), any())).thenThrow(embeddingException);
 
         assertThatThrownBy(() -> noteImportService.importText(new ImportTextRequest(
                 "Embedding Failure",

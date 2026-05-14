@@ -14,6 +14,7 @@ import com.huanf.noterag.mapper.EmbeddingModelMapper;
 import com.huanf.noterag.model.ChunkEmbedding1024;
 import com.huanf.noterag.model.EmbeddingModel;
 import com.huanf.noterag.model.NoteChunk;
+import com.huanf.noterag.util.EmbeddingTextFormatter;
 
 /**
  * Note chunk 向量化编排服务。
@@ -47,7 +48,7 @@ public class NoteEmbeddingService {
         this.transactionTemplate = transactionTemplate;
     }
 
-    public int embedAndStore(List<NoteChunk> chunks) {
+    public int embedAndStore(String title, List<NoteChunk> chunks) {
         validateChunks(chunks);
         if (chunks.isEmpty()) {
             return 0;
@@ -82,10 +83,13 @@ public class NoteEmbeddingService {
         }
         validateEmbeddingModel(embeddingModel);
 
-        List<String> contents = chunks.stream()
-                .map(NoteChunk::getContent)
+        List<String> embeddingTexts = chunks.stream()
+                .map(chunk -> EmbeddingTextFormatter.formatChunkForEmbedding(
+                        title,
+                        chunk.getHeadingPath(),
+                        chunk.getContent()))
                 .toList();
-        List<float[]> embeddings = embeddingClient.embedAll(contents);
+        List<float[]> embeddings = embeddingClient.embedAll(embeddingTexts);
         validateEmbeddingResults(embeddings, chunks.size());
 
         Integer inserted = transactionTemplate.execute(status -> insertEmbeddings(chunks, embeddings, embeddingModel.getId()));

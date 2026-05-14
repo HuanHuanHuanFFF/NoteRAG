@@ -59,7 +59,7 @@ public class NoteImportService {
             throw new BusinessException(CodeStatus.INTERNAL_ERROR, "Import transaction returned no result");
         }
 
-        noteEmbeddingService.embedAndStore(savedChunks.chunks());
+        noteEmbeddingService.embedAndStore(title, savedChunks.chunks());
 
         return new ImportTextResponse(savedChunks.noteId(), savedChunks.chunks().size(), charCount, tokenCount);
     }

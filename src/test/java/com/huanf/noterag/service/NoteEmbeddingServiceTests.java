@@ -46,20 +46,39 @@ class NoteEmbeddingServiceTests {
 
     @Test
     void embedAndStoreWritesChunkEmbeddingsWithModelAndVector() {
-        NoteChunk firstChunk = noteChunk(11L, "first");
-        NoteChunk secondChunk = noteChunk(12L, "second");
+        NoteChunk firstChunk = noteChunk(11L, "first", "Java > Collections");
+        NoteChunk secondChunk = noteChunk(12L, "second", null);
         EmbeddingModel embeddingModel = embeddingModel(7L, 1024);
         float[] firstEmbedding = embedding(1.0f);
         float[] secondEmbedding = embedding(2.0f);
         when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
                 .thenReturn(embeddingModel);
-        when(embeddingClient.embedAll(List.of("first", "second")))
+        when(embeddingClient.embedAll(any()))
                 .thenReturn(List.of(firstEmbedding, secondEmbedding));
         when(chunkEmbedding1024Mapper.insert(any(ChunkEmbedding1024.class))).thenReturn(1);
 
-        int inserted = noteEmbeddingService.embedAndStore(List.of(firstChunk, secondChunk));
+        int inserted = noteEmbeddingService.embedAndStore("Java Guide", List.of(firstChunk, secondChunk));
 
         assertThat(inserted).isEqualTo(2);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<String>> embeddingTextsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(embeddingClient).embedAll(embeddingTextsCaptor.capture());
+        assertThat(embeddingTextsCaptor.getValue()).containsExactly(
+                """
+                        文档标题: Java Guide
+                        章节路径: Java > Collections
+
+                        正文:
+                        first""",
+                """
+                        文档标题: Java Guide
+
+                        正文:
+                        second""");
+        assertThat(embeddingTextsCaptor.getValue().get(1))
+                .doesNotContain("章节路径:")
+                .doesNotContain("null");
+
         ArgumentCaptor<ChunkEmbedding1024> captor = ArgumentCaptor.forClass(ChunkEmbedding1024.class);
         verify(chunkEmbedding1024Mapper, times(2)).insert(captor.capture());
         List<ChunkEmbedding1024> storedEmbeddings = captor.getAllValues();
@@ -74,7 +93,7 @@ class NoteEmbeddingServiceTests {
 
     @Test
     void embedAndStoreReturnsZeroForEmptyChunks() {
-        int inserted = noteEmbeddingService.embedAndStore(List.of());
+        int inserted = noteEmbeddingService.embedAndStore("Java Guide", List.of());
 
         assertThat(inserted).isZero();
         verifyNoInteractions(embeddingClient, embeddingModelMapper, chunkEmbedding1024Mapper);
@@ -91,7 +110,7 @@ class NoteEmbeddingServiceTests {
                 chunkEmbedding1024Mapper,
                 transactionTemplate);
 
-        assertThatThrownBy(() -> service.embedAndStore(List.of(noteChunk(11L, "content"))))
+        assertThatThrownBy(() -> service.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_CONFIG_INVALID);
                     assertThat(exception).hasMessage("Embedding is disabled. Set noterag.embedding.enabled=true before embedding chunks.");
@@ -104,7 +123,7 @@ class NoteEmbeddingServiceTests {
         when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
                 .thenReturn(null);
 
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore(List.of(noteChunk(11L, "content"))))
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_MODEL_NOT_FOUND);
                     assertThat(exception).hasMessageContaining("Enabled embedding model config not found");
@@ -114,7 +133,7 @@ class NoteEmbeddingServiceTests {
 
     @Test
     void embedAndStoreFailsWhenChunkHasNoId() {
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore(List.of(noteChunk(null, "content"))))
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(null, "content"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.CHUNK_METADATA_INVALID);
                     assertThat(exception).hasMessage("chunk[0].id must not be null before embedding");
@@ -126,10 +145,10 @@ class NoteEmbeddingServiceTests {
     void embedAndStoreFailsWhenEmbeddingResultCountMismatch() {
         when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
                 .thenReturn(embeddingModel(7L, 1024));
-        when(embeddingClient.embedAll(List.of("first", "second")))
+        when(embeddingClient.embedAll(any()))
                 .thenReturn(List.of(embedding(1.0f)));
 
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore(
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide",
                 List.of(noteChunk(11L, "first"), noteChunk(12L, "second"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_RESULT_INVALID);
@@ -142,10 +161,10 @@ class NoteEmbeddingServiceTests {
     void embedAndStoreFailsWhenEmbeddingDimensionMismatch() {
         when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
                 .thenReturn(embeddingModel(7L, 1024));
-        when(embeddingClient.embedAll(List.of("content")))
+        when(embeddingClient.embedAll(any()))
                 .thenReturn(List.of(new float[] {1.0f, 2.0f}));
 
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore(List.of(noteChunk(11L, "content"))))
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_RESULT_INVALID);
                     assertThat(exception).hasMessage("Embedding dimension mismatch at index 0: expected=1024, actual=2");
@@ -160,9 +179,9 @@ class NoteEmbeddingServiceTests {
                 "Embedding 服务调用失败");
         when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
                 .thenReturn(embeddingModel(7L, 1024));
-        when(embeddingClient.embedAll(List.of("content"))).thenThrow(embeddingException);
+        when(embeddingClient.embedAll(any())).thenThrow(embeddingException);
 
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore(List.of(noteChunk(11L, "content"))))
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isSameAs(embeddingException);
         verifyNoInteractions(chunkEmbedding1024Mapper);
     }
@@ -177,7 +196,7 @@ class NoteEmbeddingServiceTests {
                 chunkEmbedding1024Mapper,
                 transactionTemplate);
 
-        assertThatThrownBy(() -> service.embedAndStore(List.of(noteChunk(11L, "content"))))
+        assertThatThrownBy(() -> service.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_DIMENSION_UNSUPPORTED);
                     assertThat(exception).hasMessage("Only 1024-dimension embeddings can be stored currently, configured dimension=1536");
@@ -191,7 +210,7 @@ class NoteEmbeddingServiceTests {
         when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
                 .thenReturn(embeddingModel(null, 1024));
 
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore(List.of(noteChunk(11L, "content"))))
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_MODEL_NOT_FOUND);
                     assertThat(exception).hasMessage("Embedding model config id must not be null");
@@ -210,8 +229,13 @@ class NoteEmbeddingServiceTests {
     }
 
     private static NoteChunk noteChunk(Long id, String content) {
+        return noteChunk(id, content, null);
+    }
+
+    private static NoteChunk noteChunk(Long id, String content, String headingPath) {
         NoteChunk chunk = new NoteChunk();
         chunk.setId(id);
+        chunk.setHeadingPath(headingPath);
         chunk.setContent(content);
         return chunk;
     }
