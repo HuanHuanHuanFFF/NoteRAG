@@ -23,24 +23,20 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.huanf.noterag.client.EmbeddingClient;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
-import com.huanf.noterag.config.EmbeddingProperties;
 import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
-import com.huanf.noterag.mapper.EmbeddingModelMapper;
 import com.huanf.noterag.model.ChunkEmbedding1024;
 import com.huanf.noterag.model.EmbeddingModel;
 import com.huanf.noterag.model.NoteChunk;
 
 class NoteEmbeddingServiceTests {
 
-    private final EmbeddingProperties embeddingProperties = embeddingProperties(1024);
     private final EmbeddingClient embeddingClient = mock(EmbeddingClient.class);
-    private final EmbeddingModelMapper embeddingModelMapper = mock(EmbeddingModelMapper.class);
+    private final EmbeddingModelResolver embeddingModelResolver = mock(EmbeddingModelResolver.class);
     private final ChunkEmbedding1024Mapper chunkEmbedding1024Mapper = mock(ChunkEmbedding1024Mapper.class);
     private final TransactionTemplate transactionTemplate = transactionTemplate();
     private final NoteEmbeddingService noteEmbeddingService = new NoteEmbeddingService(
-            embeddingProperties,
             embeddingClient,
-            embeddingModelMapper,
+            embeddingModelResolver,
             chunkEmbedding1024Mapper,
             transactionTemplate);
 
@@ -51,8 +47,7 @@ class NoteEmbeddingServiceTests {
         EmbeddingModel embeddingModel = embeddingModel(7L, 1024);
         float[] firstEmbedding = embedding(1.0f);
         float[] secondEmbedding = embedding(2.0f);
-        when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
-                .thenReturn(embeddingModel);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel);
         when(embeddingClient.embedAll(any()))
                 .thenReturn(List.of(firstEmbedding, secondEmbedding));
         when(chunkEmbedding1024Mapper.insert(any(ChunkEmbedding1024.class))).thenReturn(1);
@@ -96,38 +91,18 @@ class NoteEmbeddingServiceTests {
         int inserted = noteEmbeddingService.embedAndStore("Java Guide", List.of());
 
         assertThat(inserted).isZero();
-        verifyNoInteractions(embeddingClient, embeddingModelMapper, chunkEmbedding1024Mapper);
+        verifyNoInteractions(embeddingClient, embeddingModelResolver, chunkEmbedding1024Mapper);
     }
 
     @Test
-    void embedAndStoreFailsWhenEmbeddingIsDisabled() {
-        EmbeddingProperties properties = embeddingProperties(1024);
-        properties.setEnabled(false);
-        NoteEmbeddingService service = new NoteEmbeddingService(
-                properties,
-                embeddingClient,
-                embeddingModelMapper,
-                chunkEmbedding1024Mapper,
-                transactionTemplate);
-
-        assertThatThrownBy(() -> service.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_CONFIG_INVALID);
-                    assertThat(exception).hasMessage("Embedding is disabled. Set noterag.embedding.enabled=true before embedding chunks.");
-                });
-        verifyNoInteractions(embeddingClient, embeddingModelMapper, chunkEmbedding1024Mapper);
-    }
-
-    @Test
-    void embedAndStoreFailsWhenEmbeddingModelConfigMissing() {
-        when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
-                .thenReturn(null);
+    void embedAndStorePropagatesResolverBusinessException() {
+        BusinessException modelException = new BusinessException(
+                CodeStatus.EMBEDDING_MODEL_NOT_FOUND,
+                "model missing");
+        when(embeddingModelResolver.resolveRequired1024Model()).thenThrow(modelException);
 
         assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_MODEL_NOT_FOUND);
-                    assertThat(exception).hasMessageContaining("Enabled embedding model config not found");
-                });
+                .isSameAs(modelException);
         verifyNoInteractions(embeddingClient, chunkEmbedding1024Mapper);
     }
 
@@ -138,13 +113,12 @@ class NoteEmbeddingServiceTests {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.CHUNK_METADATA_INVALID);
                     assertThat(exception).hasMessage("chunk[0].id must not be null before embedding");
                 });
-        verifyNoInteractions(embeddingClient, embeddingModelMapper, chunkEmbedding1024Mapper);
+        verifyNoInteractions(embeddingClient, embeddingModelResolver, chunkEmbedding1024Mapper);
     }
 
     @Test
     void embedAndStoreFailsWhenEmbeddingResultCountMismatch() {
-        when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
-                .thenReturn(embeddingModel(7L, 1024));
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
         when(embeddingClient.embedAll(any()))
                 .thenReturn(List.of(embedding(1.0f)));
 
@@ -159,8 +133,7 @@ class NoteEmbeddingServiceTests {
 
     @Test
     void embedAndStoreFailsWhenEmbeddingDimensionMismatch() {
-        when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
-                .thenReturn(embeddingModel(7L, 1024));
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
         when(embeddingClient.embedAll(any()))
                 .thenReturn(List.of(new float[] {1.0f, 2.0f}));
 
@@ -177,55 +150,12 @@ class NoteEmbeddingServiceTests {
         BusinessException embeddingException = new BusinessException(
                 CodeStatus.EMBEDDING_FAILED,
                 "Embedding 服务调用失败");
-        when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
-                .thenReturn(embeddingModel(7L, 1024));
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
         when(embeddingClient.embedAll(any())).thenThrow(embeddingException);
 
         assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
                 .isSameAs(embeddingException);
         verifyNoInteractions(chunkEmbedding1024Mapper);
-    }
-
-    @Test
-    void embedAndStoreFailsBeforeEmbeddingWhenConfiguredDimensionIsNot1024() {
-        EmbeddingProperties properties = embeddingProperties(1536);
-        NoteEmbeddingService service = new NoteEmbeddingService(
-                properties,
-                embeddingClient,
-                embeddingModelMapper,
-                chunkEmbedding1024Mapper,
-                transactionTemplate);
-
-        assertThatThrownBy(() -> service.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_DIMENSION_UNSUPPORTED);
-                    assertThat(exception).hasMessage("Only 1024-dimension embeddings can be stored currently, configured dimension=1536");
-                });
-        verifyNoInteractions(embeddingModelMapper);
-        verifyNoInteractions(embeddingClient, chunkEmbedding1024Mapper);
-    }
-
-    @Test
-    void embedAndStoreFailsWhenEmbeddingModelIdIsMissing() {
-        when(embeddingModelMapper.findEnabledBySpec("openai", "text-embedding-v4", 1024, "cosine"))
-                .thenReturn(embeddingModel(null, 1024));
-
-        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(noteChunk(11L, "content"))))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.EMBEDDING_MODEL_NOT_FOUND);
-                    assertThat(exception).hasMessage("Embedding model config id must not be null");
-                });
-        verifyNoInteractions(embeddingClient, chunkEmbedding1024Mapper);
-    }
-
-    private static EmbeddingProperties embeddingProperties(int dimension) {
-        EmbeddingProperties properties = new EmbeddingProperties();
-        properties.setEnabled(true);
-        properties.setProvider("openai");
-        properties.setModelName("text-embedding-v4");
-        properties.setDimension(dimension);
-        properties.setDistanceMetric("cosine");
-        return properties;
     }
 
     private static NoteChunk noteChunk(Long id, String content) {

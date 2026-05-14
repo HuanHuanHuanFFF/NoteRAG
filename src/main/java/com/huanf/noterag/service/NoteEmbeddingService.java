@@ -8,9 +8,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.huanf.noterag.client.EmbeddingClient;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
-import com.huanf.noterag.config.EmbeddingProperties;
 import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
-import com.huanf.noterag.mapper.EmbeddingModelMapper;
 import com.huanf.noterag.model.ChunkEmbedding1024;
 import com.huanf.noterag.model.EmbeddingModel;
 import com.huanf.noterag.model.NoteChunk;
@@ -26,24 +24,19 @@ import com.huanf.noterag.util.EmbeddingTextFormatter;
 @Service
 public class NoteEmbeddingService {
 
-    private static final int SUPPORTED_DIMENSION_1024 = 1024;
-
-    private final EmbeddingProperties embeddingProperties;
     private final EmbeddingClient embeddingClient;
-    private final EmbeddingModelMapper embeddingModelMapper;
+    private final EmbeddingModelResolver embeddingModelResolver;
     private final ChunkEmbedding1024Mapper chunkEmbedding1024Mapper;
     private final TransactionTemplate transactionTemplate;
 
     public NoteEmbeddingService(
-            EmbeddingProperties embeddingProperties,
             EmbeddingClient embeddingClient,
-            EmbeddingModelMapper embeddingModelMapper,
+            EmbeddingModelResolver embeddingModelResolver,
             ChunkEmbedding1024Mapper chunkEmbedding1024Mapper,
             TransactionTemplate transactionTemplate
     ) {
-        this.embeddingProperties = embeddingProperties;
         this.embeddingClient = embeddingClient;
-        this.embeddingModelMapper = embeddingModelMapper;
+        this.embeddingModelResolver = embeddingModelResolver;
         this.chunkEmbedding1024Mapper = chunkEmbedding1024Mapper;
         this.transactionTemplate = transactionTemplate;
     }
@@ -54,34 +47,7 @@ public class NoteEmbeddingService {
             return 0;
         }
 
-        if (!embeddingProperties.isEnabled()) {
-            throw new BusinessException(CodeStatus.EMBEDDING_CONFIG_INVALID,
-                    "Embedding is disabled. Set noterag.embedding.enabled=true before embedding chunks.");
-        }
-
-        validateEmbeddingConfig();
-
-        if (!Integer.valueOf(SUPPORTED_DIMENSION_1024).equals(embeddingProperties.getDimension())) {
-            throw new BusinessException(CodeStatus.EMBEDDING_DIMENSION_UNSUPPORTED,
-                    "Only 1024-dimension embeddings can be stored currently, configured dimension=%d"
-                            .formatted(embeddingProperties.getDimension()));
-        }
-
-        EmbeddingModel embeddingModel = embeddingModelMapper.findEnabledBySpec(
-                embeddingProperties.getProvider(),
-                embeddingProperties.getModelName(),
-                embeddingProperties.getDimension(),
-                embeddingProperties.getDistanceMetric());
-        if (embeddingModel == null) {
-            throw new BusinessException(CodeStatus.EMBEDDING_MODEL_NOT_FOUND,
-                    "Enabled embedding model config not found: provider=%s, modelName=%s, dimension=%d, distanceMetric=%s"
-                            .formatted(
-                                    embeddingProperties.getProvider(),
-                                    embeddingProperties.getModelName(),
-                                    embeddingProperties.getDimension(),
-                                    embeddingProperties.getDistanceMetric()));
-        }
-        validateEmbeddingModel(embeddingModel);
+        EmbeddingModel embeddingModel = embeddingModelResolver.resolveRequired1024Model();
 
         List<String> embeddingTexts = chunks.stream()
                 .map(chunk -> EmbeddingTextFormatter.formatChunkForEmbedding(
@@ -90,31 +56,10 @@ public class NoteEmbeddingService {
                         chunk.getContent()))
                 .toList();
         List<float[]> embeddings = embeddingClient.embedAll(embeddingTexts);
-        validateEmbeddingResults(embeddings, chunks.size());
+        validateEmbeddingResults(embeddings, chunks.size(), embeddingModel.getDimension());
 
         Integer inserted = transactionTemplate.execute(status -> insertEmbeddings(chunks, embeddings, embeddingModel.getId()));
         return inserted == null ? 0 : inserted;
-    }
-
-    /**
-     * 校验 embedding 功能配置。
-     *
-     * <p>应用可以在 embedding 关闭或未完整配置时启动；但真正执行向量化时，
-     * provider、modelName、distanceMetric 和 dimension 必须完整有效。</p>
-     */
-    private void validateEmbeddingConfig() {
-        if (isBlank(embeddingProperties.getProvider())
-                || isBlank(embeddingProperties.getModelName())
-                || isBlank(embeddingProperties.getDistanceMetric())
-                || embeddingProperties.getDimension() == null
-                || embeddingProperties.getDimension() <= 0) {
-            throw new BusinessException(CodeStatus.EMBEDDING_CONFIG_INVALID,
-                    "Embedding config is invalid: provider, modelName, distanceMetric must be set and dimension must be greater than 0");
-        }
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     /**
@@ -132,22 +77,6 @@ public class NoteEmbeddingService {
             inserted += chunkEmbedding1024Mapper.insert(chunkEmbedding);
         }
         return inserted;
-    }
-
-    /**
-     * 校验数据库中的 embedding model 配置与当前运行配置一致。
-     */
-    private void validateEmbeddingModel(EmbeddingModel embeddingModel) {
-        if (embeddingModel.getId() == null) {
-            throw new BusinessException(CodeStatus.EMBEDDING_MODEL_NOT_FOUND,
-                    "Embedding model config id must not be null");
-        }
-        if (embeddingModel.getDimension() == null
-                || !embeddingModel.getDimension().equals(embeddingProperties.getDimension())) {
-            throw new BusinessException(CodeStatus.EMBEDDING_RESULT_INVALID,
-                    "Embedding model dimension mismatch: expected=%d, actual=%s"
-                            .formatted(embeddingProperties.getDimension(), embeddingModel.getDimension()));
-        }
     }
 
     /**
@@ -177,14 +106,13 @@ public class NoteEmbeddingService {
     /**
      * 校验模型返回结果与输入 chunk 一一对应，且维度符合当前配置。
      */
-    private void validateEmbeddingResults(List<float[]> embeddings, int expectedSize) {
+    private void validateEmbeddingResults(List<float[]> embeddings, int expectedSize, int expectedDimension) {
         if (embeddings == null || embeddings.size() != expectedSize) {
             throw new BusinessException(CodeStatus.EMBEDDING_RESULT_INVALID,
                     "Embedding result count mismatch: expected=%d, actual=%s"
                             .formatted(expectedSize, embeddings == null ? "null" : embeddings.size()));
         }
 
-        int expectedDimension = embeddingProperties.getDimension();
         for (int i = 0; i < embeddings.size(); i++) {
             float[] embedding = embeddings.get(i);
             if (embedding == null || embedding.length != expectedDimension) {
