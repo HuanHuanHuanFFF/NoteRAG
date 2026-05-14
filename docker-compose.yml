@@ -1,13 +1,13 @@
 services:
   db:
     image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg16}
-    container_name: ${POSTGRES_CONTAINER_NAME:-noterag-db}
+    container_name: ${POSTGRES_CONTAINER_NAME:-noterag-spring-ai-default-db}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - noterag-postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -19,7 +19,7 @@ services:
 
   app:
     build: .
-    container_name: ${APP_CONTAINER_NAME:-noterag-app}
+    container_name: ${APP_CONTAINER_NAME:-noterag-spring-ai-default-app}
     depends_on:
       db:
         condition: service_healthy
@@ -43,6 +43,7 @@ services:
       NOTERAG_EMBEDDING_MAX_BATCH_SIZE: ${NOTERAG_EMBEDDING_MAX_BATCH_SIZE:-10}
 
       # Markdown chunking parameters.
+      NOTERAG_CHUNKING_STRATEGY: ${NOTERAG_CHUNKING_STRATEGY:-spring-ai-default}
       NOTERAG_CHUNKING_MIN_TARGET_TOKENS: ${NOTERAG_CHUNKING_MIN_TARGET_TOKENS:-300}
       NOTERAG_CHUNKING_MAX_TARGET_TOKENS: ${NOTERAG_CHUNKING_MAX_TARGET_TOKENS:-800}
       NOTERAG_CHUNKING_HARD_MAX_TOKENS: ${NOTERAG_CHUNKING_HARD_MAX_TOKENS:-1000}
@@ -52,7 +53,8 @@ services:
       NOTERAG_RETRIEVAL_DEFAULT_TOP_N: ${NOTERAG_RETRIEVAL_DEFAULT_TOP_N:-20}
       NOTERAG_RETRIEVAL_MAX_TOP_N: ${NOTERAG_RETRIEVAL_MAX_TOP_N:-50}
     ports:
-      - "${APP_HOST_PORT:-9000}:${SERVER_PORT:-9000}"
+      - "${APP_HOST_PORT:-9001}:${SERVER_PORT:-9000}"
 
 volumes:
   noterag-postgres-data:
+    name: ${POSTGRES_VOLUME_NAME:-noterag-spring-ai-default-postgres-data}

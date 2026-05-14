@@ -7,6 +7,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.huanf.noterag.chunk.ChunkingStrategy;
 import com.huanf.noterag.chunk.MarkdownChunkTransformer;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
@@ -23,20 +24,20 @@ public class NoteImportService {
 
     private final NoteMapper noteMapper;
     private final NoteChunkMapper noteChunkMapper;
-    private final MarkdownChunkTransformer markdownChunkTransformer;
+    private final ChunkingStrategy chunkingStrategy;
     private final NoteEmbeddingService noteEmbeddingService;
     private final TransactionTemplate transactionTemplate;
 
     public NoteImportService(
             NoteMapper noteMapper,
             NoteChunkMapper noteChunkMapper,
-            MarkdownChunkTransformer markdownChunkTransformer,
+            ChunkingStrategy chunkingStrategy,
             NoteEmbeddingService noteEmbeddingService,
             TransactionTemplate transactionTemplate
     ) {
         this.noteMapper = noteMapper;
         this.noteChunkMapper = noteChunkMapper;
-        this.markdownChunkTransformer = markdownChunkTransformer;
+        this.chunkingStrategy = chunkingStrategy;
         this.noteEmbeddingService = noteEmbeddingService;
         this.transactionTemplate = transactionTemplate;
     }
@@ -72,7 +73,7 @@ public class NoteImportService {
         note.setTokenCount(tokenCount);
         noteMapper.insert(note);
 
-        List<Document> chunkDocuments = markdownChunkTransformer.transform(
+        List<Document> chunkDocuments = chunkingStrategy.transform(
                 List.of(new Document(
                         content,
                         Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, note.getId()))

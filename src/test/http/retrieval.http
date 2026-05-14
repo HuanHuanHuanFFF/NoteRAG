@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:9000
+@baseUrl = http://localhost:9001
 
 ### Retrieval search - HashMap conflict handling
 # Expected: 200 OK
