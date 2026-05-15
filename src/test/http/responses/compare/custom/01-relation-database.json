@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 3,
+        "chunkId": 94,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 基础 > 什么是关系型数据库？",
+        "content": "顾名思义，关系型数据库（RDB，Relational Database）就是一种建立在关系模型的基础上的数据库。关系模型表明了数据库中所存储的数据之间的联系（一对一、一对多、多对多）。\n\n关系型数据库中，我们的数据都被存放在了各种表中（比如用户表），表中的每一行就存放着一条数据（比如一个用户的信息）。\n\n![关系型数据库表关系](https://oss.javaguide.cn/java-guide-blog/5e3c1a71724a38245aa43b02_99bf70d46cc247be878de9d3a88f0c44.png)\n\n大部分关系型数据库都使用 SQL 来操作数据库中的数据。并且，大部分关系型数据库都支持事务的四大特性(ACID)。\n\n**有哪些常见的关系型数据库呢？**\n\nMySQL、PostgreSQL、Oracle、SQL Server、SQLite（微信本地的聊天记录的存储就是用的 SQLite） ……。",
+        "score": 0.731920437102293
+      },
+      {
+        "noteId": 3,
+        "chunkId": 95,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 基础 > 什么是 SQL？",
+        "content": "SQL 是一种结构化查询语言(Structured Query Language)，专门用来与数据库打交道，目的是提供一种从数据库中读写数据的简单有效的方法。\n\n几乎所有的主流关系数据库都支持 SQL ，适用性非常强。并且，一些非关系型数据库也兼容 SQL 或者使用的是类似于 SQL 的查询语言。\n\nSQL 可以帮助我们：\n\n- 新建数据库、数据表、字段；\n- 在数据库中增加，删除，修改，查询数据；\n- 新建视图、函数、存储过程；\n- 对数据库中的数据进行简单的数据分析；\n- 搭配 Hive，Spark SQL 做大数据；\n- 搭配 SQLFlow 做机器学习；\n- ……",
+        "score": 0.4543018639087709
+      },
+      {
+        "noteId": 3,
+        "chunkId": 133,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 什么是数据库事务？",
+        "content": "ication（数据密集型应用系统设计）》](https://book.douban.com/subject/30329536/) 的作者在他的这本书中如是说：\n\n> Atomicity, isolation, and durability are properties of the database, whereas consis‐\n> tency (in the ACID sense) is a property of the application. The application may rely\n> on the database’s atomicity and isolation properties in order to achieve consistency,\n> but it’s not up to the database alone.\n>\n> 翻译过来的意思是：原子性，隔离性和持久性是数据库的属性，而一致性（在 ACID 意义上）是应用程序的属性。应用可能依赖数据库的原子性和隔离属性来实现一致性，但这并不仅取决于数据库。因此，字母 C 不属于 ACID 。\n\n《Designing Data-Intensive Application（数据密集型应用系统设计）》这本书强推一波，值得读很多遍！豆瓣有接近 90% 的人看了这本书之后给了五星好评。另外，中文翻译版本已经在 GitHub 开源，地址：[https://github.com/Vonng/ddia](https://github.com/Vonng/ddia) 。\n\n![](https://oss.javaguide.cn/github/javaguide/books/ddia.png)",
+        "score": 0.44153008910475644
+      },
+      {
+        "noteId": 3,
+        "chunkId": 132,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 什么是数据库事务？",
+        "content": "大多数情况下，我们在谈论事务的时候，如果没有特指**分布式事务**，往往指的就是**数据库事务**。\n\n数据库事务在我们日常开发中接触的最多了。如果你的项目属于单体架构的话，你接触到的往往就是数据库事务了。\n\n**那数据库事务有什么作用呢？**\n\n简单来说，数据库事务可以保证多个对数据库的操作（也就是 SQL 语句）构成一个逻辑上的整体。构成这个逻辑上的整体的这些数据库操作遵循：**要么全部执行成功,要么全部不执行** 。\n\n```sql\n# 开启一个事务\nSTART TRANSACTION;\n# 多条 SQL 语句\nSQL1,SQL2...\n## 提交事务\nCOMMIT;\n```\n\n![数据库事务示意图](https://oss.javaguide.cn/github/javaguide/mysql/%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)\n\n另外，关系型数据库（例如：`MySQL`、`SQL Server`、`Oracle` 等）事务都有 **ACID** 特性：\n\n![ACID](https://oss.javaguide.cn/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3. **隔离性**（`Isolation`）：并发访问数据库时，一个用户的事务不被其他事务所干扰，各并发事务之间数据库是独立的；\n4. **持久性**（`Durability`）：一个事务被提交之后。它对数据库中数据的改变是持久的，即使数据库发生故障也不应该对其有任何影响。\n\n🌈 这里要额外补充一点：**只有保证了事务的持久性、原子性、隔离性之后，一致性才能得到保障。也就是说 A、I、D 是手段，C 是目的！** 想必大家也和我一样，被 ACID 这个概念被误导了很久! 我也是看周志明老师的公开课[《周志明的软件架构课》](https://time.geekbang.org/opencourse/intro/100064201)才搞清楚的（多看好书！！！）。\n\n![AID->C](https://oss.javaguide.cn/github/javaguide/mysql/AID-%3EC.png)\n\n另外，DDIA 也就是 [《Designing Data-Intensive Application（数据密集型应用系统设计）》](https://book.douban.com/subject/30329536/) 的作者在他的这本书中如是说：",
+        "score": 0.43276307387572166
+      },
+      {
+        "noteId": 3,
+        "chunkId": 96,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 基础 > 什么是 MySQL？",
+        "content": "![](https://oss.javaguide.cn/github/javaguide/csdn/20210327143351823.png)\n\n**MySQL 是一种关系型数据库，主要用于持久化存储我们的系统中的一些数据比如用户信息。**\n\n由于 MySQL 是开源免费并且比较成熟的数据库，因此，MySQL 被大量使用在各种系统中。任何人都可以在 GPL(General Public License) 的许可下下载并根据个性化的需要对其进行修改。MySQL 的默认端口号是**3306**。",
+        "score": 0.4234539018002814
+      },
+      {
+        "noteId": 3,
+        "chunkId": 131,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 什么是事务？",
+        "content": "我们设想一个场景，这个场景中我们需要插入多条相关联的数据到数据库，不幸的是，这个过程可能会遇到下面这些问题：\n\n- 数据库中途突然因为某些原因挂掉了。\n- 客户端突然因为网络原因连接不上数据库了。\n- 并发访问数据库时，多个线程同时写入数据库，覆盖了彼此的更改。\n- ……\n\n上面的任何一个问题都可能会导致数据的不一致性。为了保证数据的一致性，系统必须能够处理这些问题。事务就是我们抽象出来简化这些问题的首选机制。事务的概念起源于数据库，目前，已经成为一个比较广泛的概念。\n\n**何为事务？** 一言蔽之，**事务是逻辑上的一组操作，要么都执行，要么都不执行。**\n\n事务最经典也经常被拿出来说例子就是转账了。假如小明要给小红转账 1000 元，这个转账会涉及到两个关键操作，这两个操作必须都成功或者都失败。\n\n1. 将小明的余额减少 1000 元\n2. 将小红的余额增加 1000 元。\n\n事务会把这两个操作就可以看成逻辑上的一个整体，这个整体包含的操作要么都成功，要么都要失败。这样就不会出现小明余额减少而小红的余额却并没有增加的情况。\n\n![事务示意图](https://oss.javaguide.cn/github/javaguide/mysql/%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)",
+        "score": 0.419974341397106
+      },
+      {
+        "noteId": 3,
+        "chunkId": 163,
+        "title": "可以命中索引",
+        "headingPath": "参考",
+        "content": "- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>\n- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>\n- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>\n- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
+        "score": 0.3829964171054121
+      },
+      {
+        "noteId": 3,
+        "chunkId": 97,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 基础 > ⭐️MySQL 有什么优点？",
+        "content": "这个问题本质上是在问 MySQL 如此流行的原因。\n\nMySQL 成功可以归功于在**生态、功能和运维**这三个层面上的综合优势。\n\n**第一，从生态和成本角度看，它的护城河非常深。**\n\n- **开源免费：** 这是它得以广泛普及的基石。任何公司和个人都可以免费使用，极大地降低了技术门槛和初期成本。\n- **社区庞大，生态完善：** 经过几十年的发展，MySQL 拥有极其活跃的社区和丰富的生态系统。这意味着无论你遇到什么问题，几乎都能在网上找到解决方案；同时，市面上所有的主流编程语言、框架、ORM 工具、监控系统都对 MySQL 有完美的支持。它的文档也非常丰富，学习资源唾手可得。\n\n**第二，从核心技术功能上看，它非常强大且均衡。**\n\n- **强大的事务支持：** 这是它作为关系型数据库的立身之本。值得一提的是，InnoDB 默认的可重复读（REPEATABLE-READ）隔离级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。\n- **优秀的性能和可扩展性：** MySQL 本身经过了海量互联网业务的严酷考验，单机性能非常出色。更重要的是，它围绕着水平扩展，形成了一套非常成熟的架构方案，比如主从复制、读写分离、以及通过中间件实现的分库分表。这让它能够支撑从初创公司到大型互联网平台的各种规模的业务。\n\n**第三，从运维和使用角度看，它非常‘亲民’。**\n\n- **开箱即用，上手简单：** 相比于 Oracle 等大型商业数据库，MySQL 的安装、配置和日常使用都非常简单直观，学习曲线平缓，对于开发者和初级 DBA 非常友好。\n- **维护成本低：** 由于其简单性和庞大的社区，找到相关的运维人才和解决方案都相对容易，整体的维护成本也更低。\n\n值得一提的是最近几年，PostgreSQL 的势头很猛，甚至压过了 MySQL。网上出现了很多抨击诋毁 MySQL 的文章，笔者认为任何无脑抨击其中一方或者吹捧另外一方的行为都是不可取的。\n\n笔者也写过一篇文章分享对这两个关系型数据库代表的看法，感兴趣的可以看看：[MySQL 被干成老二了？](https://mp.weixin.qq.com/s/APWD-PzTcTqGUuibAw7GGw)。",
+        "score": 0.3807036422844359
+      },
+      {
+        "noteId": 3,
+        "chunkId": 98,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型",
+        "content": "MySQL 字段类型可以简单分为三大类：\n\n- **数值类型**：整型（TINYINT、SMALLINT、MEDIUMINT、INT 和 BIGINT）、浮点型（FLOAT 和 DOUBLE）、定点型（DECIMAL）\n- **字符串类型**：CHAR、VARCHAR、TINYTEXT、TEXT、MEDIUMTEXT、LONGTEXT、TINYBLOB、BLOB、MEDIUMBLOB 和 LONGBLOB 等，最常用的是 CHAR 和 VARCHAR。\n- **日期时间类型**：YEAR、TIME、DATE、DATETIME 和 TIMESTAMP 等。\n\n下面这张图不是我画的，忘记是从哪里保存下来的了，总结的还蛮不错的。\n\n![MySQL 常见字段类型总结](https://oss.javaguide.cn/github/javaguide/mysql/summary-of-mysql-field-types.png)\n\nMySQL 字段类型比较多，我这里会挑选一些日常开发使用很频繁且面试常问的字段类型，以面试问题的形式来详细介绍。如无特殊说明，针对的都是 InnoDB 存储引擎。\n\n另外，推荐阅读一下《高性能 MySQL(第三版)》的第四章，有详细介绍 MySQL 字段类型优化。",
+        "score": 0.3758307619397476
+      },
+      {
+        "noteId": 3,
+        "chunkId": 139,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 不可重复读和幻读有什么区别？",
+        "content": "- 不可重复读的重点是内容修改或者记录减少比如多次读取一条记录发现其中某些记录的值被修改；\n- 幻读的重点在于记录新增比如多次执行同一条查询语句（DQL）时，发现查到的记录增加了。\n\n幻读其实可以看作是不可重复读的一种特殊情况，单独把幻读区分出来的原因主要是解决幻读和不可重复读的方案不一样。\n\n举个例子：执行 `delete` 和 `update` 操作的时候，可以直接对记录加锁，保证事务安全。而执行 `insert` 操作的时候，由于记录锁（Record Lock）只能锁住已经存在的记录，为了避免插入新记录，需要依赖间隙锁（Gap Lock）。也就是说执行 `insert` 操作的时候需要依赖 Next-Key Lock（Record Lock+Gap Lock） 进行加锁来保证不出现幻读。",
+        "score": 0.36055795189392925
+      }
+    ]
+  }
+}

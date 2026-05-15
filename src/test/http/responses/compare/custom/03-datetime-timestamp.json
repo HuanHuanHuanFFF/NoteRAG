@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 3,
+        "chunkId": 104,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > ⭐️DATETIME 和 TIMESTAMP 的区别是什么？如何选择？",
+        "content": "DATETIME 类型没有时区信息，TIMESTAMP 和时区有关。\n\nTIMESTAMP 只需要使用 4 个字节的存储空间，但是 DATETIME 需要耗费 8 个字节的存储空间。但是，这样同样造成了一个问题，Timestamp 表示的时间范围更小。\n\n- DATETIME：'1000-01-01 00:00:00.000000' 到 '9999-12-31 23:59:59.999999'\n- Timestamp：'1970-01-01 00:00:01.000000' UTC 到 '2038-01-19 03:14:07.999999' UTC\n\n`TIMESTAMP` 的核心优势在于其内建的时区处理能力。数据库负责 UTC 存储和基于会话时区的自动转换，简化了需要处理多时区应用的开发。如果应用需要处理多时区，或者希望数据库能自动管理时区转换，`TIMESTAMP` 是自然的选择（注意其时间范围限制，也就是 2038 年问题）。\n\n如果应用场景不涉及时区转换，或者希望应用程序完全控制时区逻辑，并且需要表示 2038 年之后的时间，`DATETIME` 是更稳妥的选择。\n\n关于两者的详细对比以及日期存储类型选择建议，请参考我写的这篇文章： [MySQL 时间类型数据存储建议](./some-thoughts-on-database-storage-time.md)。",
+        "score": 0.8638736849057062
+      },
+      {
+        "noteId": 3,
+        "chunkId": 108,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > ⭐️手机号存储用 INT 还是 VARCHAR？",
+        "content": "）来精确计算和设定。通常会需要更长的 VARCHAR 长度，例如 VARCHAR(128), VARCHAR(256) 甚至更长。\n\n最后，来一张表格总结一下：\n\n| 对比维度         | VARCHAR 类型（推荐）              | INT/BIGINT 类型（不推荐）    | 说明/备注                                                                   |\n| ---------------- | --------------------------------- | ---------------------------- | --------------------------------------------------------------------------- |\n| **格式兼容性**   | ✔ 能存前导零、\"+\"、\"-\"、空格等   | ✘ 自动丢失前导零，不能存符号 | VARCHAR 能原样存储各种手机号格式，INT/BIGINT 只支持单纯数字，且前导零会消失 |\n| **完整性**       | ✔ 不丢失任何格式信息             | ✘ 丢失格式信息               | 例如 \"013800012345\" 存进 INT 会变成 13800012345，\"+\" 也无法存储             |\n| **非算术性**     | ✔ 适合存储“标识符”               | ✘ 只适合做数值运算           | 手机号本质是字符串标识符，不做数学运算，VARCHAR 更贴合实际用途              |\n| **查询灵活性**   | ✔ 支持 `LIKE '138%'` 等          | ✘ 查询前缀不方便或性能差     | 使用 VARCHAR 可高效按号段/前缀查询，数字类型需转为字符串或其他复杂处理      |\n| **加密存储支持** | ✔ 可存储加密密文（字母、符号等） | ✘ 无法存储密文               | 加密手机号后密文是字符串/二进制，只有 VARCHAR、TEXT、BLOB 等能兼容          |\n| **长度设置建议** | 15~20（未加密），加密视情况而定   | 无意义                       | 不加密时 VARCHAR(15~20) 通用，加密后长度取决于算法和编码方式                |",
+        "score": 0.5169967700840977
+      },
+      {
+        "noteId": 3,
+        "chunkId": 98,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型",
+        "content": "MySQL 字段类型可以简单分为三大类：\n\n- **数值类型**：整型（TINYINT、SMALLINT、MEDIUMINT、INT 和 BIGINT）、浮点型（FLOAT 和 DOUBLE）、定点型（DECIMAL）\n- **字符串类型**：CHAR、VARCHAR、TINYTEXT、TEXT、MEDIUMTEXT、LONGTEXT、TINYBLOB、BLOB、MEDIUMBLOB 和 LONGBLOB 等，最常用的是 CHAR 和 VARCHAR。\n- **日期时间类型**：YEAR、TIME、DATE、DATETIME 和 TIMESTAMP 等。\n\n下面这张图不是我画的，忘记是从哪里保存下来的了，总结的还蛮不错的。\n\n![MySQL 常见字段类型总结](https://oss.javaguide.cn/github/javaguide/mysql/summary-of-mysql-field-types.png)\n\nMySQL 字段类型比较多，我这里会挑选一些日常开发使用很频繁且面试常问的字段类型，以面试问题的形式来详细介绍。如无特殊说明，针对的都是 InnoDB 存储引擎。\n\n另外，推荐阅读一下《高性能 MySQL(第三版)》的第四章，有详细介绍 MySQL 字段类型优化。",
+        "score": 0.5147033605509956
+      },
+      {
+        "noteId": 3,
+        "chunkId": 100,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > CHAR 和 VARCHAR 的区别是什么？",
+        "content": "CHAR 和 VARCHAR 是最常用到的字符串类型，两者的主要区别在于：**CHAR 是定长字符串，VARCHAR 是变长字符串。**\n\nCHAR 在存储时会在右边填充空格以达到指定的长度，检索时会去掉空格；VARCHAR 在存储时需要使用 1 或 2 个额外字节记录字符串的长度，检索时不需要处理。\n\nCHAR 更适合存储长度较短或者长度都差不多的字符串，例如 Bcrypt 算法、MD5 算法加密后的密码、身份证号码。VARCHAR 类型适合存储长度不确定或者差异较大的字符串，例如用户昵称、文章标题等。\n\nCHAR(M) 和 VARCHAR(M) 的 M 都代表能够保存的字符数的最大值，无论是字母、数字还是中文，每个都只占用一个字符。",
+        "score": 0.5095197547054583
+      },
+      {
+        "noteId": 3,
+        "chunkId": 133,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 什么是数据库事务？",
+        "content": "ication（数据密集型应用系统设计）》](https://book.douban.com/subject/30329536/) 的作者在他的这本书中如是说：\n\n> Atomicity, isolation, and durability are properties of the database, whereas consis‐\n> tency (in the ACID sense) is a property of the application. The application may rely\n> on the database’s atomicity and isolation properties in order to achieve consistency,\n> but it’s not up to the database alone.\n>\n> 翻译过来的意思是：原子性，隔离性和持久性是数据库的属性，而一致性（在 ACID 意义上）是应用程序的属性。应用可能依赖数据库的原子性和隔离属性来实现一致性，但这并不仅取决于数据库。因此，字母 C 不属于 ACID 。\n\n《Designing Data-Intensive Application（数据密集型应用系统设计）》这本书强推一波，值得读很多遍！豆瓣有接近 90% 的人看了这本书之后给了五星好评。另外，中文翻译版本已经在 GitHub 开源，地址：[https://github.com/Vonng/ddia](https://github.com/Vonng/ddia) 。\n\n![](https://oss.javaguide.cn/github/javaguide/books/ddia.png)",
+        "score": 0.5046277335951813
+      },
+      {
+        "noteId": 3,
+        "chunkId": 107,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > ⭐️手机号存储用 INT 还是 VARCHAR？",
+        "content": "存储手机号，**强烈推荐使用 VARCHAR 类型**，而不是 INT 或 BIGINT。主要原因如下：\n\n1. **格式兼容性与完整性：**\n    - 手机号可能包含前导零（如某些地区的固话区号）、国家代码前缀（'+'），甚至可能带有分隔符（'-' 或空格）。INT 或 BIGINT 这种数字类型会自动丢失这些重要的格式信息（比如前导零会被去掉，'+' 和 '-' 无法存储）。\n    - VARCHAR 可以原样存储各种格式的号码，无论是国内的 11 位手机号，还是带有国家代码的国际号码，都能完美兼容。\n2. **非算术性：**手机号虽然看起来是数字，但我们从不对它进行数学运算（比如求和、平均值）。它本质上是一个标识符，更像是一个字符串。用 VARCHAR 更符合其数据性质。\n3. **查询灵活性：**\n    - 业务中常常需要根据号段（前缀）进行查询，例如查找所有 \"138\" 开头的用户。使用 VARCHAR 类型配合 `LIKE '138%'` 这样的 SQL 查询既直观又高效。\n    - 如果使用数字类型，进行类似的前缀匹配通常需要复杂的函数转换（如 CAST 或 SUBSTRING），或者使用范围查询（如 `WHERE phone >= 13800000000 AND phone < 13900000000`），这不仅写法繁琐，而且可能无法有效利用索引，导致性能下降。\n4. **加密存储的要求（非常关键）：**\n    - 出于数据安全和隐私合规的要求，手机号这类敏感个人信息通常必须加密存储在数据库中。\n    - 加密后的数据（密文）是一长串字符串（通常由字母、数字、符号组成，或经过 Base64/Hex 编码），INT 或 BIGINT 类型根本无法存储这种密文。只有 VARCHAR、TEXT 或 BLOB 等类型可以。\n\n**关于 VARCHAR 长度的选择：**\n\n- **如果不加密存储（强烈不推荐！）：** 考虑到国际号码和可能的格式符，VARCHAR(20) 到 VARCHAR(32) 通常是一个比较安全的范围，足以覆盖全球绝大多数手机号格式。VARCHAR(15) 可能对某些带国家码和格式符的号码来说不够用。\n- **如果进行加密存储（推荐的标准做法）：** 长度必须根据所选加密算法产生的密文最大长度，以及可能的编码方式（如 Base64 会使长度增加约 1/3）来精确计算和设定。通常会需要更长的 VARCHAR 长度，例如 VARCHAR(128), VARCHAR(256) 甚至更长。\n\n最后，来一张表格总结一下：",
+        "score": 0.504078059659352
+      },
+      {
+        "noteId": 3,
+        "chunkId": 103,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > 为什么不推荐使用 TEXT 和 BLOB？",
+        "content": "TEXT 类型类似于 CHAR（0-255 字节）和 VARCHAR（0-65,535 字节），但可以存储更长的字符串，即长文本数据，例如博客内容。\n\n| 类型       | 可存储大小           | 用途           |\n| ---------- | -------------------- | -------------- |\n| TINYTEXT   | 0-255 字节           | 一般文本字符串 |\n| TEXT       | 0-65,535 字节        | 长文本字符串   |\n| MEDIUMTEXT | 0-16,772,150 字节    | 较大文本数据   |\n| LONGTEXT   | 0-4,294,967,295 字节 | 极大文本数据   |\n\nBLOB 类型主要用于存储二进制大对象，例如图片、音视频等文件。\n\n| 类型       | 可存储大小 | 用途                     |\n| ---------- | ---------- | ------------------------ |\n| TINYBLOB   | 0-255 字节 | 短文本二进制字符串       |\n| BLOB       | 0-65KB     | 二进制字符串             |\n| MEDIUMBLOB | 0-16MB     | 二进制形式的长文本数据   |\n| LONGBLOB   | 0-4GB      | 二进制形式的极大文本数据 |\n\n在日常开发中，很少使用 TEXT 类型，但偶尔会用到，而 BLOB 类型则基本不常用。如果预期长度范围可以通过 VARCHAR 来满足，建议避免使用 TEXT。\n\n数据库规范通常不推荐使用 BLOB 和 TEXT 类型，这两种类型具有一些缺点和限制，例如：\n\n- 不能有默认值。\n- 在使用临时表时无法使用内存临时表，只能在磁盘上创建临时表（《高性能 MySQL》书中有提到）。\n- 检索效率较低。\n- 不能直接创建索引，需要指定前缀长度。\n- 可能会消耗大量的网络和 IO 带宽。\n- 可能导致表上的 DML 操作变慢。\n- ……",
+        "score": 0.49469736250058727
+      },
+      {
+        "noteId": 3,
+        "chunkId": 154,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 性能优化 > MySQL 如何存储 IP 地址？",
+        "content": "可以将 IP 地址转换成整形数据存储，性能更好，占用空间也更小。\n\nMySQL 提供了两个方法来处理 ip 地址\n\n- `INET_ATON()`：把 ip 转为无符号整型 (4-8 位)\n- `INET_NTOA()` :把整型的 ip 转为地址\n\n插入数据前，先用 `INET_ATON()` 把 ip 地址转为整型，显示数据时，使用 `INET_NTOA()` 把整型的 ip 地址转为地址显示即可。",
+        "score": 0.49259957715275515
+      },
+      {
+        "noteId": 3,
+        "chunkId": 102,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > DECIMAL 和 FLOAT/DOUBLE 的区别是什么？",
+        "content": "DECIMAL 和 FLOAT 的区别是：**DECIMAL 是定点数，FLOAT/DOUBLE 是浮点数。DECIMAL 可以存储精确的小数值，FLOAT/DOUBLE 只能存储近似的小数值。**\n\nDECIMAL 用于存储具有精度要求的小数，例如与货币相关的数据，可以避免浮点数带来的精度损失。\n\n在 Java 中，MySQL 的 DECIMAL 类型对应的是 Java 类 `java.math.BigDecimal`。",
+        "score": 0.49071908163087186
+      },
+      {
+        "noteId": 3,
+        "chunkId": 99,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 字段类型 > ⭐️整数类型的 UNSIGNED 属性有什么用？",
+        "content": "MySQL 中的整数类型可以使用可选的 UNSIGNED 属性来表示不允许负值的无符号整数。使用 UNSIGNED 属性可以将正整数的上限提高一倍，因为它不需要存储负数值。\n\n例如， TINYINT UNSIGNED 类型的取值范围是 0 ~ 255，而普通的 TINYINT 类型的值范围是 -128 ~ 127。INT UNSIGNED 类型的取值范围是 0 ~ 4,294,967,295，而普通的 INT 类型的值范围是 -2,147,483,648 ~ 2,147,483,647。\n\n对于从 0 开始递增的 ID 列，使用 UNSIGNED 属性可以非常适合，因为不允许负值并且可以拥有更大的上限范围，提供了更多的 ID 值可用。",
+        "score": 0.48432612605975556
+      }
+    ]
+  }
+}

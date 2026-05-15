@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 3,
+        "chunkId": 121,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 索引 > 为什么 InnoDB 没有使用哈希作为索引的数据结构？",
+        "content": "> 我发现很多求职者甚至是面试官对这个问题都有误解，他们相当然的认为 MySQL 底层并没有使用哈希或者 B 树作为索引的数据结构。\n>\n> 实际上，不论是提问还是回答这个问题都要区分好存储引擎。像 MEMORY 引擎就同时支持哈希和 B 树。\n\n哈希索引的底层是哈希表。它的优点是，在进行**精确的等值查询**时，理论上时间复杂度是 **O(1)** ，速度极快。比如 `WHERE id = 123`。\n\n但是，它有几个对于通用数据库来说是致命的缺点：\n\n1. **不支持范围查询:** 这是最主要的原因。哈希函数的一个特点是它会把相邻的输入值（比如 `id=100` 和 `id=101`）映射到哈希表中完全不相邻的位置。这种顺序的破坏，使得我们无法处理像 `WHERE age > 30` 或 `BETWEEN 100 AND 200`这样的范围查询。要完成这种查询，哈希索引只能退化为全表扫描。\n2. **不支持排序:** 同理，因为哈希值是无序的，所以我们无法利用哈希索引来优化 `ORDER BY` 子句。\n3. **不支持部分索引键查询:** 对于联合索引，比如`(col1, col2)`，哈希索引必须使用所有索引列进行查询，它无法单独利用 `col1` 来加速查询。\n4. **哈希冲突问题:** 当不同的键产生相同的哈希值时，需要额外的链表或开放寻址来解决，这会降低性能。\n\n鉴于数据库查询中范围查询和排序是极其常见的操作，一个不支持这些功能的索引结构，显然不能作为默认的、通用的索引类型。",
+        "score": 0.8575877206798712
+      },
+      {
+        "noteId": 3,
+        "chunkId": 122,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 索引 > 为什么 InnoDB 没有使用 B 树作为索引的数据结构？",
+        "content": "B 树和 B+树都是优秀的多路平衡搜索树，非常适合磁盘存储，因为它们都很“矮胖”，能最大化地利用每一次磁盘 I/O。\n\n但 B+树是 B 树的一个增强版，它针对数据库场景做了几个关键优化：\n\n1. **I/O 效率更高:** 在 B+树中，只有叶子节点才存储数据（或数据指针），而非叶子节点只存储索引键。因为非叶子节点不存数据，所以它们可以容纳更多的索引键。这意味着 B+树的“扇出”更大，在同样的数据量下，B+树通常会比 B 树更矮，也就意味着查找数据所需的磁盘 I/O 次数更少。\n2. **查询性能更稳定:** 在 B+树中，任何一次查询都必须从根节点走到叶子节点才能找到数据，所以查询路径的长度是固定的。而在 B 树中，如果运气好，可能在非叶子节点就找到了数据，但运气不好也得走到叶子，这导致查询性能不稳定。\n3. **对范围查询极其友好:** 这是 B+树最核心的优势。它的所有叶子节点之间通过一个双向链表连接。当我们执行一个范围查询（比如 `WHERE id > 100`）时，只需要通过树形结构找到 `id=100` 的叶子节点，然后就可以沿着链表向后顺序扫描，而无需再回溯到上层节点。这使得范围查询的效率大大提高。",
+        "score": 0.7172651504655231
+      },
+      {
+        "noteId": 3,
+        "chunkId": 115,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 存储引擎 > MyISAM 和 InnoDB 如何选择？",
+        "content": "大多数时候我们使用的都是 InnoDB 存储引擎，在某些读密集的情况下，使用 MyISAM 也是合适的。不过，前提是你的项目不介意 MyISAM 不支持事务、崩溃恢复等缺点（可是~我们一般都会介意啊）。\n\n《MySQL 高性能》上面有一句话这样写到:\n\n> 不要轻易相信“MyISAM 比 InnoDB 快”之类的经验之谈，这个结论往往不是绝对的。在很多我们已知场景中，InnoDB 的速度都可以让 MyISAM 望尘莫及，尤其是用到了聚簇索引，或者需要访问的数据都可以放入内存的应用。\n\n因此，对于咱们日常开发的业务系统来说，你几乎找不到什么理由使用 MyISAM 了，老老实实用默认的 InnoDB 就可以了！",
+        "score": 0.6505634576418077
+      },
+      {
+        "noteId": 3,
+        "chunkId": 113,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 存储引擎 > ⭐️MyISAM 和 InnoDB 有什么区别？",
+        "content": "MySQL 5.5 之前，MyISAM 引擎是 MySQL 的默认存储引擎，可谓是风光一时。\n\n虽然，MyISAM 的性能还行，各种特性也还不错（比如全文索引、压缩、空间函数等）。但是，MyISAM 不支持事务和行级锁，而且最大的缺陷就是崩溃后无法安全恢复。\n\nMySQL 5.5 版本之后，InnoDB 是 MySQL 的默认存储引擎。\n\n言归正传！咱们下面还是来简单对比一下两者：\n\n**1、是否支持行级锁**\n\nMyISAM 只有表级锁(table-level locking)，而 InnoDB 支持行级锁(row-level locking)和表级锁,默认为行级锁。\n\n也就说，MyISAM 一锁就是锁住了整张表，这在并发写的情况下是多么滴憨憨啊！这也是为什么 InnoDB 在并发写的时候，性能更牛皮了！\n\n**2、是否支持事务**\n\nMyISAM 不提供事务支持。\n\nInnoDB 提供事务支持，实现了 SQL 标准定义了四个隔离级别，具有提交(commit)和回滚(rollback)事务的能力。并且，InnoDB 默认使用的 REPEATABLE-READ（可重读）隔离级别是可以解决幻读问题发生的（基于 MVCC 和 Next-Key Lock）。\n\n关于 MySQL 事务的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n**3、是否支持外键**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n外键对于维护数据一致性非常有帮助，但是对性能有一定的损耗。因此，通常情况下，我们是不建议在实际生产项目中使用外键的，在业务代码中进行约束即可！\n\n阿里的《Java 开发手册》也是明确规定禁止使用外键的。\n\n![](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510090309427.png)\n\n不过，在代码中进行约束的话，对程序员的能力要求更高，具体是否要采用外键还是要根据你的项目实际情况而定。\n\n总结：一般我们也是不建议在数据库层面使用外键的，应用层面可以解决。不过，这样会对数据的一致性造成威胁。具体要不要使用外键还是要根据你的项目来决定。\n\n**4、是否支持数据库异常崩溃后的安全恢复**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
+        "score": 0.645836253340133
+      },
+      {
+        "noteId": 3,
+        "chunkId": 117,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 索引 > 索引是什么？",
+        "content": "**索引是一种用于快速查询和检索数据的数据结构，其本质可以看成是一种排序好的数据结构。**\n\n索引的作用就相当于书的目录。打个比方：我们在查字典的时候，如果没有目录，那我们就只能一页一页地去找我们需要查的那个字，速度很慢；如果有目录了，我们只需要先去目录里查找字的位置，然后直接翻到那一页就行了。\n\n索引底层数据结构存在很多种类型，常见的索引结构有：B 树、 B+ 树 和 Hash、红黑树。在 MySQL 中，无论是 Innodb 还是 MyISAM，都使用了 B+ 树作为索引结构。\n\n**索引的优点：**\n\n1. **查询速度起飞 (主要目的)**：通过索引，数据库可以**大幅减少需要扫描的数据量**，直接定位到符合条件的记录，从而显著加快数据检索速度，减少磁盘 I/O 次数。\n2. **保证数据唯一性**：通过创建**唯一索引 (Unique Index)**,可以确保表中的某一列（或几列组合）的值是独一无二的，比如用户 ID、邮箱等。主键本身就是一种唯一索引。\n3. **加速排序和分组**：如果查询中的 ORDER BY 或 GROUP BY 子句涉及的列建有索引，数据库往往可以直接利用索引已经排好序的特性，避免额外的排序操作，从而提升性能。\n\n**索引的缺点：**\n\n1. **创建和维护耗时**：创建索引本身需要时间，特别是对大表操作时。更重要的是，当对表中的数据进行**增、删、改 (DML 操作)** 时，不仅要操作数据本身，相关的索引也必须动态更新和维护，这会**降低这些 DML 操作的执行效率**。\n2. **占用存储空间**：索引本质上也是一种数据结构，需要以物理文件（或内存结构）的形式存储，因此会**额外占用一定的磁盘空间**。索引越多、越大，占用的空间也就越多。\n3. **可能被误用或失效**：如果索引设计不当，或者查询语句写得不好，数据库优化器可能不会选择使用索引（或者选错索引），反而导致性能下降。\n\n**那么，用了索引就一定能提高查询性能吗？**\n\n**不一定。** 大多数情况下，合理使用索引确实比全表扫描快得多。但也有例外：",
+        "score": 0.630467590433442
+      },
+      {
+        "noteId": 3,
+        "chunkId": 119,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 索引 > 索引为什么快？",
+        "content": "索引之所以快，核心原因是它**大大减少了磁盘 I/O 的次数**。\n\n它的本质是一种**排好序的数据结构**，就像书的目录，让我们不用一页一页地翻（全表扫描）。\n\n在 MySQL 中，这个数据结构是**B+树**。B+树结构主要从两方面做了优化：\n\n1. B+树的特点是“矮胖”，一个千万数据的表，索引树的高度可能只有 3-4 层。这意味着，最多只需要**3-4 次磁盘 I/O**，就能精确定位到我想要的数据，而全表扫描可能需要成千上万次，所以速度极快。\n2. B+树的叶子节点是**用链表连起来的**。找到开头后，就能顺着链表**顺序读**下去，这对磁盘非常友好，还能触发预读。",
+        "score": 0.6218457407309338
+      },
+      {
+        "noteId": 3,
+        "chunkId": 120,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 索引 > MySQL 索引底层数据结构是什么？",
+        "content": "在 MySQL 中，MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，详细介绍可以参考笔者写的这篇文章：[MySQL 索引详解](https://javaguide.cn/database/mysql/mysql-index.html)。",
+        "score": 0.6053169785345526
+      },
+      {
+        "noteId": 3,
+        "chunkId": 111,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 存储引擎 > MySQL 支持哪些存储引擎？默认使用哪个？",
+        "content": "MySQL 支持多种存储引擎，你可以通过 `SHOW ENGINES` 命令来查看 MySQL 支持的所有存储引擎。\n\n![查看 MySQL 提供的所有存储引擎](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510105408703.png)\n\n从上图我们可以查看出， MySQL 当前默认的存储引擎是 InnoDB。并且，所有的存储引擎中只有 InnoDB 是事务性存储引擎，也就是说只有 InnoDB 支持事务。\n\n我这里使用的 MySQL 版本是 8.x，不同的 MySQL 版本之间可能会有差别。\n\nMySQL 5.5.5 之前，MyISAM 是 MySQL 的默认存储引擎。5.5.5 版本之后，InnoDB 是 MySQL 的默认存储引擎。\n\n你可以通过 `SELECT VERSION()` 命令查看你的 MySQL 版本。\n\n```bash\nmysql> SELECT VERSION();\n+-----------+\n| VERSION() |\n+-----------+\n| 8.0.27    |\n+-----------+\n1 row in set (0.00 sec)\n```\n\n你也可以通过 `SHOW VARIABLES LIKE '%storage_engine%'` 命令直接查看 MySQL 当前默认的存储引擎。\n\n```bash\nmysql> SHOW VARIABLES  LIKE '%storage_engine%';\n+---------------------------------+-----------+\n| Variable_name                   | Value     |\n+---------------------------------+-----------+\n| default_storage_engine          | InnoDB    |\n| default_tmp_storage_engine      | InnoDB    |\n| disabled_storage_engines        |           |\n| internal_tmp_mem_storage_engine | TempTable |\n+---------------------------------+-----------+\n4 rows in set (0.00 sec)\n```\n\n如果你想要深入了解每个存储引擎以及它们之间的区别，推荐你去阅读以下 MySQL 官方文档对应的介绍(面试不会问这么细，了解即可)：\n\n- InnoDB 存储引擎详细介绍：<https://dev.mysql.com/doc/refman/8.0/en/innodb-storage-engine.html> 。\n- 其他存储引擎详细介绍：<https://dev.mysql.com/doc/refman/8.0/en/storage-engines.html> 。\n\n![](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510155143458.png)",
+        "score": 0.5947131933357384
+      },
+      {
+        "noteId": 3,
+        "chunkId": 97,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 基础 > ⭐️MySQL 有什么优点？",
+        "content": "这个问题本质上是在问 MySQL 如此流行的原因。\n\nMySQL 成功可以归功于在**生态、功能和运维**这三个层面上的综合优势。\n\n**第一，从生态和成本角度看，它的护城河非常深。**\n\n- **开源免费：** 这是它得以广泛普及的基石。任何公司和个人都可以免费使用，极大地降低了技术门槛和初期成本。\n- **社区庞大，生态完善：** 经过几十年的发展，MySQL 拥有极其活跃的社区和丰富的生态系统。这意味着无论你遇到什么问题，几乎都能在网上找到解决方案；同时，市面上所有的主流编程语言、框架、ORM 工具、监控系统都对 MySQL 有完美的支持。它的文档也非常丰富，学习资源唾手可得。\n\n**第二，从核心技术功能上看，它非常强大且均衡。**\n\n- **强大的事务支持：** 这是它作为关系型数据库的立身之本。值得一提的是，InnoDB 默认的可重复读（REPEATABLE-READ）隔离级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。\n- **优秀的性能和可扩展性：** MySQL 本身经过了海量互联网业务的严酷考验，单机性能非常出色。更重要的是，它围绕着水平扩展，形成了一套非常成熟的架构方案，比如主从复制、读写分离、以及通过中间件实现的分库分表。这让它能够支撑从初创公司到大型互联网平台的各种规模的业务。\n\n**第三，从运维和使用角度看，它非常‘亲民’。**\n\n- **开箱即用，上手简单：** 相比于 Oracle 等大型商业数据库，MySQL 的安装、配置和日常使用都非常简单直观，学习曲线平缓，对于开发者和初级 DBA 非常友好。\n- **维护成本低：** 由于其简单性和庞大的社区，找到相关的运维人才和解决方案都相对容易，整体的维护成本也更低。\n\n值得一提的是最近几年，PostgreSQL 的势头很猛，甚至压过了 MySQL。网上出现了很多抨击诋毁 MySQL 的文章，笔者认为任何无脑抨击其中一方或者吹捧另外一方的行为都是不可取的。\n\n笔者也写过一篇文章分享对这两个关系型数据库代表的看法，感兴趣的可以看看：[MySQL 被干成老二了？](https://mp.weixin.qq.com/s/APWD-PzTcTqGUuibAw7GGw)。",
+        "score": 0.5898327651669775
+      },
+      {
+        "noteId": 3,
+        "chunkId": 163,
+        "title": "可以命中索引",
+        "headingPath": "参考",
+        "content": "- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>\n- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>\n- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>\n- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
+        "score": 0.5861174042855922
+      }
+    ]
+  }
+}
