@@ -4,84 +4,84 @@
   "data": {
     "sources": [
       {
-        "noteId": 4,
-        "chunkId": 227,
+        "noteId": 5,
+        "chunkId": 310,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "我们可以使用 `EXPLAIN` 命令来分析 SQL 的 **执行计划** 。执行计划是指一条 SQL 语句在经过 MySQL 查询优化器的优化会后，具体的执行方式。\n\n`EXPLAIN` 并不会真的去执行相关的语句，而是通过 **查询优化器** 对语句进行分析，找出最优的查询方案，并显示对应的信息。\n\n`EXPLAIN` 适用于 `SELECT`, `DELETE`, `INSERT`, `REPLACE`, 和 `UPDATE`语句，我们一般分析 `SELECT` 查询较多。",
-        "score": 0.7562365677215835
+        "content": "`EXPLAIN` 适用于 `SELECT`, `DELETE`, `INSERT`, `REPLACE`, 和 `UPDATE`语句，我们一般分析 `SELECT` 查询较多。\n\n我们这里简单来演示一下 `EXPLAIN` 的使用。\n\n`EXPLAIN` 的输出格式如下：\n\n```sql\nmysql> EXPLAIN SELECT `score`,`name` FROM `cus_order` ORDER BY `score` DESC;\n+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+----------------+\n| id | select_type | table     | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra          |\n+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+----------------+\n|  1 | SIMPLE      | cus_order | NULL       | ALL  | NULL          | NULL | NULL    | NULL | 997572 |   100.00 | Using filesort |\n+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+----------------+\n1 row in set, 1 warning (0.00 sec)\n```\n\n各个字段的含义如下：\n\n| **列名**      | **含义**                                     |\n| ------------- | -------------------------------------------- |\n| id            | SELECT 查询的序列标识符                      |\n| select_type   | SELECT 关键字对应的查询类型                  |\n| table         | 用到的表名                                   |\n| partitions    | 匹配的分区，对于未分区的表，值为 NULL        |\n| type          | 表的访问方法                                 |\n| possible_keys | 可能用到的索引                               |\n| key           | 实际用到的索引                               |\n| key_len       | 所选索引的长度                               |",
+        "score": 0.7499424219131523
       },
       {
-        "noteId": 4,
-        "chunkId": 235,
+        "noteId": 5,
+        "chunkId": 312,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "- **EXPLAIN 命令：** 详细说明 `EXPLAIN` 命令的使用，分析查询计划、索引使用情况，可以结合实际案例展示如何解读分析结果，比如执行顺序、索引使用情况、全表扫描等。\n\n**2. 由点及面：索引、表结构和 SQL 优化**",
-        "score": 0.7098436778690635
+        "content": "性能优化的第一步永远是找到瓶颈。面试时，建议先从 **慢 SQL 定位和分析** 入手，这不仅能展示你解决问题的思路，还能体现你对数据库性能监控的熟练掌握：\n\n- **监控工具：** 介绍常用的慢 SQL 监控工具，如 **MySQL 慢查询日志**、**Performance Schema** 等，说明你对这些工具的熟悉程度以及如何通过它们定位问题。\n- **EXPLAIN 命令：** 详细说明 `EXPLAIN` 命令的使用，分析查询计划、索引使用情况，可以结合实际案例展示如何解读分析结果，比如执行顺序、索引使用情况、全表扫描等。\n\n**2. 由点及面：索引、表结构和 SQL 优化**\n\n定位到慢 SQL 后，接下来就要针对具体问题进行优化。 这里可以重点介绍索引、表结构和 SQL 编写规范等方面的优化技巧：\n\n- **索引优化：** 这是 MySQL 性能优化的重点，可以介绍索引的创建原则、覆盖索引、最左前缀匹配原则等。如果能结合你项目的实际应用来说明如何选择合适的索引，会更加分一些。",
+        "score": 0.6592893993430984
       },
       {
-        "noteId": 4,
-        "chunkId": 226,
+        "noteId": 5,
+        "chunkId": 309,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": ") 的 **「技术面试题篇」** 有一篇文章详细介绍了常见的 SQL 优化手段，非常全面，清晰易懂！\n\n![常见的 SQL 优化手段](https://oss.javaguide.cn/javamianshizhibei/javamianshizhibei-sql-optimization.png)\n\n文章地址：https://www.yuque.com/snailclimb/mf2z3k/abc2sv （密码获取：<https://t.zsxq.com/avfM0>）。\n\n### 如何分析 SQL 的性能？",
-        "score": 0.6765450642433812
+        "content": "MySQL 提供了两个方法来处理 ip 地址\n\n- `INET_ATON()`：把 ip 转为无符号整型 (4-8 位)\n- `INET_NTOA()` :把整型的 ip 转为地址\n\n插入数据前，先用 `INET_ATON()` 把 ip 地址转为整型，显示数据时，使用 `INET_NTOA()` 把整型的 ip 地址转为地址显示即可。\n\n### 有哪些常见的 SQL 优化手段？\n\n[《Java 面试指北》(付费)](https://javaguide.cn/zhuanlan/java-mian-shi-zhi-bei.html) 的 **「技术面试题篇」** 有一篇文章详细介绍了常见的 SQL 优化手段，非常全面，清晰易懂！\n\n![常见的 SQL 优化手段](https://oss.javaguide.cn/javamianshizhibei/javamianshizhibei-sql-optimization.png)\n\n文章地址：https://www.yuque.com/snailclimb/mf2z3k/abc2sv （密码获取：<https://t.zsxq.com/avfM0>）。\n\n### 如何分析 SQL 的性能？\n\n我们可以使用 `EXPLAIN` 命令来分析 SQL 的 **执行计划** 。执行计划是指一条 SQL 语句在经过 MySQL 查询优化器的优化会后，具体的执行方式。\n\n`EXPLAIN` 并不会真的去执行相关的语句，而是通过 **查询优化器** 对语句进行分析，找出最优的查询方案，并显示对应的信息。",
+        "score": 0.6571483816416142
       },
       {
-        "noteId": 4,
-        "chunkId": 228,
+        "noteId": 5,
+        "chunkId": 311,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "我们这里简单来演示一下 `EXPLAIN` 的使用。\n\n`EXPLAIN` 的输出格式如下：\n\n```sql\nmysql> EXPLAIN SELECT `score`,`name` FROM `cus_order` ORDER BY `score` DESC;\n+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+----------------+\n| id | select_type | table     | partitions | type | possible_keys | key  | key_len | ref  | rows   | filtered | Extra          |\n+----+-------------+-----------+------------+------+---------------+------+---------+------+--------+----------+----------------+",
-        "score": 0.6494836002280485
+        "content": "| ref           | 当使用索引等值查询时，与索引作比较的列或常量 |\n| rows          | 预计要读取的行数                             |\n| filtered      | 按表条件过滤后，留存的记录数的百分比         |\n| Extra         | 附加信息                                     |\n\n篇幅问题，我这里只是简单介绍了一下 MySQL 执行计划，详细介绍请看：[SQL 的执行计划](./mysql-query-execution-plan.md)这篇文章。\n\n### 读写分离和分库分表了解吗？\n\n读写分离和分库分表相关的问题比较多，于是，我单独写了一篇文章来介绍：[读写分离和分库分表详解](../../high-performance/read-and-write-separation-and-library-subtable.md)。\n\n### 深度分页如何优化？\n\n[深度分页介绍及优化建议](../../high-performance/deep-pagination-optimization.md)\n\n### 数据冷热分离如何做？\n\n[数据冷热分离详解](../../high-performance/data-cold-hot-separation.md)\n\n### MySQL 性能怎么优化？\n\nMySQL 性能优化是一个系统性工程，涉及多个方面，在面试中不可能面面俱到。因此，建议按照“点-线-面”的思路展开，从核心问题入手，再逐步扩展，展示出你对问题的思考深度和解决能力。\n\n**1. 抓住核心：慢 SQL 定位与分析**",
+        "score": 0.6324765244098335
       },
       {
-        "noteId": 4,
-        "chunkId": 233,
+        "noteId": 5,
+        "chunkId": 315,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "MySQL 性能优化是一个系统性工程，涉及多个方面，在面试中不可能面面俱到。因此，建议按照“点-线-面”的思路展开，从核心问题入手，再逐步扩展，展示出你对问题的思考深度和解决能力。\n\n**1. 抓住核心：慢 SQL 定位与分析**\n\n性能优化的第一步永远是找到瓶颈。面试时，建议先从 **慢 SQL 定位和分析** 入手，这不仅能展示你",
-        "score": 0.6339581608772323
+        "content": ") 应作为最后的手段，除非在特定场景下有明显的性能瓶颈，否则不应轻易使用，因其引入的复杂性会带来额外的维护成本。\n\n## MySQL 学习资料推荐\n\n[**书籍推荐**](../../books/database.md#mysql) 。\n\n**文章推荐** :\n\n- [一树一溪的 MySQL 系列教程](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzg3NTc3NjM4Nw==&action=getalbum&album_id=2372043523518300162&scene=173&from_msgid=2247484308&from_itemidx=1&count=3&nolastread=1#wechat_redirect)\n- [Yes 的 MySQL 系列教程](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkxNTE3NjQ3MA==&action=getalbum&album_id=1903249596194095112&scene=173&from_msgid=2247490365&from_itemidx=1&count=3&nolastread=1#wechat_redirect)\n- [写完这篇 我的 SQL 优化能力直接进入新层次 - 变成派大星 - 2022](https://juejin.cn/post/7161964571853815822)\n- [两万字详解！InnoDB 锁专题！ - 捡田螺的小男孩 - 2022](https://juejin.cn/post/7094049650428084232)",
+        "score": 0.6025793911563998
       },
       {
-        "noteId": 4,
-        "chunkId": 236,
+        "noteId": 5,
+        "chunkId": 314,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "定位到慢 SQL 后，接下来就要针对具体问题进行优化。 这里可以重点介绍索引、表结构和 SQL 编写规范等方面的优化技巧：\n\n- **索引优化：** 这是 MySQL 性能优化的重点，可以介绍索引的创建原则、覆盖索引、最左前缀匹配原则等。如果能结合你项目的实际应用来说明如何选择合适的索引，会更加分一些。",
-        "score": 0.6147517332286687
+        "content": "- **缓存机制：** 使用 Redis 等缓存中间件，将热点数据缓存到内存中，减轻数据库压力。这个非常常用，提升效果非常明显，性价比极高！\n\n**4. 其他优化手段**\n\n除了慢 SQL 定位、索引优化和架构优化，还可以提及一些其他优化手段，展示你对 MySQL 性能调优的全面理解：\n\n- **连接池配置：** 配置合理的数据库连接池（如 **连接池大小**、**超时时间** 等），能够有效提升数据库连接的效率，避免频繁的连接开销。\n- **硬件配置：** 提升硬件性能也是优化的重要手段之一。使用高性能服务器、增加内存、使用 **SSD** 硬盘等硬件升级，都可以有效提升数据库的整体性能。\n\n**5.总结**\n\n在面试中，建议按优先级依次介绍慢 SQL 定位、[索引优化](./mysql-index.md)、表结构设计和 [SQL 优化](../../high-performance/sql-optimization.md)等内容。架构层面的优化，如[读写分离和分库分表](../../high-performance/read-and-write-separation-and-library-subtable.md)、[数据冷热分离](../../high-performance/data-cold-hot-separation.",
+        "score": 0.5999869465820172
       },
       {
-        "noteId": 4,
-        "chunkId": 240,
+        "noteId": 5,
+        "chunkId": 287,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "价比极高！\n\n**4. 其他优化手段**\n\n除了慢 SQL 定位、索引优化和架构优化，还可以提及一些其他优化手段，展示你对 MySQL 性能调优的全面理解：\n\n- **连接池配置：** 配置合理的数据库连接池（如 **连接池大小**、**超时时间** 等），能够有效提升数据库连接的效率，避免频繁的连接开销。",
-        "score": 0.6124228786608173
+        "content": "**缓存虽然能够提升数据库的查询性能，但是缓存同时也带来了额外的开销，每次查询后都要做一次缓存操作，失效后还要销毁。** 因此，开启查询缓存要谨慎，尤其对于写密集的应用来说更是如此。如果开启，要注意合理控制缓存空间大小，一般来说其大小设置为几十 MB 比较合适。此外，还可以通过 `sql_cache` 和 `sql_no_cache` 来控制某个查询语句是否需要缓存：\n\n```sql\nSELECT sql_no_cache COUNT(*) FROM usr;\n```\n\nMySQL 5.6 开始，查询缓存已默认禁用。MySQL 8.0 开始，已经不再支持查询缓存了（具体可以参考这篇文章：[MySQL 8.0: Retiring Support for the Query Cache](https://dev.mysql.com/blog-archive/mysql-8-0-retiring-support-for-the-query-cache/)）。\n\n![MySQL 8.0: Retiring Support for the Query Cache](https://oss.javaguide.cn/github/javaguide/mysql/mysql8.0-retiring-support-for-the-query-cache.png)\n\n## ⭐️MySQL 日志\n\n上诉问题的答案可以在[《Java 面试指北》(付费，点击链接领取优惠卷)](https://javaguide.cn/zhuanlan/java-mian-shi-zhi-bei.html) 的 **「技术面试题篇」** 中找到。\n\n![《Java 面试指北》技术面试题篇](https://oss.javaguide.",
+        "score": 0.5449592199897311
       },
       {
-        "noteId": 4,
-        "chunkId": 241,
+        "noteId": 5,
+        "chunkId": 266,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "- **硬件配置：** 提升硬件性能也是优化的重要手段之一。使用高性能服务器、增加内存、使用 **SSD** 硬盘等硬件升级，都可以有效提升数据库的整体性能。\n\n**5.总结**\n\n在面试中，建议按优先级依次介绍慢 SQL 定位、[索引优化](./mysql-index.md)、表结构设计和 [SQL 优化](../../high-performance/sql-optimization.md)等内容。架构层面的优化，如[读写分离和分库分表](../..",
-        "score": 0.6091018915176435
+        "content": "- **优化器：** 按照 MySQL 认为最优的方案去执行。\n- **执行器：** 执行语句，然后从存储引擎返回数据。 执行语句之前会先判断是否有权限，如果没有权限的话，就会报错。\n- **插件式存储引擎**：主要负责数据的存储和读取，采用的是插件式架构，支持 InnoDB、MyISAM、Memory 等多种存储引擎。InnoDB 是 MySQL 的默认存储引擎，绝大部分场景使用 InnoDB 就是最好的选择。\n\n## MySQL 存储引擎\n\nMySQL 核心在于存储引擎，想要深入学习 MySQL，必定要深入研究 MySQL 存储引擎。\n\n### MySQL 支持哪些存储引擎？默认使用哪个？\n\nMySQL 支持多种存储引擎，你可以通过 `SHOW ENGINES` 命令来查看 MySQL 支持的所有存储引擎。\n\n![查看 MySQL 提供的所有存储引擎](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510105408703.png)\n\n从上图我们可以查看出， MySQL 当前默认的存储引擎是 InnoDB。并且，所有的存储引擎中只有 InnoDB 是事务性存储引擎，也就是说只有 InnoDB 支持事务。\n\n我这里使用的 MySQL 版本是 8.",
+        "score": 0.5385435109028381
       },
       {
-        "noteId": 4,
-        "chunkId": 234,
+        "noteId": 5,
+        "chunkId": 282,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "解决问题的思路，还能体现你对数据库性能监控的熟练掌握：\n\n- **监控工具：** 介绍常用的慢 SQL 监控工具，如 **MySQL 慢查询日志**、**Performance Schema** 等，说明你对这些工具的熟悉程度以及如何通过它们定位问题。",
-        "score": 0.5973019955934294
+        "content": "1、创建一个名为 `student` 的表，这张表只有 `id`、`name`、`class` 这 3 个字段。\n\n```sql\nCREATE TABLE `student` (\n  `id` int NOT NULL,\n  `name` varchar(100) DEFAULT NULL,\n  `class` varchar(100) DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `name_class_idx` (`name`,`class`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;\n```\n\n2、下面我们分别测试三条不同的 SQL 语句。\n\n![](https://oss.javaguide.cn/github/javaguide/database/mysql/leftmost-prefix-matching-rule.png)\n\n```sql\n# 可以命中索引\nSELECT * FROM student WHERE name = 'Anne Henry';\nEXPLAIN SELECT * FROM student WHERE name = 'Anne Henry' AND class = 'lIrm08RYVk';\n# 无法命中索引\nSELECT * FROM student WHERE class = 'lIrm08RYVk';\n```\n\n再来看一个常见的面试题：如果有索引 `联合索引（a，b，c）`，查询 `a=1 AND c=1` 会走索引么？`c=1` 呢？`b=1 AND c=1` 呢？ `b = 1 AND a = 1 AND c = 1` 呢？\n\n先不要往下看答案，给自己 3 分钟时间想一想。\n\n1. 查询 `a=1 AND c=1`：根据最左前缀匹配原则，查询可以使用索引的前缀部分。因此，该查询仅在 `a=1` 上使用索引，然后对结果进行 `c=1` 的过滤。\n2.",
+        "score": 0.5372642598905728
       },
       {
-        "noteId": 4,
-        "chunkId": 230,
+        "noteId": 5,
+        "chunkId": 250,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "| partitions    | 匹配的分区，对于未分区的表，值为 NULL        |\n| type          | 表的访问方法                                 |\n| possible_keys | 可能用到的索引                               |\n| key           | 实际用到的索引                               |\n| key_len       | 所选索引的长度                               |\n| ref           | 当使用索引等值查询时，与索引作比较的列或常量 |\n| rows          | 预计要读取的行数                             |\n| filtered      | 按表条件过滤后，留存的记录数的百分比         |\n| Extra         | 附加信息                                     |",
-        "score": 0.5691280873830399
+        "content": "大部分关系型数据库都使用 SQL 来操作数据库中的数据。并且，大部分关系型数据库都支持事务的四大特性(ACID)。\n\n**有哪些常见的关系型数据库呢？**\n\nMySQL、PostgreSQL、Oracle、SQL Server、SQLite（微信本地的聊天记录的存储就是用的 SQLite） ……。\n\n### 什么是 SQL？\n\nSQL 是一种结构化查询语言(Structured Query Language)，专门用来与数据库打交道，目的是提供一种从数据库中读写数据的简单有效的方法。\n\n几乎所有的主流关系数据库都支持 SQL ，适用性非常强。并且，一些非关系型数据库也兼容 SQL 或者使用的是类似于 SQL 的查询语言。\n\nSQL 可以帮助我们：\n\n- 新建数据库、数据表、字段；\n- 在数据库中增加，删除，修改，查询数据；\n- 新建视图、函数、存储过程；\n- 对数据库中的数据进行简单的数据分析；\n- 搭配 Hive，Spark SQL 做大数据；\n- 搭配 SQLFlow 做机器学习；\n- ……\n\n### 什么是 MySQL？\n\n![](https://oss.javaguide.cn/github/javaguide/csdn/20210327143351823.png)\n\n**MySQL 是一种关系型数据库，主要用于持久化存储我们的系统中的一些数据比如用户信息。**",
+        "score": 0.5345701852697109
       }
     ]
   }

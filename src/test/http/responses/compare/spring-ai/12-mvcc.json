@@ -4,84 +4,84 @@
   "data": {
     "sources": [
       {
-        "noteId": 4,
-        "chunkId": 192,
+        "noteId": 5,
+        "chunkId": 297,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "�一的。\n\nMVCC 在 MySQL 中实现所依赖的手段主要是: **隐藏字段、read view、undo log**。\n\n- undo log : undo log 用于记录某行数据的多个版本的数据。\n- read view 和 隐藏字段 : 用来判断当前版本数据的可见性。\n\n关于 InnoDB 对 MVCC 的具体实现可以看这篇文章：[InnoDB 存储引擎对 MVCC 的实现](./innodb-implementation-of-mvcc.md) 。\n\n### SQL 标准定义了哪些事务隔离级别?",
-        "score": 0.7206434344478378
+        "content": "**MVCC** 是多版本并发控制方法，即对一份数据会存储多个版本，通过事务的可见性来保证事务能看到自己应该看到的版本。通常会有一个全局的版本分配器来为每一行数据设置版本号，版本号是唯一的。\n\nMVCC 在 MySQL 中实现所依赖的手段主要是: **隐藏字段、read view、undo log**。\n\n- undo log : undo log 用于记录某行数据的多个版本的数据。\n- read view 和 隐藏字段 : 用来判断当前版本数据的可见性。\n\n关于 InnoDB 对 MVCC 的具体实现可以看这篇文章：[InnoDB 存储引擎对 MVCC 的实现](./innodb-implementation-of-mvcc.md) 。\n\n### SQL 标准定义了哪些事务隔离级别?\n\nSQL 标准定义了四种事务隔离级别，用来平衡事务的隔离性（Isolation）和并发性能。级别越高，数据一致性越好，但并发性能可能越低。这四个级别是：\n\n- **READ-UNCOMMITTED(读取未提交)** ：最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读或不可重复读。这种级别在实际应用中很少使用，因为它对数据一致性的保证太弱。",
+        "score": 0.7714334998806174
       },
       {
-        "noteId": 4,
-        "chunkId": 69,
+        "noteId": 5,
+        "chunkId": 295,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "�级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。",
-        "score": 0.640663053831326
+        "content": "/github/javaguide/database/mysql/concurrency-consistency-issues-phantom-read.png)\n\n### 不可重复读和幻读有什么区别？\n\n- 不可重复读的重点是内容修改或者记录减少比如多次读取一条记录发现其中某些记录的值被修改；\n- 幻读的重点在于记录新增比如多次执行同一条查询语句（DQL）时，发现查到的记录增加了。\n\n幻读其实可以看作是不可重复读的一种特殊情况，单独把幻读区分出来的原因主要是解决幻读和不可重复读的方案不一样。\n\n举个例子：执行 `delete` 和 `update` 操作的时候，可以直接对记录加锁，保证事务安全。而执行 `insert` 操作的时候，由于记录锁（Record Lock）只能锁住已经存在的记录，为了避免插入新记录，需要依赖间隙锁（Gap Lock）。也就是说执行 `insert` 操作的时候需要依赖 Next-Key Lock（Record Lock+Gap Lock） 进行加锁来保证不出现幻读。\n\n### 并发事务的控制方式有哪些？\n\nMySQL 中并发事务的控制方式无非就两种：**锁** 和 **MVCC**。锁可以看作是悲观控制的模式，多版本并发控制（MVCC，Multiversion concurrency control）可以看作是乐观控制的模式。",
+        "score": 0.6503243475572453
       },
       {
-        "noteId": 4,
-        "chunkId": 191,
+        "noteId": 5,
+        "chunkId": 270,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "锁即可（对一行或者多行记录加锁），所以对于并发写入操作来说， InnoDB 的性能更高。不论是表级锁还是行级锁，都存在共享锁（Share Lock，S 锁）和排他锁（Exclusive Lock，X 锁）这两类。\n\n**MVCC** 是多版本并发控制方法，即对一份数据会存储多个版本，通过事务的可见性来保证事务能看到自己应该看到的版本。通常会有一个全局的版本分配器来为每一行数据设置版本号，版本号是�",
-        "score": 0.6406576894145752
+        "content": "关于 MySQL 事务的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n**3、是否支持外键**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n外键对于维护数据一致性非常有帮助，但是对性能有一定的损耗。因此，通常情况下，我们是不建议在实际生产项目中使用外键的，在业务代码中进行约束即可！\n\n阿里的《Java 开发手册》也是明确规定禁止使用外键的。\n\n![](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510090309427.png)\n\n不过，在代码中进行约束的话，对程序员的能力要求更高，具体是否要采用外键还是要根据你的项目实际情况而定。\n\n总结：一般我们也是不建议在数据库层面使用外键的，应用层面可以解决。不过，这样会对数据的一致性造成威胁。具体要不要使用外键还是要根据你的项目来决定。\n\n**4、是否支持数据库异常崩溃后的安全恢复**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**",
+        "score": 0.6031424753326237
       },
       {
-        "noteId": 4,
-        "chunkId": 121,
+        "noteId": 5,
+        "chunkId": 290,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
-        "score": 0.6180714455715228
+        "content": "/github/javaguide/mysql/%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)\n\n另外，关系型数据库（例如：`MySQL`、`SQL Server`、`Oracle` 等）事务都有 **ACID** 特性：\n\n![ACID](https://oss.javaguide.cn/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3. **隔离性**（`Isolation`）：并发访问数据库时，一个用户的事务不被其他事务所干扰，各并发事务之间数据库是独立的；\n4. **持久性**（`Durability`）：一个事务被提交之后。它对数据库中数据的改变是持久的，即使数据库发生故障也不应该对其有任何影响。",
+        "score": 0.595732165146084
       },
       {
-        "noteId": 4,
-        "chunkId": 188,
+        "noteId": 5,
+        "chunkId": 299,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "是说执行 `insert` 操作的时候需要依赖 Next-Key Lock（Record Lock+Gap Lock） 进行加锁来保证不出现幻读。\n\n### 并发事务的控制方式有哪些？\n\nMySQL 中并发事务的控制方式无非就两种：**锁** 和 **MVCC**。锁可以看作是悲观控制的模式，多版本并发控制（MVCC，Multiversion concurrency control）可以看作是乐观控制的模式。",
-        "score": 0.6130465134326843
+        "content": "| REPEATABLE READ  | ×                 | ×                                | √ (标准) / ≈× (InnoDB) |\n| SERIALIZABLE     | ×                 | ×                                | ×                      |\n\n### MySQL 的默认隔离级别是什么?\n\nMySQL InnoDB 存储引擎的默认隔离级别是 **REPEATABLE READ**。可以通过以下命令查看：\n\n- MySQL 8.0 之前：`SELECT @@tx_isolation;`\n- MySQL 8.0 及之后：`SELECT @@transaction_isolation;`\n\n```sql\nmysql> SELECT @@tx_isolation;\n+-----------------+\n| @@tx_isolation  |\n+-----------------+\n| REPEATABLE-READ |\n+-----------------+\n```\n\n关于 MySQL 事务隔离级别的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n### MySQL 的隔离级别是基于锁实现的吗？\n\nMySQL 的隔离级别基于锁和 MVCC 机制共同实现的。\n\nSERIALIZABLE 隔离级别是通过锁来实现的，READ-COMMITTED 和 REPEATABLE-READ 隔离级别是基于 MVCC 实现的。不过， SERIALIZABLE 之外的其他隔离级别可能也需要用到锁机制，就比如 REPEATABLE-READ 在当前读情况下需要使用加锁读来保证不会出现幻读。\n\n## MySQL 锁\n\n锁是一种常见的并发事务的控制方式。\n\n### 表级锁和行级锁了解吗？有什么区别？",
+        "score": 0.5837735085892374
       },
       {
-        "noteId": 4,
-        "chunkId": 198,
+        "noteId": 5,
+        "chunkId": 298,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "关于 MySQL 事务隔离级别的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n### MySQL 的隔离级别是基于锁实现的吗？\n\nMySQL 的隔离级别基于锁和 MVCC 机制共同实现的。",
-        "score": 0.6081691126420229
+        "content": "- **READ-COMMITTED(读取已提交)** ：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。这是大多数数据库（如 Oracle, SQL Server）的默认隔离级别。\n- **REPEATABLE-READ(可重复读)** ：对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。MySQL InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。\n\n| 隔离级别         | 脏读 (Dirty Read) | 不可重复读 (Non-Repeatable Read) | 幻读 (Phantom Read)    |\n| ---------------- | ----------------- | -------------------------------- | ---------------------- |\n| READ UNCOMMITTED | √                 | √                                | √                      |\n| READ COMMITTED   | ×                 | √                                | √                      |",
+        "score": 0.5683933076155242
       },
       {
-        "noteId": 4,
-        "chunkId": 195,
+        "noteId": 5,
+        "chunkId": 305,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防",
-        "score": 0.5881617560193871
+        "content": "/github/javaguide/mysql/image-20220511171419081.png)\n\n### 当前读和快照读有什么区别？\n\n**快照读**（一致性非锁定读）就是单纯的 `SELECT` 语句，但不包括下面这两类 `SELECT` 语句：\n\n```sql\nSELECT ... FOR UPDATE\n# 共享锁 可以在 MySQL 5.7 和 MySQL 8.0 中使用\nSELECT ... LOCK IN SHARE MODE;\n# 共享锁 可以在 MySQL 8.0 中使用\nSELECT ... FOR SHARE;\n```\n\n快照即记录的历史版本，每行记录可能存在多个历史版本（多版本技术）。\n\n快照读的情况下，如果读取的记录正在执行 UPDATE/DELETE 操作，读取操作不会因此去等待记录上 X 锁的释放，而是会去读取行的一个快照。\n\n只有在事务隔离级别 RC(读取已提交) 和 RR（可重读）下，InnoDB 才会使用一致性非锁定读：\n\n- 在 RC 级别下，对于快照数据，一致性非锁定读总是读取被锁定行的最新一份快照数据。\n- 在 RR 级别下，对于快照数据，一致性非锁定读总是读取本事务开始时的行数据版本。\n\n快照读比较适合对于数据一致性要求不是特别高且追求极致性能的业务场景。",
+        "score": 0.5540434387896485
       },
       {
-        "noteId": 4,
-        "chunkId": 199,
+        "noteId": 5,
+        "chunkId": 317,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "SERIALIZABLE 隔离级别是通过锁来实现的，READ-COMMITTED 和 REPEATABLE-READ 隔离级别是基于 MVCC 实现的。不过， SERIALIZABLE 之外的其他隔离级别可能也需要用到锁机制，就比如 REPEATABLE-READ 在当前读情况下需要使用加锁读来保证不会出现幻读。\n\n## MySQL 锁\n\n锁是一种常见的并发事务的控制方式。\n\n### 表级锁和行级锁了解吗？有什么区别？",
-        "score": 0.5862526687973335
+        "content": "- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
+        "score": 0.5374044295485887
       },
       {
-        "noteId": 4,
-        "chunkId": 125,
+        "noteId": 5,
+        "chunkId": 252,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "- MyISAM 不支持 MVCC，而 InnoDB 支持。\n- 虽然 MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是两者的实现方式不太一样。\n- MyISAM 不支持数据库异常崩溃后的安全恢复，而 InnoDB 支持。\n- InnoDB 的性能比 MyISAM 更强大。\n\n最后，再分享一张图片给你，这张图片详细对比了常见的几种 MySQL 存储引擎。\n\n!",
-        "score": 0.5561481580381017
+        "content": "- **强大的事务支持：** 这是它作为关系型数据库的立身之本。值得一提的是，InnoDB 默认的可重复读（REPEATABLE-READ）隔离级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。\n- **优秀的性能和可扩展性：** MySQL 本身经过了海量互联网业务的严酷考验，单机性能非常出色。更重要的是，它围绕着水平扩展，形成了一套非常成熟的架构方案，比如主从复制、读写分离、以及通过中间件实现的分库分表。这让它能够支撑从初创公司到大型互联网平台的各种规模的业务。\n\n**第三，从运维和使用角度看，它非常‘亲民’。**",
+        "score": 0.5343133725372857
       },
       {
-        "noteId": 4,
-        "chunkId": 174,
+        "noteId": 5,
+        "chunkId": 303,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3.",
-        "score": 0.5364421562621445
+        "content": "- **排他锁（X 锁）**：又称写锁/独占锁，事务在修改记录的时候获取排他锁，不允许多个事务同时获取。如果一个记录已经被加了排他锁，那其他事务不能再对这条事务加任何类型的锁（锁不兼容）。\n\n排他锁与任何的锁都不兼容，共享锁仅和共享锁兼容。\n\n|      | S 锁   | X 锁 |\n| :--- | :----- | :--- |\n| S 锁 | 不冲突 | 冲突 |\n| X 锁 | 冲突   | 冲突 |\n\n由于 MVCC 的存在，对于一般的 `SELECT` 语句，InnoDB 不会加任何锁。不过， 你可以通过以下语句显式加共享锁或排他锁。\n\n```sql\n# 共享锁 可以在 MySQL 5.7 和 MySQL 8.0 中使用\nSELECT ... LOCK IN SHARE MODE;\n# 共享锁 可以在 MySQL 8.0 中使用\nSELECT ... FOR SHARE;\n# 排他锁\nSELECT ... FOR UPDATE;\n```\n\n### 意向锁有什么作用？\n\n如果需要用到表锁的话，如何判断表中的记录没有行锁呢，一行一行遍历肯定是不行，性能太差。我们需要用到一个叫做意向锁的东东来快速判断是否可以对某个表使用表锁。\n\n意向锁是表级锁，共有两种：",
+        "score": 0.532214431034667
       }
     ]
   }

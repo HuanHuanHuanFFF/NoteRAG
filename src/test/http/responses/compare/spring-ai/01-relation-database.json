@@ -4,84 +4,84 @@
   "data": {
     "sources": [
       {
-        "noteId": 4,
-        "chunkId": 63,
+        "noteId": 5,
+        "chunkId": 250,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "/java-guide-blog/5e3c1a71724a38245aa43b02_99bf70d46cc247be878de9d3a88f0c44.png)\n\n大部分关系型数据库都使用 SQL 来操作数据库中的数据。并且，大部分关系型数据库都支持事务的四大特性(ACID)。\n\n**有哪些常见的关系型数据库呢？**\n\nMySQL、PostgreSQL、Oracle、SQL Server、SQLite（微信本地的聊天记录的存储就是用的 SQLite） ……。\n\n### 什么是 SQL？",
-        "score": 0.6462908598011231
+        "content": "大部分关系型数据库都使用 SQL 来操作数据库中的数据。并且，大部分关系型数据库都支持事务的四大特性(ACID)。\n\n**有哪些常见的关系型数据库呢？**\n\nMySQL、PostgreSQL、Oracle、SQL Server、SQLite（微信本地的聊天记录的存储就是用的 SQLite） ……。\n\n### 什么是 SQL？\n\nSQL 是一种结构化查询语言(Structured Query Language)，专门用来与数据库打交道，目的是提供一种从数据库中读写数据的简单有效的方法。\n\n几乎所有的主流关系数据库都支持 SQL ，适用性非常强。并且，一些非关系型数据库也兼容 SQL 或者使用的是类似于 SQL 的查询语言。\n\nSQL 可以帮助我们：\n\n- 新建数据库、数据表、字段；\n- 在数据库中增加，删除，修改，查询数据；\n- 新建视图、函数、存储过程；\n- 对数据库中的数据进行简单的数据分析；\n- 搭配 Hive，Spark SQL 做大数据；\n- 搭配 SQLFlow 做机器学习；\n- ……\n\n### 什么是 MySQL？\n\n![](https://oss.javaguide.cn/github/javaguide/csdn/20210327143351823.png)\n\n**MySQL 是一种关系型数据库，主要用于持久化存储我们的系统中的一些数据比如用户信息。**",
+        "score": 0.6201949202665841
       },
       {
-        "noteId": 4,
-        "chunkId": 62,
+        "noteId": 5,
+        "chunkId": 290,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "顾名思义，关系型数据库（RDB，Relational Database）就是一种建立在关系模型的基础上的数据库。关系模型表明了数据库中所存储的数据之间的联系（一对一、一对多、多对多）。\n\n关系型数据库中，我们的数据都被存放在了各种表中（比如用户表），表中的每一行就存放着一条数据（比如一个用户的信息）。\n\n![关系型数据库表关系](https://oss.javaguide.",
-        "score": 0.6294599992358696
+        "content": "/github/javaguide/mysql/%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)\n\n另外，关系型数据库（例如：`MySQL`、`SQL Server`、`Oracle` 等）事务都有 **ACID** 特性：\n\n![ACID](https://oss.javaguide.cn/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3. **隔离性**（`Isolation`）：并发访问数据库时，一个用户的事务不被其他事务所干扰，各并发事务之间数据库是独立的；\n4. **持久性**（`Durability`）：一个事务被提交之后。它对数据库中数据的改变是持久的，即使数据库发生故障也不应该对其有任何影响。",
+        "score": 0.5328345259625284
       },
       {
-        "noteId": 4,
-        "chunkId": 65,
+        "noteId": 5,
+        "chunkId": 252,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "- 对数据库中的数据进行简单的数据分析；\n- 搭配 Hive，Spark SQL 做大数据；\n- 搭配 SQLFlow 做机器学习；\n- ……\n\n### 什么是 MySQL？\n\n![](https://oss.javaguide.cn/github/javaguide/csdn/20210327143351823.png)\n\n**MySQL 是一种关系型数据库，主要用于持久化存储我们的系统中的一些数据比如用户信息。**",
-        "score": 0.501474231393682
+        "content": "- **强大的事务支持：** 这是它作为关系型数据库的立身之本。值得一提的是，InnoDB 默认的可重复读（REPEATABLE-READ）隔离级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。\n- **优秀的性能和可扩展性：** MySQL 本身经过了海量互联网业务的严酷考验，单机性能非常出色。更重要的是，它围绕着水平扩展，形成了一套非常成熟的架构方案，比如主从复制、读写分离、以及通过中间件实现的分库分表。这让它能够支撑从初创公司到大型互联网平台的各种规模的业务。\n\n**第三，从运维和使用角度看，它非常‘亲民’。**",
+        "score": 0.45967254763736554
       },
       {
-        "noteId": 4,
-        "chunkId": 61,
+        "noteId": 5,
+        "chunkId": 249,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "content: MySQL高频面试题精讲：基础架构、InnoDB引擎、索引原理、B+树、事务ACID、MVCC、redo/undo/binlog日志、行锁/表锁、慢查询优化，一文速通大厂必考点！\n---\n\n<!-- @include: @small-advertisement.snippet.md -->\n\n## MySQL 基础\n\n### 什么是关系型数据库？",
-        "score": 0.48939374215677467
+        "content": "---\ntitle: MySQL常见面试题总结\ncategory: 数据库\ntag:\n  - MySQL\n  - 大厂面试\nhead:\n  - - meta\n    - name: keywords\n      content: MySQL面试题,MySQL基础架构,InnoDB存储引擎,MySQL索引,B+树索引,事务隔离级别,redo log,undo log,binlog,MVCC,行级锁,慢查询优化\n  - - meta\n    - name: description\n      content: MySQL高频面试题精讲：基础架构、InnoDB引擎、索引原理、B+树、事务ACID、MVCC、redo/undo/binlog日志、行锁/表锁、慢查询优化，一文速通大厂必考点！\n---\n\n<!-- @include: @small-advertisement.snippet.md -->\n\n## MySQL 基础\n\n### 什么是关系型数据库？\n\n顾名思义，关系型数据库（RDB，Relational Database）就是一种建立在关系模型的基础上的数据库。关系模型表明了数据库中所存储的数据之间的联系（一对一、一对多、多对多）。\n\n关系型数据库中，我们的数据都被存放在了各种表中（比如用户表），表中的每一行就存放着一条数据（比如一个用户的信息）。\n\n![关系型数据库表关系](https://oss.javaguide.cn/java-guide-blog/5e3c1a71724a38245aa43b02_99bf70d46cc247be878de9d3a88f0c44.png)",
+        "score": 0.4487348856049913
       },
       {
-        "noteId": 4,
-        "chunkId": 173,
+        "noteId": 5,
+        "chunkId": 253,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "# 多条 SQL 语句\nSQL1,SQL2...\n## 提交事务\nCOMMIT;\n```\n\n![数据库事务示意图](https://oss.javaguide.cn/github/javaguide/mysql/%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)\n\n另外，关系型数据库（例如：`MySQL`、`SQL Server`、`Oracle` 等）事务都有 **ACID** 特性：\n\n![ACID](https://oss.javaguide.",
-        "score": 0.457379140130436
+        "content": "- **开箱即用，上手简单：** 相比于 Oracle 等大型商业数据库，MySQL 的安装、配置和日常使用都非常简单直观，学习曲线平缓，对于开发者和初级 DBA 非常友好。\n- **维护成本低：** 由于其简单性和庞大的社区，找到相关的运维人才和解决方案都相对容易，整体的维护成本也更低。\n\n值得一提的是最近几年，PostgreSQL 的势头很猛，甚至压过了 MySQL。网上出现了很多抨击诋毁 MySQL 的文章，笔者认为任何无脑抨击其中一方或者吹捧另外一方的行为都是不可取的。\n\n笔者也写过一篇文章分享对这两个关系型数据库代表的看法，感兴趣的可以看看：[MySQL 被干成老二了？](https://mp.weixin.qq.com/s/APWD-PzTcTqGUuibAw7GGw)。\n\n## MySQL 字段类型\n\nMySQL 字段类型可以简单分为三大类：\n\n- **数值类型**：整型（TINYINT、SMALLINT、MEDIUMINT、INT 和 BIGINT）、浮点型（FLOAT 和 DOUBLE）、定点型（DECIMAL）\n- **字符串类型**：CHAR、VARCHAR、TINYTEXT、TEXT、MEDIUMTEXT、LONGTEXT、TINYBLOB、BLOB、MEDIUMBLOB 和 LONGBLOB 等，最常用的是 CHAR 和 VARCHAR。",
+        "score": 0.4433281489219487
       },
       {
-        "noteId": 4,
-        "chunkId": 64,
+        "noteId": 5,
+        "chunkId": 288,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "SQL 是一种结构化查询语言(Structured Query Language)，专门用来与数据库打交道，目的是提供一种从数据库中读写数据的简单有效的方法。\n\n几乎所有的主流关系数据库都支持 SQL ，适用性非常强。并且，一些非关系型数据库也兼容 SQL 或者使用的是类似于 SQL 的查询语言。\n\nSQL 可以帮助我们：\n\n- 新建数据库、数据表、字段；\n- 在数据库中增加，删除，修改，查询数据；\n- 新建视图、函数、存储过程；",
-        "score": 0.4242292687756266
+        "content": "/javamianshizhibei/technical-interview-questions.png)\n\n文章地址：<https://www.yuque.com/snailclimb/mf2z3k/zr4kfk> （密码获取：<https://t.zsxq.com/avfM0>）。\n\n## ⭐️MySQL 事务\n\n### 什么是事务？\n\n我们设想一个场景，这个场景中我们需要插入多条相关联的数据到数据库，不幸的是，这个过程可能会遇到下面这些问题：\n\n- 数据库中途突然因为某些原因挂掉了。\n- 客户端突然因为网络原因连接不上数据库了。\n- 并发访问数据库时，多个线程同时写入数据库，覆盖了彼此的更改。\n- ……\n\n上面的任何一个问题都可能会导致数据的不一致性。为了保证数据的一致性，系统必须能够处理这些问题。事务就是我们抽象出来简化这些问题的首选机制。事务的概念起源于数据库，目前，已经成为一个比较广泛的概念。\n\n**何为事务？** 一言蔽之，**事务是逻辑上的一组操作，要么都执行，要么都不执行。**\n\n事务最经典也经常被拿出来说例子就是转账了。假如小明要给小红转账 1000 元，这个转账会涉及到两个关键操作，这两个操作必须都成功或者都失败。\n\n1.",
+        "score": 0.4150684031721832
       },
       {
-        "noteId": 4,
-        "chunkId": 72,
+        "noteId": 5,
+        "chunkId": 289,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "。\n\n值得一提的是最近几年，PostgreSQL 的势头很猛，甚至压过了 MySQL。网上出现了很多抨击诋毁 MySQL 的文章，笔者认为任何无脑抨击其中一方或者吹捧另外一方的行为都是不可取的。\n\n笔者也写过一篇文章分享对这两个关系型数据库代表的看法，感兴趣的可以看看：[MySQL 被干成老二了？](https://mp.weixin.qq.",
-        "score": 0.4070128070689196
+        "content": "将小明的余额减少 1000 元\n2. 将小红的余额增加 1000 元。\n\n事务会把这两个操作就可以看成逻辑上的一个整体，这个整体包含的操作要么都成功，要么都要失败。这样就不会出现小明余额减少而小红的余额却并没有增加的情况。\n\n![事务示意图](https://oss.javaguide.cn/github/javaguide/mysql/%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)\n\n### 什么是数据库事务？\n\n大多数情况下，我们在谈论事务的时候，如果没有特指**分布式事务**，往往指的就是**数据库事务**。\n\n数据库事务在我们日常开发中接触的最多了。如果你的项目属于单体架构的话，你接触到的往往就是数据库事务了。\n\n**那数据库事务有什么作用呢？**\n\n简单来说，数据库事务可以保证多个对数据库的操作（也就是 SQL 语句）构成一个逻辑上的整体。构成这个逻辑上的整体的这些数据库操作遵循：**要么全部执行成功,要么全部不执行** 。\n\n```sql\n# 开启一个事务\nSTART TRANSACTION;\n# 多条 SQL 语句\nSQL1,SQL2...\n## 提交事务\nCOMMIT;\n```\n\n![数据库事务示意图](https://oss.javaguide.",
+        "score": 0.4014018295524324
       },
       {
-        "noteId": 4,
-        "chunkId": 174,
+        "noteId": 5,
+        "chunkId": 270,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3.",
-        "score": 0.40564567413057917
+        "content": "关于 MySQL 事务的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n**3、是否支持外键**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n外键对于维护数据一致性非常有帮助，但是对性能有一定的损耗。因此，通常情况下，我们是不建议在实际生产项目中使用外键的，在业务代码中进行约束即可！\n\n阿里的《Java 开发手册》也是明确规定禁止使用外键的。\n\n![](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510090309427.png)\n\n不过，在代码中进行约束的话，对程序员的能力要求更高，具体是否要采用外键还是要根据你的项目实际情况而定。\n\n总结：一般我们也是不建议在数据库层面使用外键的，应用层面可以解决。不过，这样会对数据的一致性造成威胁。具体要不要使用外键还是要根据你的项目来决定。\n\n**4、是否支持数据库异常崩溃后的安全恢复**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**",
+        "score": 0.3984466972744417
       },
       {
-        "noteId": 4,
-        "chunkId": 121,
+        "noteId": 5,
+        "chunkId": 317,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
-        "score": 0.4048163110236751
+        "content": "- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
+        "score": 0.38438599156183184
       },
       {
-        "noteId": 4,
-        "chunkId": 177,
+        "noteId": 5,
+        "chunkId": 258,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "/opencourse/intro/100064201)才搞清楚的（多看好书！！！）。\n\n![AID->C](https://oss.javaguide.cn/github/javaguide/mysql/AID-%3EC.png)\n\n另外，DDIA 也就是 [《Designing Data-Intensive Application（数据密集型应用系统设计）》](https://book.douban.com/subject/30329536/) 的作者在他的这本书中如是说：\n\n> Atomicity, isolation, and durability are properties of the database, whereas consis‐\n> tency (in the ACID sense) is a property of the application. The application may rely",
-        "score": 0.39600802087736076
+        "content": "数据库规范通常不推荐使用 BLOB 和 TEXT 类型，这两种类型具有一些缺点和限制，例如：\n\n- 不能有默认值。\n- 在使用临时表时无法使用内存临时表，只能在磁盘上创建临时表（《高性能 MySQL》书中有提到）。\n- 检索效率较低。\n- 不能直接创建索引，需要指定前缀长度。\n- 可能会消耗大量的网络和 IO 带宽。\n- 可能导致表上的 DML 操作变慢。\n- ……\n\n### ⭐️DATETIME 和 TIMESTAMP 的区别是什么？如何选择？\n\nDATETIME 类型没有时区信息，TIMESTAMP 和时区有关。\n\nTIMESTAMP 只需要使用 4 个字节的存储空间，但是 DATETIME 需要耗费 8 个字节的存储空间。但是，这样同样造成了一个问题，Timestamp 表示的时间范围更小。\n\n- DATETIME：'1000-01-01 00:00:00.000000' 到 '9999-12-31 23:59:59.999999'\n- Timestamp：'1970-01-01 00:00:01.000000' UTC 到 '2038-01-19 03:14:07.999999' UTC",
+        "score": 0.38430098388785283
       }
     ]
   }

@@ -4,84 +4,84 @@
   "data": {
     "sources": [
       {
-        "noteId": 4,
-        "chunkId": 130,
+        "noteId": 5,
+        "chunkId": 277,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "索引底层数据结构存在很多种类型，常见的索引结构有：B 树、 B+ 树 和 Hash、红黑树。在 MySQL 中，无论是 Innodb 还是 MyISAM，都使用了 B+ 树作为索引结构。\n\n**索引的优点：**\n\n1. **查询速度起飞 (主要目的)**：通过索引，数据库可以**大幅减少需要扫描的数据量**，直接定位到符合条件的记录，从而显著加快数据检索速度，减少磁盘 I/O 次数",
-        "score": 0.7603425526414793
+        "content": "B+树的叶子节点是**用链表连起来的**。找到开头后，就能顺着链表**顺序读**下去，这对磁盘非常友好，还能触发预读。\n\n### MySQL 索引底层数据结构是什么？\n\n在 MySQL 中，MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，详细介绍可以参考笔者写的这篇文章：[MySQL 索引详解](https://javaguide.cn/database/mysql/mysql-index.html)。\n\n### 为什么 InnoDB 没有使用哈希作为索引的数据结构？\n\n> 我发现很多求职者甚至是面试官对这个问题都有误解，他们相当然的认为 MySQL 底层并没有使用哈希或者 B 树作为索引的数据结构。\n>\n> 实际上，不论是提问还是回答这个问题都要区分好存储引擎。像 MEMORY 引擎就同时支持哈希和 B 树。\n\n哈希索引的底层是哈希表。它的优点是，在进行**精确的等值查询**时，理论上时间复杂度是 **O(1)** ，速度极快。比如 `WHERE id = 123`。\n\n但是，它有几个对于通用数据库来说是致命的缺点：\n\n1.",
+        "score": 0.8353744745254517
       },
       {
-        "noteId": 4,
-        "chunkId": 143,
+        "noteId": 5,
+        "chunkId": 279,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "鉴于数据库查询中范围查询和排序是极其常见的操作，一个不支持这些功能的索引结构，显然不能作为默认的、通用的索引类型。\n\n### 为什么 InnoDB 没有使用 B 树作为索引的数据结构？\n\nB 树和 B+树都是优秀的多路平衡搜索树，非常适合磁盘存储，因为它们都很“矮胖”，能最大化地利用每一次磁盘 I/O。",
-        "score": 0.7602632927580777
+        "content": "B 树和 B+树都是优秀的多路平衡搜索树，非常适合磁盘存储，因为它们都很“矮胖”，能最大化地利用每一次磁盘 I/O。\n\n但 B+树是 B 树的一个增强版，它针对数据库场景做了几个关键优化：\n\n1. **I/O 效率更高:** 在 B+树中，只有叶子节点才存储数据（或数据指针），而非叶子节点只存储索引键。因为非叶子节点不存数据，所以它们可以容纳更多的索引键。这意味着 B+树的“扇出”更大，在同样的数据量下，B+树通常会比 B 树更矮，也就意味着查找数据所需的磁盘 I/O 次数更少。\n2. **查询性能更稳定:** 在 B+树中，任何一次查询都必须从根节点走到叶子节点才能找到数据，所以查询路径的长度是固定的。而在 B 树中，如果运气好，可能在非叶子节点就找到了数据，但运气不好也得走到叶子，这导致查询性能不稳定。\n3.",
+        "score": 0.7754749059677124
       },
       {
-        "noteId": 4,
-        "chunkId": 138,
+        "noteId": 5,
+        "chunkId": 278,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "友好，还能触发预读。\n\n### MySQL 索引底层数据结构是什么？\n\n在 MySQL 中，MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，详细介绍可以参考笔者写的这篇文章：[MySQL 索引详解](https://javaguide.cn/database/mysql/mysql-index.html)。\n\n### 为什么 InnoDB 没有使用哈希作为索引的数据结构？",
-        "score": 0.7562443017959595
+        "content": "**不支持范围查询:** 这是最主要的原因。哈希函数的一个特点是它会把相邻的输入值（比如 `id=100` 和 `id=101`）映射到哈希表中完全不相邻的位置。这种顺序的破坏，使得我们无法处理像 `WHERE age > 30` 或 `BETWEEN 100 AND 200`这样的范围查询。要完成这种查询，哈希索引只能退化为全表扫描。\n2. **不支持排序:** 同理，因为哈希值是无序的，所以我们无法利用哈希索引来优化 `ORDER BY` 子句。\n3. **不支持部分索引键查询:** 对于联合索引，比如`(col1, col2)`，哈希索引必须使用所有索引列进行查询，它无法单独利用 `col1` 来加速查询。\n4. **哈希冲突问题:** 当不同的键产生相同的哈希值时，需要额外的链表或开放寻址来解决，这会降低性能。\n\n鉴于数据库查询中范围查询和排序是极其常见的操作，一个不支持这些功能的索引结构，显然不能作为默认的、通用的索引类型。\n\n### 为什么 InnoDB 没有使用 B 树作为索引的数据结构？",
+        "score": 0.7266627550125122
       },
       {
-        "noteId": 4,
-        "chunkId": 146,
+        "noteId": 5,
+        "chunkId": 274,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "**对范围查询极其友好:** 这是 B+树最核心的优势。它的所有叶子节点之间通过一个双向链表连接。当我们执行一个范围查询（比如 `WHERE id > 100`）时，只需要通过树形结构找到 `id=100` 的叶子节点，然后就可以沿着链表向后顺序扫描，而无需再回溯到上层节点。这使得范围查询的效率大大提高。\n\n### 什么是覆盖索引？",
-        "score": 0.7143523693084717
+        "content": "索引的作用就相当于书的目录。打个比方：我们在查字典的时候，如果没有目录，那我们就只能一页一页地去找我们需要查的那个字，速度很慢；如果有目录了，我们只需要先去目录里查找字的位置，然后直接翻到那一页就行了。\n\n索引底层数据结构存在很多种类型，常见的索引结构有：B 树、 B+ 树 和 Hash、红黑树。在 MySQL 中，无论是 Innodb 还是 MyISAM，都使用了 B+ 树作为索引结构。\n\n**索引的优点：**\n\n1. **查询速度起飞 (主要目的)**：通过索引，数据库可以**大幅减少需要扫描的数据量**，直接定位到符合条件的记录，从而显著加快数据检索速度，减少磁盘 I/O 次数。\n2. **保证数据唯一性**：通过创建**唯一索引 (Unique Index)**,可以确保表中的某一列（或几列组合）的值是独一无二的，比如用户 ID、邮箱等。主键本身就是一种唯一索引。\n3. **加速排序和分组**：如果查询中的 ORDER BY 或 GROUP BY 子句涉及的列建有索引，数据库往往可以直接利用索引已经排好序的特性，避免额外的排序操作，从而提升性能。\n\n**索引的缺点：**\n\n1.",
+        "score": 0.7215518687305659
       },
       {
-        "noteId": 4,
-        "chunkId": 137,
+        "noteId": 5,
+        "chunkId": 280,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "B+树的特点是“矮胖”，一个千万数据的表，索引树的高度可能只有 3-4 层。这意味着，最多只需要**3-4 次磁盘 I/O**，就能精确定位到我想要的数据，而全表扫描可能需要成千上万次，所以速度极快。\n2. B+树的叶子节点是**用链表连起来的**。找到开头后，就能顺着链表**顺序读**下去，这对磁盘非常",
-        "score": 0.7069817360054425
+        "content": "**对范围查询极其友好:** 这是 B+树最核心的优势。它的所有叶子节点之间通过一个双向链表连接。当我们执行一个范围查询（比如 `WHERE id > 100`）时，只需要通过树形结构找到 `id=100` 的叶子节点，然后就可以沿着链表向后顺序扫描，而无需再回溯到上层节点。这使得范围查询的效率大大提高。\n\n### 什么是覆盖索引？\n\n如果一个索引包含（或者说覆盖）所有需要查询的字段的值，我们就称之为 **覆盖索引（Covering Index）**。\n\n在 InnoDB 存储引擎中，非主键索引的叶子节点包含的是主键的值。这意味着，当使用非主键索引进行查询时，数据库会先找到对应的主键值，然后再通过主键索引来定位和检索完整的行数据。这个过程被称为“回表”。\n\n**覆盖索引即需要查询的字段正好是索引的字段，那么直接根据该索引，就可以查到数据了，而无需回表查询。**\n\n### 请解释一下 MySQL 的联合索引及其最左前缀原则\n\n使用表中的多个字段创建索引，就是 **联合索引**，也叫 **组合索引** 或 **复合索引**。\n\n以 `score` 和 `name` 两个字段建立联合索引：\n\n```sql",
+        "score": 0.7176001071929932
       },
       {
-        "noteId": 4,
-        "chunkId": 139,
+        "noteId": 5,
+        "chunkId": 276,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "> 我发现很多求职者甚至是面试官对这个问题都有误解，他们相当然的认为 MySQL 底层并没有使用哈希或者 B 树作为索引的数据结构。\n>\n> 实际上，不论是提问还是回答这个问题都要区分好存储引擎。像 MEMORY 引擎就同时支持哈希和 B 树。",
-        "score": 0.6968632936477661
+        "content": "- **查询结果集占比过大**：如果要查询的数据占了整张表的大部分（比如超过 20%-30%），优化器可能会认为全表扫描更划算，因为通过索引多次回表（随机 I/O）的成本可能高于一次顺序的全表扫描。\n- **索引维护不当或统计信息过时**：导致优化器做出错误判断。\n\n### 索引为什么快？\n\n索引之所以快，核心原因是它**大大减少了磁盘 I/O 的次数**。\n\n它的本质是一种**排好序的数据结构**，就像书的目录，让我们不用一页一页地翻（全表扫描）。\n\n在 MySQL 中，这个数据结构是**B+树**。B+树结构主要从两方面做了优化：\n\n1. B+树的特点是“矮胖”，一个千万数据的表，索引树的高度可能只有 3-4 层。这意味着，最多只需要**3-4 次磁盘 I/O**，就能精确定位到我想要的数据，而全表扫描可能需要成千上万次，所以速度极快。\n2.",
+        "score": 0.7058982603671291
       },
       {
-        "noteId": 4,
-        "chunkId": 136,
+        "noteId": 5,
+        "chunkId": 273,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "索引之所以快，核心原因是它**大大减少了磁盘 I/O 的次数**。\n\n它的本质是一种**排好序的数据结构**，就像书的目录，让我们不用一页一页地翻（全表扫描）。\n\n在 MySQL 中，这个数据结构是**B+树**。B+树结构主要从两方面做了优化：\n\n1.",
-        "score": 0.6957388286901967
+        "content": "大多数时候我们使用的都是 InnoDB 存储引擎，在某些读密集的情况下，使用 MyISAM 也是合适的。不过，前提是你的项目不介意 MyISAM 不支持事务、崩溃恢复等缺点（可是~我们一般都会介意啊）。\n\n《MySQL 高性能》上面有一句话这样写到:\n\n> 不要轻易相信“MyISAM 比 InnoDB 快”之类的经验之谈，这个结论往往不是绝对的。在很多我们已知场景中，InnoDB 的速度都可以让 MyISAM 望尘莫及，尤其是用到了聚簇索引，或者需要访问的数据都可以放入内存的应用。\n\n因此，对于咱们日常开发的业务系统来说，你几乎找不到什么理由使用 MyISAM 了，老老实实用默认的 InnoDB 就可以了！\n\n## ⭐️MySQL 索引\n\nMySQL 索引相关的问题比较多，也非常重要，更详细的介绍可以阅读笔者写的这篇文章：[MySQL 索引详解](./mysql-index.md) 。\n\n### 索引是什么？\n\n**索引是一种用于快速查询和检索数据的数据结构，其本质可以看成是一种排序好的数据结构。**",
+        "score": 0.6588328677068018
       },
       {
-        "noteId": 4,
-        "chunkId": 245,
+        "noteId": 5,
+        "chunkId": 272,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "- [深入理解 MySQL 索引底层原理 - 腾讯技术工程 - 2020](https://zhuanlan.zhihu.com/p/113917726)\n\n## 参考\n\n- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>",
-        "score": 0.6940590921605186
+        "content": "InnoDB 使用缓冲池（Buffer Pool）缓存数据页和索引页，MyISAM 使用键缓存（Key Cache）仅缓存索引页而不缓存数据页。\n\n**总结**：\n\n- InnoDB 支持行级别的锁粒度，MyISAM 不支持，只支持表级别的锁粒度。\n- MyISAM 不提供事务支持。InnoDB 提供事务支持，实现了 SQL 标准定义了四个隔离级别。\n- MyISAM 不支持外键，而 InnoDB 支持。\n- MyISAM 不支持 MVCC，而 InnoDB 支持。\n- 虽然 MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是两者的实现方式不太一样。\n- MyISAM 不支持数据库异常崩溃后的安全恢复，而 InnoDB 支持。\n- InnoDB 的性能比 MyISAM 更强大。\n\n最后，再分享一张图片给你，这张图片详细对比了常见的几种 MySQL 存储引擎。\n\n![常见的几种 MySQL 存储引擎对比](https://oss.javaguide.cn/github/javaguide/mysql/comparison-of-common-mysql-storage-engines.png)\n\n### MyISAM 和 InnoDB 如何选择？",
+        "score": 0.6515600292944902
       },
       {
-        "noteId": 4,
-        "chunkId": 145,
+        "noteId": 5,
+        "chunkId": 315,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "着查找数据所需的磁盘 I/O 次数更少。\n2. **查询性能更稳定:** 在 B+树中，任何一次查询都必须从根节点走到叶子节点才能找到数据，所以查询路径的长度是固定的。而在 B 树中，如果运气好，可能在非叶子节点就找到了数据，但运气不好也得走到叶子，这导致查询性能不稳定。\n3.",
-        "score": 0.6889418959617615
+        "content": ") 应作为最后的手段，除非在特定场景下有明显的性能瓶颈，否则不应轻易使用，因其引入的复杂性会带来额外的维护成本。\n\n## MySQL 学习资料推荐\n\n[**书籍推荐**](../../books/database.md#mysql) 。\n\n**文章推荐** :\n\n- [一树一溪的 MySQL 系列教程](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzg3NTc3NjM4Nw==&action=getalbum&album_id=2372043523518300162&scene=173&from_msgid=2247484308&from_itemidx=1&count=3&nolastread=1#wechat_redirect)\n- [Yes 的 MySQL 系列教程](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzkxNTE3NjQ3MA==&action=getalbum&album_id=1903249596194095112&scene=173&from_msgid=2247490365&from_itemidx=1&count=3&nolastread=1#wechat_redirect)\n- [写完这篇 我的 SQL 优化能力直接进入新层次 - 变成派大星 - 2022](https://juejin.cn/post/7161964571853815822)\n- [两万字详解！InnoDB 锁专题！ - 捡田螺的小男孩 - 2022](https://juejin.cn/post/7094049650428084232)",
+        "score": 0.6404244899749756
       },
       {
-        "noteId": 4,
-        "chunkId": 144,
+        "noteId": 5,
+        "chunkId": 316,
         "title": "可以命中索引",
         "headingPath": null,
-        "content": "但 B+树是 B 树的一个增强版，它针对数据库场景做了几个关键优化：\n\n1. **I/O 效率更高:** 在 B+树中，只有叶子节点才存储数据（或数据指针），而非叶子节点只存储索引键。因为非叶子节点不存数据，所以它们可以容纳更多的索引键。这意味着 B+树的“扇出”更大，在同样的数据量下，B+树通常会比 B 树更矮，也就意味",
-        "score": 0.684950590133667
+        "content": "- [MySQL 的自增主键一定是连续的吗？ - 飞天小牛肉 - 2022](https://mp.weixin.qq.com/s/qci10h9rJx_COZbHV3aygQ)\n- [深入理解 MySQL 索引底层原理 - 腾讯技术工程 - 2020](https://zhuanlan.zhihu.com/p/113917726)\n\n## 参考\n\n- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>\n- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>\n- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>",
+        "score": 0.633285641670227
       }
     ]
   }
