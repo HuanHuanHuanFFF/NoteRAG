@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 202,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- **行级锁：** MySQL 中锁定粒度最小的一种锁，是 **针对索引字段加的锁** ，只针对当前操作的行记录进行加锁。 行级锁能大大减少数据库操作的冲突。其加锁粒度最小，并发度高，但加锁的开销也最大，加锁慢，会出现死锁。行级锁和存储引擎有关，是在存储引擎层面实现的。\n\n### 行级锁的使用有什么注意事项？",
+        "score": 0.6903685515899342
+      },
+      {
+        "noteId": 4,
+        "chunkId": 247,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>\n- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.",
+        "score": 0.6777449250221252
+      },
+      {
+        "noteId": 4,
+        "chunkId": 206,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "**在 InnoDB 默认的隔离级别 REPEATABLE-READ 下，行锁默认使用的是 Next-Key Lock。但是，如果操作的索引是唯一索引或主键，InnoDB 会对 Next-Key Lock 进行优化，将其降级为 Record Lock，即仅锁住索引本身，而不是范围。**\n\n### 共享锁和排他锁呢？\n\n不论是表级锁还是行级锁，都存在共享锁（Share Lock，S 锁）和排他锁（Exclusive Lock，X 锁）这两类：",
+        "score": 0.6689930952795677
+      },
+      {
+        "noteId": 4,
+        "chunkId": 200,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "MyISAM 仅仅支持表级锁(table-level locking)，一锁就锁整张表，这在并发写的情况下性非常差。InnoDB 不光支持表级锁(table-level locking)，还支持行级锁(row-level locking)，默认为行级锁。\n\n行级锁的粒度更小，仅对相关的记录上锁即可（对一行或者多行记录加锁），所以对于并发写入操作来说， InnoDB 的性能更高。\n\n**表级锁和行级锁对比**：",
+        "score": 0.6510672985235143
+      },
+      {
+        "noteId": 4,
+        "chunkId": 204,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "不过，很多时候即使用了索引也有可能会走全表扫描，这是因为 MySQL 优化器的原因。\n\n### InnoDB 有哪几类行锁？\n\nInnoDB 行锁是通过对索引数据页上的记录加锁实现的，MySQL InnoDB 支持三种行锁定方式：\n\n- **记录锁（Record Lock）**：属于单个行记录上的锁。\n- **间隙锁（Gap Lock）**：锁定一个范围，不包括记录本身。",
+        "score": 0.65072999587894
+      },
+      {
+        "noteId": 4,
+        "chunkId": 69,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "�级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。",
+        "score": 0.6421912739048915
+      },
+      {
+        "noteId": 4,
+        "chunkId": 209,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "7 和 MySQL 8.0 中使用\nSELECT ... LOCK IN SHARE MODE;\n# 共享锁 可以在 MySQL 8.0 中使用\nSELECT ... FOR SHARE;\n# 排他锁\nSELECT ... FOR UPDATE;\n```\n\n### 意向锁有什么作用？\n\n如果需要用到表锁的话，如何判断表中的记录没有行锁呢，一行一行遍历肯定是不行，性能太差。我们需要用到一个叫做意向锁的东东来快速判断是否可以对某个表使用表锁。",
+        "score": 0.6408958481140511
+      },
+      {
+        "noteId": 4,
+        "chunkId": 195,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防",
+        "score": 0.6382993459701538
+      },
+      {
+        "noteId": 4,
+        "chunkId": 191,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "锁即可（对一行或者多行记录加锁），所以对于并发写入操作来说， InnoDB 的性能更高。不论是表级锁还是行级锁，都存在共享锁（Share Lock，S 锁）和排他锁（Exclusive Lock，X 锁）这两类。\n\n**MVCC** 是多版本并发控制方法，即对一份数据会存储多个版本，通过事务的可见性来保证事务能看到自己应该看到的版本。通常会有一个全局的版本分配器来为每一行数据设置版本号，版本号是�",
+        "score": 0.6348755198865554
+      },
+      {
+        "noteId": 4,
+        "chunkId": 203,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "InnoDB 的行锁是针对索引字段加的锁，表级锁是针对非索引字段加的锁。当我们执行 `UPDATE`、`DELETE` 语句时，如果 `WHERE`条件中字段没有命中唯一索引或者索引失效的话，就会导致扫描全表对表中的所有行记录进行加锁。这个在我们日常工作开发中经常会遇到，一定要多多注意！！！",
+        "score": 0.633826732635498
+      }
+    ]
+  }
+}

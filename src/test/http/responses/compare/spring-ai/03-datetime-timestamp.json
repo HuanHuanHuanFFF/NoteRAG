@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 86,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "TIMESTAMP 只需要使用 4 个字节的存储空间，但是 DATETIME 需要耗费 8 个字节的存储空间。但是，这样同样造成了一个问题，Timestamp 表示的时间范围更小。\n\n- DATETIME：'1000-01-01 00:00:00.000000' 到 '9999-12-31 23:59:59.999999'\n- Timestamp：'1970-01-01 00:00:01.000000' UTC 到 '2038-01-19 03:14:07.999999' UTC",
+        "score": 0.7716163396835382
+      },
+      {
+        "noteId": 4,
+        "chunkId": 88,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "如果应用场景不涉及时区转换，或者希望应用程序完全控制时区逻辑，并且需要表示 2038 年之后的时间，`DATETIME` 是更稳妥的选择。\n\n关于两者的详细对比以及日期存储类型选择建议，请参考我写的这篇文章： [MySQL 时间类型数据存储建议](./some-thoughts-on-database-storage-time.md)。\n\n### NULL 和 '' 的区别是什么？",
+        "score": 0.7116028838394366
+      },
+      {
+        "noteId": 4,
+        "chunkId": 87,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "`TIMESTAMP` 的核心优势在于其内建的时区处理能力。数据库负责 UTC 存储和基于会话时区的自动转换，简化了需要处理多时区应用的开发。如果应用需要处理多时区，或者希望数据库能自动管理时区转换，`TIMESTAMP` 是自然的选择（注意其时间范围限制，也就是 2038 年问题）。",
+        "score": 0.6845771042268698
+      },
+      {
+        "noteId": 4,
+        "chunkId": 85,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- 在使用临时表时无法使用内存临时表，只能在磁盘上创建临时表（《高性能 MySQL》书中有提到）。\n- 检索效率较低。\n- 不能直接创建索引，需要指定前缀长度。\n- 可能会消耗大量的网络和 IO 带宽。\n- 可能导致表上的 DML 操作变慢。\n- ……\n\n### ⭐️DATETIME 和 TIMESTAMP 的区别是什么？如何选择？\n\nDATETIME 类型没有时区信息，TIMESTAMP 和时区有关。",
+        "score": 0.6697445506314259
+      },
+      {
+        "noteId": 4,
+        "chunkId": 101,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "| 对比维度         | VARCHAR 类型（推荐）              | INT/BIGINT 类型（不推荐）    | 说明/备注                                                                   |\n| ---------------- | --------------------------------- | ---------------------------- | --------------------------------------------------------------------------- |\n| **格式兼容性**   | ✔ 能存前导零、\"+\"、\"-\"、空格等   | ✘ 自动丢失前导零，不能存符号 | VARCHAR 能原样存储各种手机号格式，INT/BIGINT 只支持单纯数字，且前导零会消失 |",
+        "score": 0.5688035663121532
+      },
+      {
+        "noteId": 4,
+        "chunkId": 77,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "对于从 0 开始递增的 ID 列，使用 UNSIGNED 属性可以非常适合，因为不允许负值并且可以拥有更大的上限范围，提供了更多的 ID 值可用。\n\n### CHAR 和 VARCHAR 的区别是什么？\n\nCHAR 和 VARCHAR 是最常用到的字符串类型，两者的主要区别在于：**CHAR 是定长字符串，VARCHAR 是变长字符串。**",
+        "score": 0.538363543846397
+      },
+      {
+        "noteId": 4,
+        "chunkId": 81,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "长度来进行的，也就会消耗更多内存。\n\n### DECIMAL 和 FLOAT/DOUBLE 的区别是什么？\n\nDECIMAL 和 FLOAT 的区别是：**DECIMAL 是定点数，FLOAT/DOUBLE 是浮点数。DECIMAL 可以存储精确的小数值，FLOAT/DOUBLE 只能存储近似的小数值。**\n\nDECIMAL 用于存储具有精度要求的小数，例如与货币相关的数据，可以避免浮点数带来的精度损失。\n\n在 Java 中，MySQL 的 DECIMAL 类型对应的是 Java 类 `java.math.",
+        "score": 0.5242222391300747
+      },
+      {
+        "noteId": 4,
+        "chunkId": 102,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "| **完整性**       | ✔ 不丢失任何格式信息             | ✘ 丢失格式信息               | 例如 \"013800012345\" 存进 INT 会变成 13800012345，\"+\" 也无法存储             |\n| **非算术性**     | ✔ 适合存储“标识符”               | ✘ 只适合做数值运算           | 手机号本质是字符串标识符，不做数学运算，VARCHAR 更贴合实际用途              |",
+        "score": 0.5090987075449577
+      },
+      {
+        "noteId": 4,
+        "chunkId": 225,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- `INET_NTOA()` :把整型的 ip 转为地址\n\n插入数据前，先用 `INET_ATON()` 把 ip 地址转为整型，显示数据时，使用 `INET_NTOA()` 把整型的 ip 地址转为地址显示即可。\n\n### 有哪些常见的 SQL 优化手段？\n\n[《Java 面试指北》(付费)](https://javaguide.cn/zhuanlan/java-mian-shi-zhi-bei.",
+        "score": 0.5069925785064733
+      },
+      {
+        "noteId": 4,
+        "chunkId": 103,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "| **查询灵活性**   | ✔ 支持 `LIKE '138%'` 等          | ✘ 查询前缀不方便或性能差     | 使用 VARCHAR 可高效按号段/前缀查询，数字类型需转为字符串或其他复杂处理      |\n| **加密存储支持** | ✔ 可存储加密密文（字母、符号等） | ✘ 无法存储密文               | 加密手机号后密文是字符串/二进制，只有 VARCHAR、TEXT、BLOB 等能兼容          |",
+        "score": 0.5039331016580411
+      }
+    ]
+  }
+}

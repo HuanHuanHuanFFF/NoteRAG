@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 192,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "�一的。\n\nMVCC 在 MySQL 中实现所依赖的手段主要是: **隐藏字段、read view、undo log**。\n\n- undo log : undo log 用于记录某行数据的多个版本的数据。\n- read view 和 隐藏字段 : 用来判断当前版本数据的可见性。\n\n关于 InnoDB 对 MVCC 的具体实现可以看这篇文章：[InnoDB 存储引擎对 MVCC 的实现](./innodb-implementation-of-mvcc.md) 。\n\n### SQL 标准定义了哪些事务隔离级别?",
+        "score": 0.7206434344478378
+      },
+      {
+        "noteId": 4,
+        "chunkId": 69,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "�级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。",
+        "score": 0.640663053831326
+      },
+      {
+        "noteId": 4,
+        "chunkId": 191,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "锁即可（对一行或者多行记录加锁），所以对于并发写入操作来说， InnoDB 的性能更高。不论是表级锁还是行级锁，都存在共享锁（Share Lock，S 锁）和排他锁（Exclusive Lock，X 锁）这两类。\n\n**MVCC** 是多版本并发控制方法，即对一份数据会存储多个版本，通过事务的可见性来保证事务能看到自己应该看到的版本。通常会有一个全局的版本分配器来为每一行数据设置版本号，版本号是�",
+        "score": 0.6406576894145752
+      },
+      {
+        "noteId": 4,
+        "chunkId": 121,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
+        "score": 0.6180714455715228
+      },
+      {
+        "noteId": 4,
+        "chunkId": 188,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "是说执行 `insert` 操作的时候需要依赖 Next-Key Lock（Record Lock+Gap Lock） 进行加锁来保证不出现幻读。\n\n### 并发事务的控制方式有哪些？\n\nMySQL 中并发事务的控制方式无非就两种：**锁** 和 **MVCC**。锁可以看作是悲观控制的模式，多版本并发控制（MVCC，Multiversion concurrency control）可以看作是乐观控制的模式。",
+        "score": 0.6130465134326843
+      },
+      {
+        "noteId": 4,
+        "chunkId": 198,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "关于 MySQL 事务隔离级别的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n### MySQL 的隔离级别是基于锁实现的吗？\n\nMySQL 的隔离级别基于锁和 MVCC 机制共同实现的。",
+        "score": 0.6081691126420229
+      },
+      {
+        "noteId": 4,
+        "chunkId": 195,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防",
+        "score": 0.5881617560193871
+      },
+      {
+        "noteId": 4,
+        "chunkId": 199,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "SERIALIZABLE 隔离级别是通过锁来实现的，READ-COMMITTED 和 REPEATABLE-READ 隔离级别是基于 MVCC 实现的。不过， SERIALIZABLE 之外的其他隔离级别可能也需要用到锁机制，就比如 REPEATABLE-READ 在当前读情况下需要使用加锁读来保证不会出现幻读。\n\n## MySQL 锁\n\n锁是一种常见的并发事务的控制方式。\n\n### 表级锁和行级锁了解吗？有什么区别？",
+        "score": 0.5862526687973335
+      },
+      {
+        "noteId": 4,
+        "chunkId": 125,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- MyISAM 不支持 MVCC，而 InnoDB 支持。\n- 虽然 MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是两者的实现方式不太一样。\n- MyISAM 不支持数据库异常崩溃后的安全恢复，而 InnoDB 支持。\n- InnoDB 的性能比 MyISAM 更强大。\n\n最后，再分享一张图片给你，这张图片详细对比了常见的几种 MySQL 存储引擎。\n\n!",
+        "score": 0.5561481580381017
+      },
+      {
+        "noteId": 4,
+        "chunkId": 174,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3.",
+        "score": 0.5364421562621445
+      }
+    ]
+  }
+}

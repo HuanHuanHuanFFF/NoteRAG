@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 213,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "aguide.cn/github/javaguide/mysql/image-20220511171419081.png)\n\n### 当前读和快照读有什么区别？\n\n**快照读**（一致性非锁定读）就是单纯的 `SELECT` 语句，但不包括下面这两类 `SELECT` 语句：\n\n```sql\nSELECT ... FOR UPDATE\n# 共享锁 可以在 MySQL 5.7 和 MySQL 8.0 中使用\nSELECT ... LOCK IN SHARE MODE;\n# 共享锁 可以在 MySQL 8.0 中使用\nSELECT ... FOR SHARE;\n```",
+        "score": 0.8145736676962829
+      },
+      {
+        "noteId": 4,
+        "chunkId": 215,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- 在 RC 级别下，对于快照数据，一致性非锁定读总是读取被锁定行的最新一份快照数据。\n- 在 RR 级别下，对于快照数据，一致性非锁定读总是读取本事务开始时的行数据版本。\n\n快照读比较适合对于数据一致性要求不是特别高且追求极致性能的业务场景。\n\n**当前读** （一致性锁定读）就是给行记录加 X 锁或 S 锁。",
+        "score": 0.7675808349155439
+      },
+      {
+        "noteId": 4,
+        "chunkId": 214,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "快照即记录的历史版本，每行记录可能存在多个历史版本（多版本技术）。\n\n快照读的情况下，如果读取的记录正在执行 UPDATE/DELETE 操作，读取操作不会因此去等待记录上 X 锁的释放，而是会去读取行的一个快照。\n\n只有在事务隔离级别 RC(读取已提交) 和 RR（可重读）下，InnoDB 才会使用一致性非锁定读：",
+        "score": 0.7242691352527831
+      },
+      {
+        "noteId": 4,
+        "chunkId": 186,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "的结果多了新的数据。\n\n![幻读](https://oss.javaguide.cn/github/javaguide/database/mysql/concurrency-consistency-issues-phantom-read.png)\n\n### 不可重复读和幻读有什么区别？\n\n- 不可重复读的重点是内容修改或者记录减少比如多次读取一条记录发现其中某些记录的值被修改；\n- 幻读的重点在于记录新增比如多次执行同一条查询语句（DQL）时，发现查到的记录增加了。",
+        "score": 0.6449199107241589
+      },
+      {
+        "noteId": 4,
+        "chunkId": 196,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "止脏读、不可重复读以及幻读。\n\n| 隔离级别         | 脏读 (Dirty Read) | 不可重复读 (Non-Repeatable Read) | 幻读 (Phantom Read)    |\n| ---------------- | ----------------- | -------------------------------- | ---------------------- |\n| READ UNCOMMITTED | √                 | √                                | √                      |\n| READ COMMITTED   | ×                 | √                                | √                      |\n| REPEATABLE READ  | ×                 | ×                                | √ (标准) / ≈× (InnoDB) |\n| SERIALIZABLE     | ×                 | ×                                | ×                      |",
+        "score": 0.6371544599533081
+      },
+      {
+        "noteId": 4,
+        "chunkId": 216,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "当前读的一些常见 SQL 语句类型如下：\n\n```sql\n# 对读的记录加一个X锁\nSELECT...FOR UPDATE\n# 对读的记录加一个S锁\nSELECT...LOCK IN SHARE MODE\n# 对读的记录加一个S锁\nSELECT...FOR SHARE\n# 对修改的记录加一个X锁\nINSERT...\nUPDATE...\nDELETE...\n```\n\n### 自增锁有了解吗？\n\n> 不太重要的一个知识点，简单了解即可。",
+        "score": 0.6222824679444761
+      },
+      {
+        "noteId": 4,
+        "chunkId": 184,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "例如：事务 1 读取某表中的数据 A=20，事务 2 也读取 A=20，事务 1 修改 A=A-1，事务 2 再次读取 A =19，此时读取的结果和第一次读取的结果不同。\n\n![不可重复读](https://oss.javaguide.cn/github/javaguide/database/mysql/concurrency-consistency-issues-unrepeatable-read.png)\n\n#### 幻读（Phantom read）",
+        "score": 0.6135377152517225
+      },
+      {
+        "noteId": 4,
+        "chunkId": 194,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "的保证太弱。\n- **READ-COMMITTED(读取已提交)** ：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。这是大多数数据库（如 Oracle, SQL Server）的默认隔离级别。\n- **REPEATABLE-READ(可重复读)** ：对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。MySQL",
+        "score": 0.6114213648862056
+      },
+      {
+        "noteId": 4,
+        "chunkId": 187,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "幻读其实可以看作是不可重复读的一种特殊情况，单独把幻读区分出来的原因主要是解决幻读和不可重复读的方案不一样。\n\n举个例子：执行 `delete` 和 `update` 操作的时候，可以直接对记录加锁，保证事务安全。而执行 `insert` 操作的时候，由于记录锁（Record Lock）只能锁住已经存在的记录，为了避免插入新记录，需要依赖间隙锁（Gap Lock）。也就",
+        "score": 0.5927347783604406
+      },
+      {
+        "noteId": 4,
+        "chunkId": 183,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "丢失修改](https://oss.javaguide.cn/github/javaguide/database/mysql/concurrency-consistency-issues-missing-modifications.png)\n\n#### 不可重复读（Unrepeatable read）\n\n指在一个事务内多次读同一数据。在这个事务还没有结束时，另一个事务也访问该数据。那么，在第一个事务中的两次读数据之间，由于第二个事务的修改导致第一个事务两次读取的数据可能不太一样。这就发生了在一个事务内两次读到的数据是不一样的情况，因此称为不可重复读。",
+        "score": 0.5914573560407972
+      }
+    ]
+  }
+}

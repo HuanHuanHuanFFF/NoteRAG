@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 160,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- **被经常频繁用于连接的字段**：经常用于连接的字段可能是一些外键列，对于外键列并不一定要建立外键，只是说该列涉及到表与表的关系。对于频繁被连接查询的字段，可以考虑建立索引，提高多表连接查询的效率。\n\n### 索引失效的原因有哪些？\n\n1. 创建了组合索引，但查询条件未遵守最左匹配原则;\n2. 在索引列上进行计算、函数、类型转换等操作;\n3.",
+        "score": 0.7357737579480567
+      },
+      {
+        "noteId": 4,
+        "chunkId": 161,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "以 % 开头的 LIKE 查询比如 `LIKE '%abc';`;\n4. 查询条件中使用 OR，且 OR 的前后条件中有一个列没有索引，涉及的索引都不会被使用到;\n5. IN 的取值范围较大时会导致索引失效，走全表扫描(NOT IN 和 IN 的失效场景相同);\n6. 发生[隐式转换](https://javaguide.cn/database/mysql/index-invalidation-caused-by-implicit-conversion.html \"隐式转换\");\n\n## MySQL 查询缓存",
+        "score": 0.6942578918626438
+      },
+      {
+        "noteId": 4,
+        "chunkId": 157,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "31 还报告了一个 bug：[Bug #109145 Using index for skip scan cause incorrect result](https://bugs.mysql.com/bug.php?id=109145)（后续版本已经修复）。个人建议知道有这个东西就好，不需要深究，实际项目也不一定能用上。\n\n### SELECT \\* 会导致索引失效吗？",
+        "score": 0.6870452556894671
+      },
+      {
+        "noteId": 4,
+        "chunkId": 135,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- **查询结果集占比过大**：如果要查询的数据占了整张表的大部分（比如超过 20%-30%），优化器可能会认为全表扫描更划算，因为通过索引多次回表（随机 I/O）的成本可能高于一次顺序的全表扫描。\n- **索引维护不当或统计信息过时**：导致优化器做出错误判断。\n\n### 索引为什么快？",
+        "score": 0.6787548065185595
+      },
+      {
+        "noteId": 4,
+        "chunkId": 158,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "`SELECT *` 不会直接导致索引失效（如果不走索引大概率是因为 where 查询范围过大导致的），但它可能会带来一些其他的性能问题比如造成网络传输和数据处理的浪费、无法使用索引覆盖。\n\n### 哪些字段适合创建索引？\n\n- **不为 NULL 的字段**：索引字段的数据应该尽量不为 NULL，因为对于数据为 NULL 的字段，数据库较难优化。如果字段频繁被查询，但又避免不了为 NULL，建议",
+        "score": 0.6753871440887499
+      },
+      {
+        "noteId": 4,
+        "chunkId": 131,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "。\n2. **保证数据唯一性**：通过创建**唯一索引 (Unique Index)**,可以确保表中的某一列（或几列组合）的值是独一无二的，比如用户 ID、邮箱等。主键本身就是一种唯一索引。\n3. **加速排序和分组**：如果查询中的 ORDER BY 或 GROUP BY 子句涉及的列建有索引，数据库往往可以直接利用索引已经排好序的特性，避免额外的排序操作，从而提升性能。\n\n**索引的缺点：**",
+        "score": 0.6415933561800001
+      },
+      {
+        "noteId": 4,
+        "chunkId": 245,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- [深入理解 MySQL 索引底层原理 - 腾讯技术工程 - 2020](https://zhuanlan.zhihu.com/p/113917726)\n\n## 参考\n\n- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>",
+        "score": 0.6389964057211392
+      },
+      {
+        "noteId": 4,
+        "chunkId": 85,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- 在使用临时表时无法使用内存临时表，只能在磁盘上创建临时表（《高性能 MySQL》书中有提到）。\n- 检索效率较低。\n- 不能直接创建索引，需要指定前缀长度。\n- 可能会消耗大量的网络和 IO 带宽。\n- 可能导致表上的 DML 操作变慢。\n- ……\n\n### ⭐️DATETIME 和 TIMESTAMP 的区别是什么？如何选择？\n\nDATETIME 类型没有时区信息，TIMESTAMP 和时区有关。",
+        "score": 0.6292658515097179
+      },
+      {
+        "noteId": 4,
+        "chunkId": 141,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "全不相邻的位置。这种顺序的破坏，使得我们无法处理像 `WHERE age > 30` 或 `BETWEEN 100 AND 200`这样的范围查询。要完成这种查询，哈希索引只能退化为全表扫描。\n2. **不支持排序:** 同理，因为哈希值是无序的，所以我们无法利用哈希索引来优化 `ORDER BY` 子句。\n3.",
+        "score": 0.6260263546689548
+      },
+      {
+        "noteId": 4,
+        "chunkId": 143,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "鉴于数据库查询中范围查询和排序是极其常见的操作，一个不支持这些功能的索引结构，显然不能作为默认的、通用的索引类型。\n\n### 为什么 InnoDB 没有使用 B 树作为索引的数据结构？\n\nB 树和 B+树都是优秀的多路平衡搜索树，非常适合磁盘存储，因为它们都很“矮胖”，能最大化地利用每一次磁盘 I/O。",
+        "score": 0.6236840563385397
+      }
+    ]
+  }
+}

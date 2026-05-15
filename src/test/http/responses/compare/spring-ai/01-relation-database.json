@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 63,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "/java-guide-blog/5e3c1a71724a38245aa43b02_99bf70d46cc247be878de9d3a88f0c44.png)\n\n大部分关系型数据库都使用 SQL 来操作数据库中的数据。并且，大部分关系型数据库都支持事务的四大特性(ACID)。\n\n**有哪些常见的关系型数据库呢？**\n\nMySQL、PostgreSQL、Oracle、SQL Server、SQLite（微信本地的聊天记录的存储就是用的 SQLite） ……。\n\n### 什么是 SQL？",
+        "score": 0.6462908598011231
+      },
+      {
+        "noteId": 4,
+        "chunkId": 62,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "顾名思义，关系型数据库（RDB，Relational Database）就是一种建立在关系模型的基础上的数据库。关系模型表明了数据库中所存储的数据之间的联系（一对一、一对多、多对多）。\n\n关系型数据库中，我们的数据都被存放在了各种表中（比如用户表），表中的每一行就存放着一条数据（比如一个用户的信息）。\n\n![关系型数据库表关系](https://oss.javaguide.",
+        "score": 0.6294599992358696
+      },
+      {
+        "noteId": 4,
+        "chunkId": 65,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- 对数据库中的数据进行简单的数据分析；\n- 搭配 Hive，Spark SQL 做大数据；\n- 搭配 SQLFlow 做机器学习；\n- ……\n\n### 什么是 MySQL？\n\n![](https://oss.javaguide.cn/github/javaguide/csdn/20210327143351823.png)\n\n**MySQL 是一种关系型数据库，主要用于持久化存储我们的系统中的一些数据比如用户信息。**",
+        "score": 0.501474231393682
+      },
+      {
+        "noteId": 4,
+        "chunkId": 61,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "content: MySQL高频面试题精讲：基础架构、InnoDB引擎、索引原理、B+树、事务ACID、MVCC、redo/undo/binlog日志、行锁/表锁、慢查询优化，一文速通大厂必考点！\n---\n\n<!-- @include: @small-advertisement.snippet.md -->\n\n## MySQL 基础\n\n### 什么是关系型数据库？",
+        "score": 0.48939374215677467
+      },
+      {
+        "noteId": 4,
+        "chunkId": 173,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "# 多条 SQL 语句\nSQL1,SQL2...\n## 提交事务\nCOMMIT;\n```\n\n![数据库事务示意图](https://oss.javaguide.cn/github/javaguide/mysql/%E6%95%B0%E6%8D%AE%E5%BA%93%E4%BA%8B%E5%8A%A1%E7%A4%BA%E6%84%8F%E5%9B%BE.png)\n\n另外，关系型数据库（例如：`MySQL`、`SQL Server`、`Oracle` 等）事务都有 **ACID** 特性：\n\n![ACID](https://oss.javaguide.",
+        "score": 0.457379140130436
+      },
+      {
+        "noteId": 4,
+        "chunkId": 64,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "SQL 是一种结构化查询语言(Structured Query Language)，专门用来与数据库打交道，目的是提供一种从数据库中读写数据的简单有效的方法。\n\n几乎所有的主流关系数据库都支持 SQL ，适用性非常强。并且，一些非关系型数据库也兼容 SQL 或者使用的是类似于 SQL 的查询语言。\n\nSQL 可以帮助我们：\n\n- 新建数据库、数据表、字段；\n- 在数据库中增加，删除，修改，查询数据；\n- 新建视图、函数、存储过程；",
+        "score": 0.4242292687756266
+      },
+      {
+        "noteId": 4,
+        "chunkId": 72,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "。\n\n值得一提的是最近几年，PostgreSQL 的势头很猛，甚至压过了 MySQL。网上出现了很多抨击诋毁 MySQL 的文章，笔者认为任何无脑抨击其中一方或者吹捧另外一方的行为都是不可取的。\n\n笔者也写过一篇文章分享对这两个关系型数据库代表的看法，感兴趣的可以看看：[MySQL 被干成老二了？](https://mp.weixin.qq.",
+        "score": 0.4070128070689196
+      },
+      {
+        "noteId": 4,
+        "chunkId": 174,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "/github/javaguide/mysql/ACID.png)\n\n1. **原子性**（`Atomicity`）：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；\n2. **一致性**（`Consistency`）：执行事务前后，数据保持一致，例如转账业务中，无论事务是否成功，转账者和收款人的总额应该是不变的；\n3.",
+        "score": 0.40564567413057917
+      },
+      {
+        "noteId": 4,
+        "chunkId": 121,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
+        "score": 0.4048163110236751
+      },
+      {
+        "noteId": 4,
+        "chunkId": 177,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "/opencourse/intro/100064201)才搞清楚的（多看好书！！！）。\n\n![AID->C](https://oss.javaguide.cn/github/javaguide/mysql/AID-%3EC.png)\n\n另外，DDIA 也就是 [《Designing Data-Intensive Application（数据密集型应用系统设计）》](https://book.douban.com/subject/30329536/) 的作者在他的这本书中如是说：\n\n> Atomicity, isolation, and durability are properties of the database, whereas consis‐\n> tency (in the ACID sense) is a property of the application. The application may rely",
+        "score": 0.39600802087736076
+      }
+    ]
+  }
+}

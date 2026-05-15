@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 143,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "鉴于数据库查询中范围查询和排序是极其常见的操作，一个不支持这些功能的索引结构，显然不能作为默认的、通用的索引类型。\n\n### 为什么 InnoDB 没有使用 B 树作为索引的数据结构？\n\nB 树和 B+树都是优秀的多路平衡搜索树，非常适合磁盘存储，因为它们都很“矮胖”，能最大化地利用每一次磁盘 I/O。",
+        "score": 0.7570733347171628
+      },
+      {
+        "noteId": 4,
+        "chunkId": 138,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "友好，还能触发预读。\n\n### MySQL 索引底层数据结构是什么？\n\n在 MySQL 中，MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，详细介绍可以参考笔者写的这篇文章：[MySQL 索引详解](https://javaguide.cn/database/mysql/mysql-index.html)。\n\n### 为什么 InnoDB 没有使用哈希作为索引的数据结构？",
+        "score": 0.7307888487216491
+      },
+      {
+        "noteId": 4,
+        "chunkId": 142,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "**不支持部分索引键查询:** 对于联合索引，比如`(col1, col2)`，哈希索引必须使用所有索引列进行查询，它无法单独利用 `col1` 来加速查询。\n4. **哈希冲突问题:** 当不同的键产生相同的哈希值时，需要额外的链表或开放寻址来解决，这会降低性能。",
+        "score": 0.6825544441507594
+      },
+      {
+        "noteId": 4,
+        "chunkId": 140,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "哈希索引的底层是哈希表。它的优点是，在进行**精确的等值查询**时，理论上时间复杂度是 **O(1)** ，速度极快。比如 `WHERE id = 123`。\n\n但是，它有几个对于通用数据库来说是致命的缺点：\n\n1. **不支持范围查询:** 这是最主要的原因。哈希函数的一个特点是它会把相邻的输入值（比如 `id=100` 和 `id=101`）映射到哈希表中完",
+        "score": 0.6780129277113955
+      },
+      {
+        "noteId": 4,
+        "chunkId": 141,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "全不相邻的位置。这种顺序的破坏，使得我们无法处理像 `WHERE age > 30` 或 `BETWEEN 100 AND 200`这样的范围查询。要完成这种查询，哈希索引只能退化为全表扫描。\n2. **不支持排序:** 同理，因为哈希值是无序的，所以我们无法利用哈希索引来优化 `ORDER BY` 子句。\n3.",
+        "score": 0.6778478228404472
+      },
+      {
+        "noteId": 4,
+        "chunkId": 124,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "InnoDB 使用缓冲池（Buffer Pool）缓存数据页和索引页，MyISAM 使用键缓存（Key Cache）仅缓存索引页而不缓存数据页。\n\n**总结**：\n\n- InnoDB 支持行级别的锁粒度，MyISAM 不支持，只支持表级别的锁粒度。\n- MyISAM 不提供事务支持。InnoDB 提供事务支持，实现了 SQL 标准定义了四个隔离级别。\n- MyISAM 不支持外键，而 InnoDB 支持。",
+        "score": 0.6587581830846725
+      },
+      {
+        "noteId": 4,
+        "chunkId": 139,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "> 我发现很多求职者甚至是面试官对这个问题都有误解，他们相当然的认为 MySQL 底层并没有使用哈希或者 B 树作为索引的数据结构。\n>\n> 实际上，不论是提问还是回答这个问题都要区分好存储引擎。像 MEMORY 引擎就同时支持哈希和 B 树。",
+        "score": 0.6444760753058221
+      },
+      {
+        "noteId": 4,
+        "chunkId": 122,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "虽然 MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是两者的实现方式不太一样。\n\nInnoDB 引擎中，其数据文件本身就是索引文件。相比 MyISAM，索引文件和数据文件是分离的，其表数据文件本身就是按 B+Tree 组织的一个索引结构，树的叶节点 data 域保存了完整的数据记录。\n\n详细区别，推荐你看看我写的这篇文章：[MySQL 索引详解](./mysql-index.",
+        "score": 0.6317334959427567
+      },
+      {
+        "noteId": 4,
+        "chunkId": 126,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "常见的几种 MySQL 存储引擎对比](https://oss.javaguide.cn/github/javaguide/mysql/comparison-of-common-mysql-storage-engines.png)\n\n### MyISAM 和 InnoDB 如何选择？\n\n大多数时候我们使用的都是 InnoDB 存储引擎，在某些读密集的情况下，使用 MyISAM 也是合适的。不过，前提是你的项目不介意 MyISAM 不支持事务、崩溃恢复等缺点（可是~我们一般都会介意啊）。",
+        "score": 0.6285143903340606
+      },
+      {
+        "noteId": 4,
+        "chunkId": 121,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
+        "score": 0.6239542179121335
+      }
+    ]
+  }
+}

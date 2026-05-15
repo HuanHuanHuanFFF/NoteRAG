@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 123,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": ")。\n\n**7、性能有差别。**\n\nInnoDB 的性能比 MyISAM 更强大，不管是在读写混合模式下还是只读模式下，随着 CPU 核数的增加，InnoDB 的读写能力呈线性增长。MyISAM 因为读写不能并发，它的处理能力跟核数没关系。\n\n![InnoDB 和 MyISAM 性能对比](https://oss.javaguide.cn/github/javaguide/mysql/innodb-myisam-performance-comparison.png)\n\n**8、数据缓存策略和机制实现不同。**",
+        "score": 0.7547006607055664
+      },
+      {
+        "noteId": 4,
+        "chunkId": 121,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
+        "score": 0.7481418402110447
+      },
+      {
+        "noteId": 4,
+        "chunkId": 124,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "InnoDB 使用缓冲池（Buffer Pool）缓存数据页和索引页，MyISAM 使用键缓存（Key Cache）仅缓存索引页而不缓存数据页。\n\n**总结**：\n\n- InnoDB 支持行级别的锁粒度，MyISAM 不支持，只支持表级别的锁粒度。\n- MyISAM 不提供事务支持。InnoDB 提供事务支持，实现了 SQL 标准定义了四个隔离级别。\n- MyISAM 不支持外键，而 InnoDB 支持。",
+        "score": 0.6882319450378418
+      },
+      {
+        "noteId": 4,
+        "chunkId": 126,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "常见的几种 MySQL 存储引擎对比](https://oss.javaguide.cn/github/javaguide/mysql/comparison-of-common-mysql-storage-engines.png)\n\n### MyISAM 和 InnoDB 如何选择？\n\n大多数时候我们使用的都是 InnoDB 存储引擎，在某些读密集的情况下，使用 MyISAM 也是合适的。不过，前提是你的项目不介意 MyISAM 不支持事务、崩溃恢复等缺点（可是~我们一般都会介意啊）。",
+        "score": 0.6745838716874211
+      },
+      {
+        "noteId": 4,
+        "chunkId": 125,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- MyISAM 不支持 MVCC，而 InnoDB 支持。\n- 虽然 MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是两者的实现方式不太一样。\n- MyISAM 不支持数据库异常崩溃后的安全恢复，而 InnoDB 支持。\n- InnoDB 的性能比 MyISAM 更强大。\n\n最后，再分享一张图片给你，这张图片详细对比了常见的几种 MySQL 存储引擎。\n\n!",
+        "score": 0.6651497882426085
+      },
+      {
+        "noteId": 4,
+        "chunkId": 122,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "虽然 MyISAM 引擎和 InnoDB 引擎都是使用 B+Tree 作为索引结构，但是两者的实现方式不太一样。\n\nInnoDB 引擎中，其数据文件本身就是索引文件。相比 MyISAM，索引文件和数据文件是分离的，其表数据文件本身就是按 B+Tree 组织的一个索引结构，树的叶节点 data 域保存了完整的数据记录。\n\n详细区别，推荐你看看我写的这篇文章：[MySQL 索引详解](./mysql-index.",
+        "score": 0.6501343250274658
+      },
+      {
+        "noteId": 4,
+        "chunkId": 117,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "MyISAM 只有表级锁(table-level locking)，而 InnoDB 支持行级锁(row-level locking)和表级锁,默认为行级锁。\n\n也就说，MyISAM 一锁就是锁住了整张表，这在并发写的情况下是多么滴憨憨啊！这也是为什么 InnoDB 在并发写的时候，性能更牛皮了！\n\n**2、是否支持事务**\n\nMyISAM 不提供事务支持。",
+        "score": 0.6327253799006127
+      },
+      {
+        "noteId": 4,
+        "chunkId": 111,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "| disabled_storage_engines        |           |\n| internal_tmp_mem_storage_engine | TempTable |\n+---------------------------------+-----------+\n4 rows in set (0.00 sec)\n```\n\n如果你想要深入了解每个存储引擎以及它们之间的区别，推荐你去阅读以下 MySQL 官方文档对应的介绍(面试不会问这么细，了解即可)：\n\n- InnoDB 存储引擎详细介绍：<https://dev.mysql.com/doc/refman/8.0/en/innodb-storage-engine.html> 。",
+        "score": 0.6287243366241455
+      },
+      {
+        "noteId": 4,
+        "chunkId": 200,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "MyISAM 仅仅支持表级锁(table-level locking)，一锁就锁整张表，这在并发写的情况下性非常差。InnoDB 不光支持表级锁(table-level locking)，还支持行级锁(row-level locking)，默认为行级锁。\n\n行级锁的粒度更小，仅对相关的记录上锁即可（对一行或者多行记录加锁），所以对于并发写入操作来说， InnoDB 的性能更高。\n\n**表级锁和行级锁对比**：",
+        "score": 0.6277899589789008
+      },
+      {
+        "noteId": 4,
+        "chunkId": 115,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "MySQL 官方文档也有介绍到如何编写一个自定义存储引擎，地址：<https://dev.mysql.com/doc/internals/en/custom-engine.html> 。\n\n### ⭐️MyISAM 和 InnoDB 有什么区别？\n\nMySQL 5.5 之前，MyISAM 引擎是 MySQL 的默认存储引擎，可谓是风光一时。",
+        "score": 0.6157080393185612
+      }
+    ]
+  }
+}

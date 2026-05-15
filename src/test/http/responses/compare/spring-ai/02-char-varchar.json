@@ -1,0 +1,88 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "sources": [
+      {
+        "noteId": 4,
+        "chunkId": 79,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "CHAR(M) 和 VARCHAR(M) 的 M 都代表能够保存的字符数的最大值，无论是字母、数字还是中文，每个都只占用一个字符。\n\n### VARCHAR(100)和 VARCHAR(10)的区别是什么？\n\nVARCHAR(100)和 VARCHAR(10)都是变长类型，表示能存储最多 100 个字符和 10 个字符。因此，VARCHAR (100) 可以满足更大范围的字符存储需求，有更好的业务拓展性。而 VARCHAR(10)存储超过 10 个字符时，就需要修改表",
+        "score": 0.7818764708189458
+      },
+      {
+        "noteId": 4,
+        "chunkId": 77,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "对于从 0 开始递增的 ID 列，使用 UNSIGNED 属性可以非常适合，因为不允许负值并且可以拥有更大的上限范围，提供了更多的 ID 值可用。\n\n### CHAR 和 VARCHAR 的区别是什么？\n\nCHAR 和 VARCHAR 是最常用到的字符串类型，两者的主要区别在于：**CHAR 是定长字符串，VARCHAR 是变长字符串。**",
+        "score": 0.7695503234863281
+      },
+      {
+        "noteId": 4,
+        "chunkId": 78,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "CHAR 在存储时会在右边填充空格以达到指定的长度，检索时会去掉空格；VARCHAR 在存储时需要使用 1 或 2 个额外字节记录字符串的长度，检索时不需要处理。\n\nCHAR 更适合存储长度较短或者长度都差不多的字符串，例如 Bcrypt 算法、MD5 算法加密后的密码、身份证号码。VARCHAR 类型适合存储长度不确定或者差异较大的字符串，例如用户昵称、文章标题等。",
+        "score": 0.7294390797615051
+      },
+      {
+        "noteId": 4,
+        "chunkId": 80,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "结构才可以。\n\n虽说 VARCHAR(100)和 VARCHAR(10)能存储的字符范围不同，但二者存储相同的字符串，所占用磁盘的存储空间其实是一样的，这也是很多人容易误解的一点。\n\n不过，VARCHAR(100) 会消耗更多的内存。这是因为 VARCHAR 类型在内存中操作时，通常会分配固定大小的内存块来保存值，即使用字符类型中定义的长度。例如在进行排序的时候，VARCHAR(100)是按照 100 这个",
+        "score": 0.6504340767860413
+      },
+      {
+        "noteId": 4,
+        "chunkId": 96,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "**非算术性：**手机号虽然看起来是数字，但我们从不对它进行数学运算（比如求和、平均值）。它本质上是一个标识符，更像是一个字符串。用 VARCHAR 更符合其数据性质。\n3. **查询灵活性：**\n    - 业务中常常需要根据号段（前缀）进行查询，例如查找所有 \"138\" 开头的用户。使用 VARCHAR 类型配合 `LIKE '138%'` 这样的 SQL 查询既直观又高效。",
+        "score": 0.6457492113113403
+      },
+      {
+        "noteId": 4,
+        "chunkId": 246,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>",
+        "score": 0.641391396522522
+      },
+      {
+        "noteId": 4,
+        "chunkId": 102,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "| **完整性**       | ✔ 不丢失任何格式信息             | ✘ 丢失格式信息               | 例如 \"013800012345\" 存进 INT 会变成 13800012345，\"+\" 也无法存储             |\n| **非算术性**     | ✔ 适合存储“标识符”               | ✘ 只适合做数值运算           | 手机号本质是字符串标识符，不做数学运算，VARCHAR 更贴合实际用途              |",
+        "score": 0.5853886851436694
+      },
+      {
+        "noteId": 4,
+        "chunkId": 98,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- 加密后的数据（密文）是一长串字符串（通常由字母、数字、符号组成，或经过 Base64/Hex 编码），INT 或 BIGINT 类型根本无法存储这种密文。只有 VARCHAR、TEXT 或 BLOB 等类型可以。\n\n**关于 VARCHAR 长度的选择：**",
+        "score": 0.5734245093554884
+      },
+      {
+        "noteId": 4,
+        "chunkId": 101,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "| 对比维度         | VARCHAR 类型（推荐）              | INT/BIGINT 类型（不推荐）    | 说明/备注                                                                   |\n| ---------------- | --------------------------------- | ---------------------------- | --------------------------------------------------------------------------- |\n| **格式兼容性**   | ✔ 能存前导零、\"+\"、\"-\"、空格等   | ✘ 自动丢失前导零，不能存符号 | VARCHAR 能原样存储各种手机号格式，INT/BIGINT 只支持单纯数字，且前导零会消失 |",
+        "score": 0.5695482409538976
+      },
+      {
+        "noteId": 4,
+        "chunkId": 99,
+        "title": "可以命中索引",
+        "headingPath": null,
+        "content": "- **如果不加密存储（强烈不推荐！）：** 考虑到国际号码和可能的格式符，VARCHAR(20) 到 VARCHAR(32) 通常是一个比较安全的范围，足以覆盖全球绝大多数手机号格式。VARCHAR(15) 可能对某些带国家码和格式符的号码来说不够用。",
+        "score": 0.5654334347923516
+      }
+    ]
+  }
+}

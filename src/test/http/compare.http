@@ -1,0 +1,169 @@
+@baseUrl = http://localhost:9001
+# Change resultSet to spring-ai-default when running against http://localhost:9001.
+@resultSet = spring-ai
+@resultDir = ./responses/compare/{{resultSet}}
+
+### MySQL - relation database
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "什么是关系型数据库?",
+  "topN": 10
+}
+>>! {{resultDir}}/01-relation-database.json
+
+### MySQL - CHAR vs VARCHAR
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "CHAR和VARCHAR有什么区别?",
+  "topN": 10
+}
+>>! {{resultDir}}/02-char-varchar.json
+
+### MySQL - DATETIME vs TIMESTAMP
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "DATETIME和TIMESTAMP应该怎么选择?",
+  "topN": 10
+}
+>>! {{resultDir}}/03-datetime-timestamp.json
+
+### MySQL - InnoDB vs MyISAM
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MyISAM和InnoDB有什么区别?",
+  "topN": 10
+}
+>>! {{resultDir}}/04-innodb-myisam.json
+
+### MySQL - index structure
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL索引底层为什么使用B+树?",
+  "topN": 10
+}
+>>! {{resultDir}}/05-index-structure.json
+
+### MySQL - hash index
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "为什么InnoDB没有使用哈希作为默认索引结构?",
+  "topN": 10
+}
+>>! {{resultDir}}/06-hash-index.json
+
+### MySQL - covering index
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "什么是覆盖索引?",
+  "topN": 10
+}
+>>! {{resultDir}}/07-covering-index.json
+
+### MySQL - leftmost prefix
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "联合索引的最左前缀原则是什么?",
+  "topN": 10
+}
+>>! {{resultDir}}/08-leftmost-prefix.json
+
+### MySQL - index invalidation
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL索引失效的原因有哪些?",
+  "topN": 10
+}
+>>! {{resultDir}}/09-index-invalidation.json
+
+### MySQL - transaction problems
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "并发事务会带来哪些问题?",
+  "topN": 10
+}
+>>! {{resultDir}}/10-transaction-problems.json
+
+### MySQL - phantom read
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "不可重复读和幻读有什么区别?",
+  "topN": 10
+}
+>>! {{resultDir}}/11-phantom-read.json
+
+### MySQL - MVCC
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL的MVCC依赖哪些机制实现?",
+  "topN": 10
+}
+>>! {{resultDir}}/12-mvcc.json
+
+### MySQL - row lock
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "InnoDB行级锁有哪些注意事项?",
+  "topN": 10
+}
+>>! {{resultDir}}/13-row-lock.json
+
+### MySQL - current read vs snapshot read
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "当前读和快照读有什么区别?",
+  "topN": 10
+}
+>>! {{resultDir}}/14-current-snapshot-read.json
+
+### MySQL - explain
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "如何使用EXPLAIN分析SQL性能?",
+  "topN": 10
+}
+>>! {{resultDir}}/15-explain.json
