@@ -10,16 +10,30 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import com.huanf.noterag.config.ChunkingProperties;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
+/**
+ * Spring AI 默认 TokenTextSplitter baseline。
+ *
+ * <p>本策略只补齐 NoteRAG 入库所需的工程 metadata，不解析 Markdown 标题，也不生成 headingPath，
+ * 避免 baseline 使用自定义 Markdown chunk 方案的优势。</p>
+ */
 @Component
 @ConditionalOnProperty(name = "noterag.chunking.strategy", havingValue = "spring-ai-default")
 public class SpringAiDefaultChunkingStrategy implements ChunkingStrategy {
 
     private final TokenTextSplitter tokenTextSplitter;
 
-    public SpringAiDefaultChunkingStrategy() {
-        this.tokenTextSplitter = new TokenTextSplitter();
+    public SpringAiDefaultChunkingStrategy(ChunkingProperties chunkingProperties) {
+        ChunkingProperties.SpringAi springAi = chunkingProperties.getSpringAi();
+        this.tokenTextSplitter = TokenTextSplitter.builder()
+                .withChunkSize(springAi.getChunkSize())
+                .withMinChunkSizeChars(springAi.getMinChunkSizeChars())
+                .withMinChunkLengthToEmbed(springAi.getMinChunkLengthToEmbed())
+                .withMaxNumChunks(springAi.getMaxNumChunks())
+                .withKeepSeparator(springAi.isKeepSeparator())
+                .build();
     }
 
     @Override

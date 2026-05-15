@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 
@@ -33,6 +34,9 @@ public class ChunkingProperties {
     @Min(0)
     private int overlapChars = 80;
 
+    @Valid
+    private SpringAi springAi = new SpringAi();
+
     /**
      * 软下限不能大于软上限。
      */
@@ -47,5 +51,30 @@ public class ChunkingProperties {
     @AssertTrue(message = "noterag.chunking.hard-max-tokens must be greater than or equal to max-target-tokens")
     public boolean isHardMaxTokensNotLessThanMaxTargetTokens() {
         return hardMaxTokens >= maxTargetTokens;
+    }
+
+    /**
+     * Spring AI 默认 TokenTextSplitter 的参数。
+     *
+     * <p>这些参数只在 `noterag.chunking.strategy=spring-ai-default` 时生效，用来做 baseline 对比，
+     * 不参与 NoteRAG 自定义 Markdown chunk 规则。</p>
+     */
+    @Setter
+    @Getter
+    public static class SpringAi {
+
+        @Min(1)
+        private int chunkSize = 800;
+
+        @Min(1)
+        private int minChunkSizeChars = 350;
+
+        @Min(0)
+        private int minChunkLengthToEmbed = 5;
+
+        @Min(1)
+        private int maxNumChunks = 10000;
+
+        private boolean keepSeparator = true;
     }
 }

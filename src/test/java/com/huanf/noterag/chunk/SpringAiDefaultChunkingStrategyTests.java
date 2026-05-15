@@ -9,12 +9,13 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 
-class SpringAiDefaultChunkingStrategyTests {
+import com.huanf.noterag.config.ChunkingProperties;
 
-    private final SpringAiDefaultChunkingStrategy strategy = new SpringAiDefaultChunkingStrategy();
+class SpringAiDefaultChunkingStrategyTests {
 
     @Test
     void transformAddsProjectMetadataWithoutHeadingPath() {
+        SpringAiDefaultChunkingStrategy strategy = new SpringAiDefaultChunkingStrategy(defaultProperties());
         Long documentId = 42L;
         String content = "# Java\n\n" + "Spring AI default baseline chunk text. ".repeat(1200);
 
@@ -38,5 +39,27 @@ class SpringAiDefaultChunkingStrategyTests {
                     .isGreaterThan(0);
             assertThat(chunk.getMetadata().get(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY)).isNull();
         });
+    }
+
+    @Test
+    void transformUsesConfiguredSpringAiChunkSize() {
+        Long documentId = 42L;
+        String content = "# Java\n\n" + "Spring AI default baseline chunk text. ".repeat(1200);
+
+        List<Document> defaultChunks = new SpringAiDefaultChunkingStrategy(defaultProperties()).transform(List.of(new Document(
+                content,
+                Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, documentId))));
+
+        ChunkingProperties smallChunkProperties = defaultProperties();
+        smallChunkProperties.getSpringAi().setChunkSize(200);
+        List<Document> smallChunks = new SpringAiDefaultChunkingStrategy(smallChunkProperties).transform(List.of(new Document(
+                content,
+                Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, documentId))));
+
+        assertThat(smallChunks.size()).isGreaterThan(defaultChunks.size());
+    }
+
+    private ChunkingProperties defaultProperties() {
+        return new ChunkingProperties();
     }
 }
