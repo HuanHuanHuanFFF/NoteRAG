@@ -49,11 +49,31 @@ config/
 
 ```text
 GET  /api/health
-POST /api/documents/import-text
-POST /api/query
+POST /api/note-imports/text
+POST /api/retrieval/search   # 开发期召回测试接口
+POST /api/query              # 后续完整问答接口
 ```
 
 实现时先保持简单，先跑通完整 RAG 闭环，再逐步完善每个环节。
+
+## 切块策略
+
+NoteRAG 当前采用自定义 Markdown heading-aware chunk 策略：
+
+```text
+heading section -> paragraph merge -> estimated token control -> overlap -> headingPath
+```
+
+chunk 入向量时会临时拼入文档标题和章节路径，但数据库中的 `note_chunks.content` 仍保留原始正文。
+
+已完成一轮 retrieval baseline 对比：在 JavaGuide MySQL 文档上，自定义方案与 Spring AI `TokenTextSplitter` 调整到接近 chunk 数量后，二者 `Recall@5 / Recall@10` 均为 100%；自定义方案在排序和 source 可解释性上更好：
+
+| 方案 | chunks | Hit@1 | Hit@3 | Recall@5 | MRR@5 |
+|---|---:|---:|---:|---:|---:|
+| Spring AI TokenTextSplitter baseline | 69 | 80.0% | 93.3% | 100% | 0.883 |
+| NoteRAG heading-aware chunk | 71 | 93.3% | 100% | 100% | 0.967 |
+
+完整实验记录见 [`retrieval-baseline-report.md`](src/test/http/responses/compare/retrieval-baseline-report.md)。
 
 ## English
 
@@ -105,8 +125,23 @@ Current development should first make the minimal runnable backend work:
 
 ```text
 GET  /api/health
-POST /api/documents/import-text
-POST /api/query
+POST /api/note-imports/text
+POST /api/retrieval/search   # development retrieval test endpoint
+POST /api/query              # future full QA endpoint
 ```
 
 Implementation should stay simple: run the core path first, then improve each step after the full RAG loop is connected.
+
+## Chunking Strategy
+
+NoteRAG currently uses a custom Markdown heading-aware chunking strategy:
+
+```text
+heading section -> paragraph merge -> estimated token control -> overlap -> headingPath
+```
+
+For embedding, each chunk is formatted with the note title and heading path, while `note_chunks.content` keeps the original chunk body.
+
+A retrieval baseline comparison has been added. On a JavaGuide MySQL document, the custom strategy and Spring AI `TokenTextSplitter` both reached 100% `Recall@5 / Recall@10` at similar chunk counts, while the custom strategy produced better ranking and source explainability.
+
+See [`retrieval-baseline-report.md`](src/test/http/responses/compare/retrieval-baseline-report.md) for details.
