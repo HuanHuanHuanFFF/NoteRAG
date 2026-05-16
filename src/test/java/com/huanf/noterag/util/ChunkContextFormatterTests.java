@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-class EmbeddingTextFormatterTests {
+class ChunkContextFormatterTests {
 
     @Test
     void formatChunkForEmbeddingIncludesTitleHeadingPathAndContent() {
-        String embeddingText = EmbeddingTextFormatter.formatChunkForEmbedding(
+        String embeddingText = ChunkContextFormatter.formatChunkForEmbedding(
                 " Java Guide ",
                 " Java > Collections ",
                 "HashMap notes.");
@@ -23,7 +23,7 @@ class EmbeddingTextFormatterTests {
 
     @Test
     void formatChunkForEmbeddingOmitsBlankHeadingPath() {
-        String embeddingText = EmbeddingTextFormatter.formatChunkForEmbedding(
+        String embeddingText = ChunkContextFormatter.formatChunkForEmbedding(
                 "Java Guide",
                 "   ",
                 "Java notes.");
@@ -40,12 +40,12 @@ class EmbeddingTextFormatterTests {
 
     @Test
     void formatQueryForEmbeddingStripsQuestion() {
-        assertThat(EmbeddingTextFormatter.formatQueryForEmbedding("  What is RAG?\n"))
+        assertThat(ChunkContextFormatter.formatQueryForEmbedding("  What is RAG?\n"))
                 .isEqualTo("What is RAG?");
     }
 
     @Test
     void formatQueryForEmbeddingReturnsEmptyStringForNull() {
-        assertThat(EmbeddingTextFormatter.formatQueryForEmbedding(null)).isEmpty();
+        assertThat(ChunkContextFormatter.formatQueryForEmbedding(null)).isEmpty();
     }
 }

@@ -1,8 +1,8 @@
 package com.huanf.noterag.util;
 
-public final class EmbeddingTextFormatter {
+public final class ChunkContextFormatter {
 
-    private EmbeddingTextFormatter() {
+    private ChunkContextFormatter() {
     }
 
     public static String formatChunkForEmbedding(String title, String headingPath, String content) {

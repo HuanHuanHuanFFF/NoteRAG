@@ -19,7 +19,7 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.RerankProperties;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.EmbeddingTextFormatter;
+import com.huanf.noterag.util.ChunkContextFormatter;
 
 class RerankServiceTests {
 
@@ -117,9 +117,9 @@ class RerankServiceTests {
                 eq(2),
                 eq(properties.getInstruct()));
         assertThat(documentsCaptor.getValue()).containsExactly(
-                EmbeddingTextFormatter.formatChunkForEmbedding("Java", "JVM", "first"),
-                EmbeddingTextFormatter.formatChunkForEmbedding("MySQL", "Index", "second"),
-                EmbeddingTextFormatter.formatChunkForEmbedding("Redis", "Cache", "third"));
+                ChunkContextFormatter.formatChunkForEmbedding("Java", "JVM", "first"),
+                ChunkContextFormatter.formatChunkForEmbedding("MySQL", "Index", "second"),
+                ChunkContextFormatter.formatChunkForEmbedding("Redis", "Cache", "third"));
     }
 
     @Test

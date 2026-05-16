@@ -13,7 +13,7 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.RerankProperties;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.EmbeddingTextFormatter;
+import com.huanf.noterag.util.ChunkContextFormatter;
 
 @Service
 public class RerankService {
@@ -59,7 +59,7 @@ public class RerankService {
         }
 
         List<String> documents = candidates.stream()
-                .map(candidate -> EmbeddingTextFormatter.formatChunkForEmbedding(
+                .map(candidate -> ChunkContextFormatter.formatChunkForEmbedding(
                         candidate.getTitle(),
                         candidate.getHeadingPath(),
                         candidate.getContent()))
