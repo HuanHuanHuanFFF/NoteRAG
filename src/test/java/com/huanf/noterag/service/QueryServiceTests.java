@@ -31,7 +31,7 @@ class QueryServiceTests {
         when(retrievalService.retrieveTopN("what is index?")).thenReturn(retrievedChunks);
         when(rerankService.rerank("what is index?", retrievedChunks)).thenReturn(rerankedChunks);
 
-        QueryResponse response = queryService.query("what is index?");
+        QueryResponse response = queryService.query("  what is index?  ");
 
         assertThat(response.getAnswer()).isEmpty();
         assertThat(response.getSources()).hasSize(2);

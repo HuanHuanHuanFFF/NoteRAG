@@ -1,0 +1,49 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "answer": "",
+    "sources": [
+      {
+        "noteId": 3,
+        "chunkId": 143,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > MySQL 的隔离级别是基于锁实现的吗？",
+        "content": "MySQL 的隔离级别基于锁和 MVCC 机制共同实现的。\n\nSERIALIZABLE 隔离级别是通过锁来实现的，READ-COMMITTED 和 REPEATABLE-READ 隔离级别是基于 MVCC 实现的。不过， SERIALIZABLE 之外的其他隔离级别可能也需要用到锁机制，就比如 REPEATABLE-READ 在当前读情况下需要使用加锁读来保证不会出现幻读。",
+        "score": 0.9360213411497651
+      },
+      {
+        "noteId": 3,
+        "chunkId": 141,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > SQL 标准定义了哪些事务隔离级别?",
+        "content": "SQL 标准定义了四种事务隔离级别，用来平衡事务的隔离性（Isolation）和并发性能。级别越高，数据一致性越好，但并发性能可能越低。这四个级别是：\n\n- **READ-UNCOMMITTED(读取未提交)** ：最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读或不可重复读。这种级别在实际应用中很少使用，因为它对数据一致性的保证太弱。\n- **READ-COMMITTED(读取已提交)** ：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。这是大多数数据库（如 Oracle, SQL Server）的默认隔离级别。\n- **REPEATABLE-READ(可重复读)** ：对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。MySQL InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。\n\n| 隔离级别         | 脏读 (Dirty Read) | 不可重复读 (Non-Repeatable Read) | 幻读 (Phantom Read)    |\n| ---------------- | ----------------- | -------------------------------- | ---------------------- |\n| READ UNCOMMITTED | √                 | √                                | √                      |\n| READ COMMITTED   | ×                 | √                                | √                      |\n| REPEATABLE READ  | ×                 | ×                                | √ (标准) / ≈× (InnoDB) |\n| SERIALIZABLE     | ×                 | ×                                | ×                      |",
+        "score": 0.7255040223855919
+      },
+      {
+        "noteId": 3,
+        "chunkId": 142,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > MySQL 的默认隔离级别是什么?",
+        "content": "MySQL InnoDB 存储引擎的默认隔离级别是 **REPEATABLE READ**。可以通过以下命令查看：\n\n- MySQL 8.0 之前：`SELECT @@tx_isolation;`\n- MySQL 8.0 及之后：`SELECT @@transaction_isolation;`\n\n```sql\nmysql> SELECT @@tx_isolation;\n+-----------------+\n| @@tx_isolation  |\n+-----------------+\n| REPEATABLE-READ |\n+-----------------+\n```\n\n关于 MySQL 事务隔离级别的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。",
+        "score": 0.6793105969014543
+      },
+      {
+        "noteId": 3,
+        "chunkId": 163,
+        "title": "可以命中索引",
+        "headingPath": "参考",
+        "content": "- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>\n- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>\n- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>\n- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
+        "score": 0.5651024029184283
+      },
+      {
+        "noteId": 3,
+        "chunkId": 97,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 基础 > ⭐️MySQL 有什么优点？",
+        "content": "这个问题本质上是在问 MySQL 如此流行的原因。\n\nMySQL 成功可以归功于在**生态、功能和运维**这三个层面上的综合优势。\n\n**第一，从生态和成本角度看，它的护城河非常深。**\n\n- **开源免费：** 这是它得以广泛普及的基石。任何公司和个人都可以免费使用，极大地降低了技术门槛和初期成本。\n- **社区庞大，生态完善：** 经过几十年的发展，MySQL 拥有极其活跃的社区和丰富的生态系统。这意味着无论你遇到什么问题，几乎都能在网上找到解决方案；同时，市面上所有的主流编程语言、框架、ORM 工具、监控系统都对 MySQL 有完美的支持。它的文档也非常丰富，学习资源唾手可得。\n\n**第二，从核心技术功能上看，它非常强大且均衡。**\n\n- **强大的事务支持：** 这是它作为关系型数据库的立身之本。值得一提的是，InnoDB 默认的可重复读（REPEATABLE-READ）隔离级别，通过 MVCC 和 Next-Key Lock 机制，很大程度上避免了幻读问题，这在很多其他数据库中都需要更高的隔离级别才能做到，兼顾了性能和一致性。详细介绍可以阅读笔者写的这篇文章：[MySQL 事务隔离级别详解](https://javaguide.cn/database/mysql/transaction-isolation-level.html)。\n- **优秀的性能和可扩展性：** MySQL 本身经过了海量互联网业务的严酷考验，单机性能非常出色。更重要的是，它围绕着水平扩展，形成了一套非常成熟的架构方案，比如主从复制、读写分离、以及通过中间件实现的分库分表。这让它能够支撑从初创公司到大型互联网平台的各种规模的业务。\n\n**第三，从运维和使用角度看，它非常‘亲民’。**\n\n- **开箱即用，上手简单：** 相比于 Oracle 等大型商业数据库，MySQL 的安装、配置和日常使用都非常简单直观，学习曲线平缓，对于开发者和初级 DBA 非常友好。\n- **维护成本低：** 由于其简单性和庞大的社区，找到相关的运维人才和解决方案都相对容易，整体的维护成本也更低。\n\n值得一提的是最近几年，PostgreSQL 的势头很猛，甚至压过了 MySQL。网上出现了很多抨击诋毁 MySQL 的文章，笔者认为任何无脑抨击其中一方或者吹捧另外一方的行为都是不可取的。\n\n笔者也写过一篇文章分享对这两个关系型数据库代表的看法，感兴趣的可以看看：[MySQL 被干成老二了？](https://mp.weixin.qq.com/s/APWD-PzTcTqGUuibAw7GGw)。",
+        "score": 0.530261264871603
+      }
+    ]
+  }
+}

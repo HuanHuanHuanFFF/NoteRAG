@@ -1,0 +1,49 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "answer": "",
+    "sources": [
+      {
+        "noteId": 3,
+        "chunkId": 140,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 并发事务的控制方式有哪些？",
+        "content": "MySQL 中并发事务的控制方式无非就两种：**锁** 和 **MVCC**。锁可以看作是悲观控制的模式，多版本并发控制（MVCC，Multiversion concurrency control）可以看作是乐观控制的模式。\n\n**锁** 控制方式下会通过锁来显式控制共享资源而不是通过调度手段，MySQL 中主要是通过 **读写锁** 来实现并发控制。\n\n- **共享锁（S 锁）**：又称读锁，事务在读取记录的时候获取共享锁，允许多个事务同时获取（锁兼容）。\n- **排他锁（X 锁）**：又称写锁/独占锁，事务在修改记录的时候获取排他锁，不允许多个事务同时获取。如果一个记录已经被加了排他锁，那其他事务不能再对这条记录加任何类型的锁（锁不兼容）。\n\n读写锁可以做到读读并行，但是无法做到写读、写写并行。另外，根据根据锁粒度的不同，又被分为 **表级锁(table-level locking)** 和 **行级锁(row-level locking)** 。InnoDB 不光支持表级锁，还支持行级锁，默认为行级锁。行级锁的粒度更小，仅对相关的记录上锁即可（对一行或者多行记录加锁），所以对于并发写入操作来说， InnoDB 的性能更高。不论是表级锁还是行级锁，都存在共享锁（Share Lock，S 锁）和排他锁（Exclusive Lock，X 锁）这两类。\n\n**MVCC** 是多版本并发控制方法，即对一份数据会存储多个版本，通过事务的可见性来保证事务能看到自己应该看到的版本。通常会有一个全局的版本分配器来为每一行数据设置版本号，版本号是唯一的。\n\nMVCC 在 MySQL 中实现所依赖的手段主要是: **隐藏字段、read view、undo log**。\n\n- undo log : undo log 用于记录某行数据的多个版本的数据。\n- read view 和 隐藏字段 : 用来判断当前版本数据的可见性。\n\n关于 InnoDB 对 MVCC 的具体实现可以看这篇文章：[InnoDB 存储引擎对 MVCC 的实现](./innodb-implementation-of-mvcc.md) 。",
+        "score": 0.8214658259368768
+      },
+      {
+        "noteId": 3,
+        "chunkId": 143,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > MySQL 的隔离级别是基于锁实现的吗？",
+        "content": "MySQL 的隔离级别基于锁和 MVCC 机制共同实现的。\n\nSERIALIZABLE 隔离级别是通过锁来实现的，READ-COMMITTED 和 REPEATABLE-READ 隔离级别是基于 MVCC 实现的。不过， SERIALIZABLE 之外的其他隔离级别可能也需要用到锁机制，就比如 REPEATABLE-READ 在当前读情况下需要使用加锁读来保证不会出现幻读。",
+        "score": 0.7986086086896076
+      },
+      {
+        "noteId": 3,
+        "chunkId": 148,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 锁 > 共享锁和排他锁呢？",
+        "content": "不论是表级锁还是行级锁，都存在共享锁（Share Lock，S 锁）和排他锁（Exclusive Lock，X 锁）这两类：\n\n- **共享锁（S 锁）**：又称读锁，事务在读取记录的时候获取共享锁，允许多个事务同时获取（锁兼容）。\n- **排他锁（X 锁）**：又称写锁/独占锁，事务在修改记录的时候获取排他锁，不允许多个事务同时获取。如果一个记录已经被加了排他锁，那其他事务不能再对这条事务加任何类型的锁（锁不兼容）。\n\n排他锁与任何的锁都不兼容，共享锁仅和共享锁兼容。\n\n|      | S 锁   | X 锁 |\n| :--- | :----- | :--- |\n| S 锁 | 不冲突 | 冲突 |\n| X 锁 | 冲突   | 冲突 |\n\n由于 MVCC 的存在，对于一般的 `SELECT` 语句，InnoDB 不会加任何锁。不过， 你可以通过以下语句显式加共享锁或排他锁。\n\n```sql\n# 共享锁 可以在 MySQL 5.7 和 MySQL 8.0 中使用\nSELECT ... LOCK IN SHARE MODE;\n# 共享锁 可以在 MySQL 8.0 中使用\nSELECT ... FOR SHARE;\n# 排他锁\nSELECT ... FOR UPDATE;\n```",
+        "score": 0.5133890651873018
+      },
+      {
+        "noteId": 3,
+        "chunkId": 141,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > SQL 标准定义了哪些事务隔离级别?",
+        "content": "SQL 标准定义了四种事务隔离级别，用来平衡事务的隔离性（Isolation）和并发性能。级别越高，数据一致性越好，但并发性能可能越低。这四个级别是：\n\n- **READ-UNCOMMITTED(读取未提交)** ：最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读或不可重复读。这种级别在实际应用中很少使用，因为它对数据一致性的保证太弱。\n- **READ-COMMITTED(读取已提交)** ：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。这是大多数数据库（如 Oracle, SQL Server）的默认隔离级别。\n- **REPEATABLE-READ(可重复读)** ：对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。MySQL InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。\n\n| 隔离级别         | 脏读 (Dirty Read) | 不可重复读 (Non-Repeatable Read) | 幻读 (Phantom Read)    |\n| ---------------- | ----------------- | -------------------------------- | ---------------------- |\n| READ UNCOMMITTED | √                 | √                                | √                      |\n| READ COMMITTED   | ×                 | √                                | √                      |\n| REPEATABLE READ  | ×                 | ×                                | √ (标准) / ≈× (InnoDB) |\n| SERIALIZABLE     | ×                 | ×                                | ×                      |",
+        "score": 0.48624637709780044
+      },
+      {
+        "noteId": 3,
+        "chunkId": 163,
+        "title": "可以命中索引",
+        "headingPath": "参考",
+        "content": "- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>\n- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>\n- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>\n- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
+        "score": 0.4706439940137299
+      }
+    ]
+  }
+}

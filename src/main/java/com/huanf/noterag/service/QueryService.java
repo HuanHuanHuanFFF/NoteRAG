@@ -20,8 +20,9 @@ public class QueryService {
     }
 
     public QueryResponse query(String question) {
-        List<RetrievedChunk> retrievedChunks = retrievalService.retrieveTopN(question);
-        List<RetrievedChunk> rerankedChunks = rerankService.rerank(question, retrievedChunks);
+        String normalizedQuestion = question.strip();
+        List<RetrievedChunk> retrievedChunks = retrievalService.retrieveTopN(normalizedQuestion);
+        List<RetrievedChunk> rerankedChunks = rerankService.rerank(normalizedQuestion, retrievedChunks);
         List<SourceChunkResponse> sources = rerankedChunks.stream()
                 .map(SourceChunkResponse::from)
                 .toList();
