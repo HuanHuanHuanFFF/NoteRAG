@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.huanf.noterag.common.exception.BusinessException;
+import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.dto.QueryResponse;
 import com.huanf.noterag.dto.SourceChunkResponse;
 import com.huanf.noterag.model.RetrievedChunk;
@@ -20,6 +22,9 @@ public class QueryService {
     }
 
     public QueryResponse query(String question) {
+        if (question == null || question.isBlank()) {
+            throw new BusinessException(CodeStatus.INVALID_REQUEST, "question must not be null or blank");
+        }
         String normalizedQuestion = question.strip();
         List<RetrievedChunk> retrievedChunks = retrievalService.retrieveTopN(normalizedQuestion);
         List<RetrievedChunk> rerankedChunks = rerankService.rerank(normalizedQuestion, retrievedChunks);
