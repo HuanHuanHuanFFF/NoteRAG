@@ -33,7 +33,7 @@ public class RerankProperties {
     private String baseUrl = "https://dashscope.aliyuncs.com/compatible-api/v1";
 
     @Min(1)
-    private int defaultTopK = 5;
+    private int defaultTopK = 8;
 
     @Min(1)
     private int maxTopK = 20;
@@ -41,7 +41,7 @@ public class RerankProperties {
     @Min(1)
     private int maxDocuments = 500;
 
-    private String instruct = "给定一个技术问题，从候选 Markdown 技术笔记片段中找出最能回答该问题的片段。";
+    private String instruct = "给定一个技术问题，请从候选 Markdown 技术笔记片段中选出最能直接回答问题的正文片段。优先选择包含概念解释、机制说明、对比结论或操作要点的片段；降低只包含参考资料、链接列表、目录、图片说明、上下文不完整或不能直接回答问题的片段排名。";
 
     @AssertTrue(message = "noterag.rerank.api-key must not be blank when rerank is enabled")
     public boolean isApiKeyValidWhenEnabled() {

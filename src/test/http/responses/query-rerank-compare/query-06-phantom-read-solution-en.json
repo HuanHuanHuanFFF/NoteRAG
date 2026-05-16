@@ -10,7 +10,7 @@
         "title": "可以命中索引",
         "headingPath": "⭐️MySQL 事务 > SQL 标准定义了哪些事务隔离级别?",
         "content": "SQL 标准定义了四种事务隔离级别，用来平衡事务的隔离性（Isolation）和并发性能。级别越高，数据一致性越好，但并发性能可能越低。这四个级别是：\n\n- **READ-UNCOMMITTED(读取未提交)** ：最低的隔离级别，允许读取尚未提交的数据变更，可能会导致脏读、幻读或不可重复读。这种级别在实际应用中很少使用，因为它对数据一致性的保证太弱。\n- **READ-COMMITTED(读取已提交)** ：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。这是大多数数据库（如 Oracle, SQL Server）的默认隔离级别。\n- **REPEATABLE-READ(可重复读)** ：对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。MySQL InnoDB 存储引擎的默认隔离级别正是 REPEATABLE READ。并且，InnoDB 在此级别下通过 MVCC（多版本并发控制） 和 Next-Key Locks（间隙锁+行锁） 机制，在很大程度上解决了幻读问题。\n- **SERIALIZABLE(可串行化)** ：最高的隔离级别，完全服从 ACID 的隔离级别。所有的事务依次逐个执行，这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。\n\n| 隔离级别         | 脏读 (Dirty Read) | 不可重复读 (Non-Repeatable Read) | 幻读 (Phantom Read)    |\n| ---------------- | ----------------- | -------------------------------- | ---------------------- |\n| READ UNCOMMITTED | √                 | √                                | √                      |\n| READ COMMITTED   | ×                 | √                                | √                      |\n| REPEATABLE READ  | ×                 | ×                                | √ (标准) / ≈× (InnoDB) |\n| SERIALIZABLE     | ×                 | ×                                | ×                      |",
-        "score": 0.6734856864157003
+        "score": 0.6875448371232521
       },
       {
         "noteId": 3,
@@ -18,7 +18,7 @@
         "title": "可以命中索引",
         "headingPath": "MySQL 锁 > InnoDB 有哪几类行锁？",
         "content": "InnoDB 行锁是通过对索引数据页上的记录加锁实现的，MySQL InnoDB 支持三种行锁定方式：\n\n- **记录锁（Record Lock）**：属于单个行记录上的锁。\n- **间隙锁（Gap Lock）**：锁定一个范围，不包括记录本身。\n- **临键锁（Next-Key Lock）**：Record Lock+Gap Lock，锁定一个范围，包含记录本身，主要目的是为了解决幻读问题（MySQL 事务部分提到过）。记录锁只能锁住已经存在的记录，为了避免插入新记录，需要依赖间隙锁。\n\n**在 InnoDB 默认的隔离级别 REPEATABLE-READ 下，行锁默认使用的是 Next-Key Lock。但是，如果操作的索引是唯一索引或主键，InnoDB 会对 Next-Key Lock 进行优化，将其降级为 Record Lock，即仅锁住索引本身，而不是范围。**",
-        "score": 0.6208015891766776
+        "score": 0.6305639347134704
       },
       {
         "noteId": 3,
@@ -26,7 +26,7 @@
         "title": "可以命中索引",
         "headingPath": "参考",
         "content": "- 《高性能 MySQL》第 7 章 MySQL 高级特性\n- 《MySQL 技术内幕 InnoDB 存储引擎》第 6 章 锁\n- Relational Database：<https://www.omnisci.com/technical-glossary/relational-database>\n- 一篇文章看懂 mysql 中 varchar 能存多少汉字、数字，以及 varchar(100)和 varchar(10)的区别：<https://www.cnblogs.com/zhuyeshen/p/11642211.html>\n- 技术分享 | 隔离级别：正确理解幻读：<https://opensource.actionsky.com/20210818-mysql/>\n- MySQL Server Logs - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/server-logs.html>\n- Redo Log - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-redo-log.html>\n- Locking Reads - MySQL 5.7 Reference Manual：<https://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html>\n- 深入理解数据库行锁与表锁 <https://zhuanlan.zhihu.com/p/52678870>\n- 详解 MySQL InnoDB 中意向锁的作用：<https://juejin.cn/post/6844903666332368909>\n- 深入剖析 MySQL 自增锁：<https://juejin.cn/post/6968420054287253540>\n- 在数据库中不可重复读和幻读到底应该怎么分？：<https://www.zhihu.com/question/392569386>\n\n<!-- @include: @article-footer.snippet.md -->",
-        "score": 0.5414432477930157
+        "score": 0.5505926737782658
       },
       {
         "noteId": 3,
@@ -34,7 +34,7 @@
         "title": "可以命中索引",
         "headingPath": "⭐️MySQL 事务 > 不可重复读和幻读有什么区别？",
         "content": "- 不可重复读的重点是内容修改或者记录减少比如多次读取一条记录发现其中某些记录的值被修改；\n- 幻读的重点在于记录新增比如多次执行同一条查询语句（DQL）时，发现查到的记录增加了。\n\n幻读其实可以看作是不可重复读的一种特殊情况，单独把幻读区分出来的原因主要是解决幻读和不可重复读的方案不一样。\n\n举个例子：执行 `delete` 和 `update` 操作的时候，可以直接对记录加锁，保证事务安全。而执行 `insert` 操作的时候，由于记录锁（Record Lock）只能锁住已经存在的记录，为了避免插入新记录，需要依赖间隙锁（Gap Lock）。也就是说执行 `insert` 操作的时候需要依赖 Next-Key Lock（Record Lock+Gap Lock） 进行加锁来保证不出现幻读。",
-        "score": 0.5080976678885641
+        "score": 0.5213671719100137
       },
       {
         "noteId": 3,
@@ -42,7 +42,31 @@
         "title": "可以命中索引",
         "headingPath": "⭐️MySQL 事务 > 并发事务带来了哪些问题? > 幻读（Phantom read）",
         "content": "幻读与不可重复读类似。它发生在一个事务读取了几行数据，接着另一个并发事务插入了一些数据时。在随后的查询中，第一个事务就会发现多了一些原本不存在的记录，就好像发生了幻觉一样，所以称为幻读。\n\n例如：事务 2 读取某个范围的数据，事务 1 在这个范围插入了新的数据，事务 2 再次读取这个范围的数据发现相比于第一次读取的结果多了新的数据。\n\n![幻读](https://oss.javaguide.cn/github/javaguide/database/mysql/concurrency-consistency-issues-phantom-read.png)",
-        "score": 0.49394141341802306
+        "score": 0.5091568703361162
+      },
+      {
+        "noteId": 3,
+        "chunkId": 143,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > MySQL 的隔离级别是基于锁实现的吗？",
+        "content": "MySQL 的隔离级别基于锁和 MVCC 机制共同实现的。\n\nSERIALIZABLE 隔离级别是通过锁来实现的，READ-COMMITTED 和 REPEATABLE-READ 隔离级别是基于 MVCC 实现的。不过， SERIALIZABLE 之外的其他隔离级别可能也需要用到锁机制，就比如 REPEATABLE-READ 在当前读情况下需要使用加锁读来保证不会出现幻读。",
+        "score": 0.4800591597705314
+      },
+      {
+        "noteId": 3,
+        "chunkId": 133,
+        "title": "可以命中索引",
+        "headingPath": "⭐️MySQL 事务 > 什么是数据库事务？",
+        "content": "ication（数据密集型应用系统设计）》](https://book.douban.com/subject/30329536/) 的作者在他的这本书中如是说：\n\n> Atomicity, isolation, and durability are properties of the database, whereas consis‐\n> tency (in the ACID sense) is a property of the application. The application may rely\n> on the database’s atomicity and isolation properties in order to achieve consistency,\n> but it’s not up to the database alone.\n>\n> 翻译过来的意思是：原子性，隔离性和持久性是数据库的属性，而一致性（在 ACID 意义上）是应用程序的属性。应用可能依赖数据库的原子性和隔离属性来实现一致性，但这并不仅取决于数据库。因此，字母 C 不属于 ACID 。\n\n《Designing Data-Intensive Application（数据密集型应用系统设计）》这本书强推一波，值得读很多遍！豆瓣有接近 90% 的人看了这本书之后给了五星好评。另外，中文翻译版本已经在 GitHub 开源，地址：[https://github.com/Vonng/ddia](https://github.com/Vonng/ddia) 。\n\n![](https://oss.javaguide.cn/github/javaguide/books/ddia.png)",
+        "score": 0.4462808475478433
+      },
+      {
+        "noteId": 3,
+        "chunkId": 113,
+        "title": "可以命中索引",
+        "headingPath": "MySQL 存储引擎 > ⭐️MyISAM 和 InnoDB 有什么区别？",
+        "content": "MySQL 5.5 之前，MyISAM 引擎是 MySQL 的默认存储引擎，可谓是风光一时。\n\n虽然，MyISAM 的性能还行，各种特性也还不错（比如全文索引、压缩、空间函数等）。但是，MyISAM 不支持事务和行级锁，而且最大的缺陷就是崩溃后无法安全恢复。\n\nMySQL 5.5 版本之后，InnoDB 是 MySQL 的默认存储引擎。\n\n言归正传！咱们下面还是来简单对比一下两者：\n\n**1、是否支持行级锁**\n\nMyISAM 只有表级锁(table-level locking)，而 InnoDB 支持行级锁(row-level locking)和表级锁,默认为行级锁。\n\n也就说，MyISAM 一锁就是锁住了整张表，这在并发写的情况下是多么滴憨憨啊！这也是为什么 InnoDB 在并发写的时候，性能更牛皮了！\n\n**2、是否支持事务**\n\nMyISAM 不提供事务支持。\n\nInnoDB 提供事务支持，实现了 SQL 标准定义了四个隔离级别，具有提交(commit)和回滚(rollback)事务的能力。并且，InnoDB 默认使用的 REPEATABLE-READ（可重读）隔离级别是可以解决幻读问题发生的（基于 MVCC 和 Next-Key Lock）。\n\n关于 MySQL 事务的详细介绍，可以看看我写的这篇文章：[MySQL 事务隔离级别详解](./transaction-isolation-level.md)。\n\n**3、是否支持外键**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n外键对于维护数据一致性非常有帮助，但是对性能有一定的损耗。因此，通常情况下，我们是不建议在实际生产项目中使用外键的，在业务代码中进行约束即可！\n\n阿里的《Java 开发手册》也是明确规定禁止使用外键的。\n\n![](https://oss.javaguide.cn/github/javaguide/mysql/image-20220510090309427.png)\n\n不过，在代码中进行约束的话，对程序员的能力要求更高，具体是否要采用外键还是要根据你的项目实际情况而定。\n\n总结：一般我们也是不建议在数据库层面使用外键的，应用层面可以解决。不过，这样会对数据的一致性造成威胁。具体要不要使用外键还是要根据你的项目来决定。\n\n**4、是否支持数据库异常崩溃后的安全恢复**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n使用 InnoDB 的数据库在异常崩溃后，数据库重新启动的时候会保证数据库恢复到崩溃前的状态。这个恢复的过程依赖于 `redo log` 。\n\n**5、是否支持 MVCC**\n\nMyISAM 不支持，而 InnoDB 支持。\n\n讲真，这个对比有点废话，毕竟 MyISAM 连行级锁都不支持。MVCC 可以看作是行级锁的一个升级，可以有效减少加锁操作，提高性能。\n\n**6、索引实现不一样。**",
+        "score": 0.43450648045944396
       }
     ]
   }
