@@ -1,4 +1,6 @@
 HELP.md
+CLAUDE_HANDOFF.md
+.claude/settings.local.json
 target/
 .env
 .env.*
