@@ -1,0 +1,152 @@
+@baseUrl = http://localhost:9000
+@resultDir = ./responses/query-rerank-compare
+@retrievalTopN = 20
+
+### Query rerank - MyISAM vs InnoDB differences
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MyISAM和InnoDB有什么区别?"
+}
+>>! {{resultDir}}/query-01-innodb-myisam-cn.json
+
+### Retrieval only - MyISAM vs InnoDB differences
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MyISAM和InnoDB有什么区别?",
+  "topN": {{retrievalTopN}}
+}
+>>! {{resultDir}}/retrieval-01-innodb-myisam-cn.json
+
+### Query rerank - MVCC implementation
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL的MVCC依赖哪些机制实现?"
+}
+>>! {{resultDir}}/query-02-mvcc-cn.json
+
+### Retrieval only - MVCC implementation
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL的MVCC依赖哪些机制实现?",
+  "topN": {{retrievalTopN}}
+}
+>>! {{resultDir}}/retrieval-02-mvcc-cn.json
+
+### Query rerank - MVCC implementation English
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "What mechanisms does MySQL MVCC rely on?"
+}
+>>! {{resultDir}}/query-03-mvcc-en.json
+
+### Retrieval only - MVCC implementation English
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "What mechanisms does MySQL MVCC rely on?",
+  "topN": {{retrievalTopN}}
+}
+>>! {{resultDir}}/retrieval-03-mvcc-en.json
+
+### Query rerank - MyISAM vs InnoDB differences English
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "What are the differences between MyISAM and InnoDB?"
+}
+>>! {{resultDir}}/query-04-innodb-myisam-en.json
+
+### Retrieval only - MyISAM vs InnoDB differences English
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "What are the differences between MyISAM and InnoDB?",
+  "topN": {{retrievalTopN}}
+}
+>>! {{resultDir}}/retrieval-04-innodb-myisam-en.json
+
+### Query rerank - isolation implementation
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL的隔离级别是基于什么机制实现的?"
+}
+>>! {{resultDir}}/query-05-isolation-impl-cn.json
+
+### Retrieval only - isolation implementation
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL的隔离级别是基于什么机制实现的?",
+  "topN": {{retrievalTopN}}
+}
+>>! {{resultDir}}/retrieval-05-isolation-impl-cn.json
+
+### Query rerank - phantom read solution English
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "How does InnoDB prevent phantom reads?"
+}
+>>! {{resultDir}}/query-06-phantom-read-solution-en.json
+
+### Retrieval only - phantom read solution English
+# Expected: 200 OK
+POST {{baseUrl}}/api/retrieval/search
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "How does InnoDB prevent phantom reads?",
+  "topN": {{retrievalTopN}}
+}
+>>! {{resultDir}}/retrieval-06-phantom-read-solution-en.json
+
+
+### Query debug - invalid blank question
+# Expected: 400 Bad Request
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": " "
+}
