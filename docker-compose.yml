@@ -51,6 +51,17 @@ services:
       # Vector retrieval parameters.
       NOTERAG_RETRIEVAL_DEFAULT_TOP_N: ${NOTERAG_RETRIEVAL_DEFAULT_TOP_N:-20}
       NOTERAG_RETRIEVAL_MAX_TOP_N: ${NOTERAG_RETRIEVAL_MAX_TOP_N:-50}
+
+      # Rerank parameters. Local development may keep this false; production should set it true.
+      NOTERAG_RERANK_ENABLED: ${NOTERAG_RERANK_ENABLED:-false}
+      NOTERAG_RERANK_PROVIDER: ${NOTERAG_RERANK_PROVIDER:-dashscope}
+      NOTERAG_RERANK_MODEL: ${NOTERAG_RERANK_MODEL:-qwen3-rerank}
+      NOTERAG_RERANK_API_KEY: ${NOTERAG_RERANK_API_KEY:-}
+      NOTERAG_RERANK_BASE_URL: ${NOTERAG_RERANK_BASE_URL:-https://dashscope.aliyuncs.com/compatible-api/v1}
+      NOTERAG_RERANK_DEFAULT_TOP_K: ${NOTERAG_RERANK_DEFAULT_TOP_K:-5}
+      NOTERAG_RERANK_MAX_TOP_K: ${NOTERAG_RERANK_MAX_TOP_K:-20}
+      NOTERAG_RERANK_MAX_DOCUMENTS: ${NOTERAG_RERANK_MAX_DOCUMENTS:-500}
+      NOTERAG_RERANK_INSTRUCT: ${NOTERAG_RERANK_INSTRUCT:-给定一个技术问题，从候选 Markdown 技术笔记片段中找出最能回答该问题的片段。}
     ports:
       - "${APP_HOST_PORT:-9000}:${SERVER_PORT:-9000}"
 
