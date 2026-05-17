@@ -5,13 +5,8 @@ export const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'query',
-      component: () => import('@/views/QueryPage.vue'),
-    },
-    {
-      path: '/import',
-      name: 'import',
-      component: () => import('@/views/ImportPage.vue'),
+      name: 'workspace',
+      component: () => import('@/views/WorkspacePage.vue'),
     },
     {
       path: '/debug/retrieval',

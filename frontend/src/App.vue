@@ -4,8 +4,7 @@ import { RouterLink, RouterView, useRoute } from 'vue-router';
 
 const route = useRoute();
 const navItems = [
-  { path: '/', label: '问答' },
-  { path: '/import', label: '导入' },
+  { path: '/', label: 'Workspace' },
   { path: '/debug/retrieval', label: '检索调试' },
 ];
 const activePath = computed(() => route.path);
@@ -14,9 +13,9 @@ const activePath = computed(() => route.path);
 <template>
   <div class="flex min-h-screen flex-col">
     <header
-      class="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0a0a0b]/80 backdrop-blur-xl"
+      class="sticky top-0 z-30 h-14 border-b border-white/[0.06] bg-[#0a0a0b]/80 backdrop-blur-xl"
     >
-      <div class="mx-auto flex h-14 max-w-6xl items-center gap-8 px-6">
+      <div class="mx-auto flex h-full items-center gap-8 px-6">
         <div class="flex items-center gap-2.5">
           <span class="relative inline-flex h-2 w-2">
             <span
@@ -25,7 +24,9 @@ const activePath = computed(() => route.path);
             <span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
           </span>
           <span class="text-[15px] font-semibold tracking-tight text-white">NoteRAG</span>
-          <span class="hidden text-[11px] font-medium uppercase tracking-wider text-white/30 sm:inline">
+          <span
+            class="hidden text-[11px] font-medium uppercase tracking-wider text-white/30 sm:inline"
+          >
             v1
           </span>
         </div>
@@ -47,13 +48,12 @@ const activePath = computed(() => route.path);
         </nav>
 
         <div class="ml-auto hidden items-center gap-2 text-[12px] text-white/40 sm:flex">
-          <span class="h-1.5 w-1.5 rounded-full bg-accent/70"></span>
-          <span>localhost:9000</span>
+          <span class="font-mono text-[11px]">RAG demo</span>
         </div>
       </div>
     </header>
 
-    <main class="relative mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-6">
+    <main class="relative flex-1">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />

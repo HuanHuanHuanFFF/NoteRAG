@@ -33,3 +33,28 @@ export interface ImportTextResponse {
   charCount: number;
   tokenCount: number;
 }
+
+export interface NoteListItem {
+  id: number;
+  title: string;
+  chunkCount: number;
+  charCount: number;
+  tokenCount: number;
+  createdAt: string;
+}
+
+export interface ChatTurn {
+  id: number;
+  question: string;
+  answer: string;
+  sources: SourceChunk[];
+  loading: boolean;
+  error?: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  turns: ChatTurn[];
+  noteId: number | null;
+}
