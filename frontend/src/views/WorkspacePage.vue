@@ -30,7 +30,7 @@ const importOpen = ref(false);
 const sourcesOpen = ref(false);
 const sourcesLoading = ref(false);
 const sourcesData = ref<SourceChunk[]>([]);
-const activeCitation = ref<{ turnId: number; index: number } | null>(null);
+const activeCitation = ref<{ turnId: number; index: number | null } | null>(null);
 
 const activeSession = computed<ChatSession | null>(
   () => sessions.value.find((s) => s.id === activeSessionId.value) ?? null
@@ -114,10 +114,10 @@ async function handleSubmit(question: string) {
   turn.loading = false;
 }
 
-function handleOpenCitation(turnId: number, index: number) {
+function handleOpenCitation(turnId: number, index: number | null) {
   const turn = activeSession.value?.turns.find((t) => t.id === turnId);
   if (!turn) return;
-  if (index < 1 || index > turn.sources.length) return;
+  if (index != null && (index < 1 || index > turn.sources.length)) return;
 
   const same =
     sourcesOpen.value &&

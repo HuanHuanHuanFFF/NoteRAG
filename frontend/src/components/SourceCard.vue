@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import type { SourceChunk } from '@/api/types';
 
 const props = defineProps<{
   source: SourceChunk;
   index: number;
   highlight?: boolean;
+  expanded?: boolean;
 }>();
 
-defineEmits<{ (e: 'close'): void }>();
+const emit = defineEmits<{ (e: 'toggle'): void }>();
 
-const expanded = ref(true);
 const headingDisplay = computed(() => props.source.headingPath?.trim() || '—');
 const scoreDisplay = computed(() => {
   const s = props.source.score;
@@ -53,7 +53,7 @@ const scoreDisplay = computed(() => {
         type="button"
         class="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-white/40 transition-colors duration-150 hover:text-accent focus:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
         :aria-expanded="expanded"
-        @click="expanded = !expanded"
+        @click="emit('toggle')"
       >
         <svg
           class="h-3 w-3 transition-transform duration-200"

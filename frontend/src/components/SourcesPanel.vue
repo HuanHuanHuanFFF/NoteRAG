@@ -12,6 +12,7 @@ const props = defineProps<{
 defineEmits<{ (e: 'close'): void }>();
 
 const containerRef = ref<HTMLElement | null>(null);
+const expandedSet = ref<Set<number>>(new Set());
 
 const items = computed(() =>
   props.sources.map((source, idx) => ({
@@ -21,9 +22,23 @@ const items = computed(() =>
 );
 
 watch(
+  () => props.sources,
+  () => {
+    expandedSet.value =
+      props.highlightIndex == null ? new Set() : new Set([props.highlightIndex]);
+  }
+);
+
+watch(
   () => props.highlightIndex,
   async (idx) => {
-    if (idx == null) return;
+    if (idx == null) {
+      expandedSet.value = new Set();
+      return;
+    }
+    const next = new Set(expandedSet.value);
+    next.add(idx);
+    expandedSet.value = next;
     await new Promise((r) => requestAnimationFrame(r));
     const el = containerRef.value?.querySelector(`#source-${idx}`) as HTMLElement | null;
     if (el && containerRef.value) {
@@ -33,6 +48,13 @@ watch(
   },
   { flush: 'post' }
 );
+
+function toggle(index: number) {
+  const next = new Set(expandedSet.value);
+  if (next.has(index)) next.delete(index);
+  else next.add(index);
+  expandedSet.value = next;
+}
 </script>
 
 <template>
@@ -72,6 +94,8 @@ watch(
         :source="item.source"
         :index="item.index"
         :highlight="highlightIndex === item.index"
+        :expanded="expandedSet.has(item.index)"
+        @toggle="toggle(item.index)"
       />
 
       <div

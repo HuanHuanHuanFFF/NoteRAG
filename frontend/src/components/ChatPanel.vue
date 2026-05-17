@@ -5,12 +5,12 @@ import type { ChatSession, ChatTurn, NoteListItem } from '@/api/types';
 const props = defineProps<{
   session: ChatSession | null;
   selectedNote: NoteListItem | null;
-  activeCitation: { turnId: number; index: number } | null;
+  activeCitation: { turnId: number; index: number | null } | null;
 }>();
 
 const emit = defineEmits<{
   (e: 'submit', question: string): void;
-  (e: 'open-citation', turnId: number, index: number): void;
+  (e: 'open-citation', turnId: number, index: number | null): void;
 }>();
 
 const input = ref('');
@@ -199,9 +199,13 @@ function isCitationActive(turnId: number, index: number): boolean {
                   v-if="turn.sources.length > 0"
                   class="mt-3 flex flex-wrap items-center gap-1.5"
                 >
-                  <span class="text-[11px] font-medium uppercase tracking-wider text-white/35">
+                  <button
+                    type="button"
+                    class="inline-flex h-6 items-center rounded-md px-2 text-[11px] font-medium text-white/55 transition-colors duration-150 hover:text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    @click="emit('open-citation', turn.id, null)"
+                  >
                     参考来源
-                  </span>
+                  </button>
                   <button
                     v-for="(_, i) in turn.sources"
                     :key="i"
