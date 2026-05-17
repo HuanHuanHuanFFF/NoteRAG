@@ -98,7 +98,6 @@ export const mockSessions: ChatSession[] = [
   {
     id: 'session-1',
     title: 'MVCC 实现机制',
-    noteId: null,
     turns: [
       {
         id: 1,
@@ -121,7 +120,6 @@ export const mockSessions: ChatSession[] = [
   {
     id: 'session-2',
     title: 'B+ 树为什么适合数据库索引',
-    noteId: 1,
     turns: [
       {
         id: 1,

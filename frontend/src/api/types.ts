@@ -56,5 +56,4 @@ export interface ChatSession {
   id: string;
   title: string;
   turns: ChatTurn[];
-  noteId: number | null;
 }

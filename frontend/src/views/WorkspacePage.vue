@@ -22,9 +22,8 @@ import {
 
 const notes = ref<NoteListItem[]>([...mockNotes]);
 const sessions = ref<ChatSession[]>(JSON.parse(JSON.stringify(mockSessions)));
-const activeSessionId = ref<string>(sessions.value[0]?.id ?? createSessionInternal().id);
-
 const selectedNoteId = ref<number | null>(null);
+const activeSessionId = ref<string>(sessions.value[0]?.id ?? createSessionInternal().id);
 const importOpen = ref(false);
 
 const sourcesOpen = ref(false);
@@ -49,7 +48,6 @@ function createSessionInternal(): ChatSession {
   const session: ChatSession = {
     id: `session-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     title: `新会话 ${nextSessionIdx++}`,
-    noteId: selectedNoteId.value,
     turns: [],
   };
   sessions.value.unshift(session);
