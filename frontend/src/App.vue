@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
-import {
-  NConfigProvider,
-  NLayout,
-  NLayoutHeader,
-  NLayoutContent,
-  NMessageProvider,
-  zhCN,
-  dateZhCN,
-} from 'naive-ui';
 
 const route = useRoute();
 const navItems = [
@@ -17,45 +8,68 @@ const navItems = [
   { path: '/import', label: '导入' },
   { path: '/debug/retrieval', label: '检索调试' },
 ];
-
-const activeKey = computed(() => route.path);
+const activePath = computed(() => route.path);
 </script>
 
 <template>
-  <n-config-provider :locale="zhCN" :date-locale="dateZhCN">
-    <n-message-provider>
-      <n-layout class="h-full">
-        <n-layout-header bordered class="h-14 flex items-center px-6">
-          <div class="flex items-center gap-2 font-semibold text-base">
-            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-            NoteRAG
-          </div>
-          <nav class="flex items-center gap-1 ml-8">
-            <router-link
-              v-for="item in navItems"
-              :key="item.path"
-              :to="item.path"
-              class="px-3 py-1.5 rounded-md text-sm transition-colors"
-              :class="
-                activeKey === item.path
-                  ? 'bg-slate-100 text-slate-900'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-              "
-            >
-              {{ item.label }}
-            </router-link>
-          </nav>
-        </n-layout-header>
-        <n-layout-content class="px-6 py-6" content-style="height: calc(100vh - 56px);">
-          <router-view />
-        </n-layout-content>
-      </n-layout>
-    </n-message-provider>
-  </n-config-provider>
+  <div class="flex min-h-screen flex-col">
+    <header
+      class="sticky top-0 z-30 border-b border-white/[0.06] bg-[#0a0a0b]/80 backdrop-blur-xl"
+    >
+      <div class="mx-auto flex h-14 max-w-6xl items-center gap-8 px-6">
+        <div class="flex items-center gap-2.5">
+          <span class="relative inline-flex h-2 w-2">
+            <span
+              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60"
+            ></span>
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
+          </span>
+          <span class="text-[15px] font-semibold tracking-tight text-white">NoteRAG</span>
+          <span class="hidden text-[11px] font-medium uppercase tracking-wider text-white/30 sm:inline">
+            v1
+          </span>
+        </div>
+
+        <nav class="flex items-center gap-1">
+          <router-link
+            v-for="item in navItems"
+            :key="item.path"
+            :to="item.path"
+            class="rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors duration-150"
+            :class="
+              activePath === item.path
+                ? 'bg-white/[0.06] text-white'
+                : 'text-white/50 hover:bg-white/[0.03] hover:text-white/90'
+            "
+          >
+            {{ item.label }}
+          </router-link>
+        </nav>
+
+        <div class="ml-auto hidden items-center gap-2 text-[12px] text-white/40 sm:flex">
+          <span class="h-1.5 w-1.5 rounded-full bg-accent/70"></span>
+          <span>localhost:9000</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="relative mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-6">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
+  </div>
 </template>
 
 <style scoped>
-.router-link-active {
-  font-weight: 500;
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 180ms ease-out;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

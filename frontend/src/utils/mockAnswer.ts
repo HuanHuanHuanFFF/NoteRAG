@@ -17,7 +17,7 @@ export function buildMockAnswer(question: string, sources: SourceChunk[]): strin
     .join('\n');
   return [
     '（这是占位回答，未接入 LLM）',
-    `针对 “${trimmedQuestion}”，笔记中以下片段最相关：`,
+    `针对 "${trimmedQuestion}"，笔记中以下片段最相关：`,
     bullets,
     '请展开下方来源查看完整 chunk 内容。',
   ].join('\n');

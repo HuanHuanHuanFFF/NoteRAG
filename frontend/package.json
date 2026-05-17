@@ -11,7 +11,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "naive-ui": "2.40.4",
     "vue": "3.5.13",
     "vue-router": "4.5.0"
   },

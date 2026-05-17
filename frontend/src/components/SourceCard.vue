@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { NCollapse, NCollapseItem, NTag } from 'naive-ui';
 import type { SourceChunk } from '@/api/types';
 
 const props = defineProps<{
@@ -8,33 +7,79 @@ const props = defineProps<{
   index: number;
 }>();
 
-const collapseValue = ref<string[]>([]);
+const expanded = ref(false);
 const headingDisplay = computed(() => props.source.headingPath?.trim() || '—');
 const scoreDisplay = computed(() => {
-  const score = props.source.score;
-  return score == null ? '—' : score.toFixed(4);
+  const s = props.source.score;
+  return s == null ? '—' : s.toFixed(4);
+});
+const contentPreview = computed(() => {
+  const flat = props.source.content.replace(/\s+/g, ' ').trim();
+  return flat.length > 140 ? flat.slice(0, 140) + '…' : flat;
 });
 </script>
 
 <template>
-  <div class="rounded-lg border border-slate-200 bg-white px-4 py-3">
-    <div class="flex items-start justify-between gap-3">
-      <div class="min-w-0">
-        <div class="flex items-center gap-2 text-sm">
-          <n-tag size="small" :bordered="false" type="info">[{{ index }}]</n-tag>
-          <span class="font-medium text-slate-900 truncate">{{ source.title }}</span>
-        </div>
-        <div class="mt-1 text-xs text-slate-500 truncate">章节: {{ headingDisplay }}</div>
+  <article
+    class="group rounded-xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm transition-colors duration-150 hover:border-white/[0.12] hover:bg-white/[0.03]"
+  >
+    <header class="flex items-start gap-3 px-4 py-3">
+      <span
+        class="mt-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded px-1 font-mono text-[11px] font-medium text-accent ring-1 ring-inset ring-accent/30"
+      >
+        {{ index }}
+      </span>
+      <div class="min-w-0 flex-1">
+        <h3 class="truncate text-[13px] font-semibold text-white/90">{{ source.title }}</h3>
+        <p class="mt-0.5 truncate text-[11px] text-white/40">
+          <span class="text-white/30">章节</span>
+          <span class="ml-1.5">{{ headingDisplay }}</span>
+        </p>
       </div>
-      <div class="text-xs text-slate-400 shrink-0 tabular-nums">score {{ scoreDisplay }}</div>
-    </div>
-    <n-collapse v-model:expanded-names="collapseValue" class="mt-2" arrow-placement="right">
-      <n-collapse-item title="展开内容" name="content">
-        <pre
-          class="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-slate-700 font-sans"
-          >{{ source.content }}</pre
+      <span class="shrink-0 font-mono text-[11px] tabular-nums text-white/35">
+        {{ scoreDisplay }}
+      </span>
+    </header>
+
+    <div class="px-4 pb-3">
+      <div
+        v-if="!expanded"
+        class="font-mono text-[12px] leading-relaxed text-white/55 line-clamp-2"
+      >
+        {{ contentPreview }}
+      </div>
+      <pre
+        v-else
+        class="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.05] bg-black/30 p-3 font-mono text-[12px] leading-relaxed text-white/75"
+        >{{ source.content }}</pre
+      >
+      <button
+        type="button"
+        class="mt-2 inline-flex items-center gap-1 rounded text-[11px] font-medium text-white/40 transition-colors duration-150 hover:text-accent focus:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        :aria-expanded="expanded"
+        @click="expanded = !expanded"
+      >
+        <svg
+          class="h-3 w-3 transition-transform duration-200"
+          :class="expanded ? 'rotate-90' : ''"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
         >
-      </n-collapse-item>
-    </n-collapse>
-  </div>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+        {{ expanded ? '收起' : '展开完整内容' }}
+      </button>
+    </div>
+  </article>
 </template>
+
+<style scoped>
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
