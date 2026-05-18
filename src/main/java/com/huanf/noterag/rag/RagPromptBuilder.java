@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.ChunkContextFormatter;
+import com.huanf.noterag.util.RagTextFormatter;
 
 @Component
 public class RagPromptBuilder {
@@ -59,7 +59,7 @@ public class RagPromptBuilder {
                 throw new BusinessException(CodeStatus.INTERNAL_ERROR, "Retrieved chunk id must not be null");
             }
             sb.append("\n\nsourceId: ").append(chunk.getChunkId()).append("\n");
-            sb.append(ChunkContextFormatter.formatChunkForEmbedding(
+            sb.append(RagTextFormatter.formatChunkContext(
                     chunk.getTitle(), chunk.getHeadingPath(), chunk.getContent()));
         }
         return sb.toString();

@@ -1,11 +1,11 @@
 package com.huanf.noterag.util;
 
-public final class ChunkContextFormatter {
+public final class RagTextFormatter {
 
-    private ChunkContextFormatter() {
+    private RagTextFormatter() {
     }
 
-    public static String formatChunkForEmbedding(String title, String headingPath, String content) {
+    public static String formatChunkContext(String title, String headingPath, String content) {
         String normalizedTitle = stripToEmpty(title);
         String normalizedHeadingPath = stripToEmpty(headingPath);
         String normalizedContent = content == null ? "" : content;
@@ -26,7 +26,7 @@ public final class ChunkContextFormatter {
                 %s""".formatted(normalizedTitle, normalizedHeadingPath, normalizedContent);
     }
 
-    public static String formatQueryForEmbedding(String question) {
+    public static String formatQueryText(String question) {
         return stripToEmpty(question);
     }
 

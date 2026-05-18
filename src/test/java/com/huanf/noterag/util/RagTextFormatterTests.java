@@ -4,16 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-class ChunkContextFormatterTests {
+class RagTextFormatterTests {
 
     @Test
-    void formatChunkForEmbeddingIncludesTitleHeadingPathAndContent() {
-        String embeddingText = ChunkContextFormatter.formatChunkForEmbedding(
+    void formatChunkContextIncludesTitleHeadingPathAndContent() {
+        String chunkContext = RagTextFormatter.formatChunkContext(
                 " Java Guide ",
                 " Java > Collections ",
                 "HashMap notes.");
 
-        assertThat(embeddingText).isEqualTo("""
+        assertThat(chunkContext).isEqualTo("""
                 文档标题: Java Guide
                 章节路径: Java > Collections
 
@@ -22,30 +22,30 @@ class ChunkContextFormatterTests {
     }
 
     @Test
-    void formatChunkForEmbeddingOmitsBlankHeadingPath() {
-        String embeddingText = ChunkContextFormatter.formatChunkForEmbedding(
+    void formatChunkContextOmitsBlankHeadingPath() {
+        String chunkContext = RagTextFormatter.formatChunkContext(
                 "Java Guide",
                 "   ",
                 "Java notes.");
 
-        assertThat(embeddingText).isEqualTo("""
+        assertThat(chunkContext).isEqualTo("""
                 文档标题: Java Guide
 
                 正文:
                 Java notes.""");
-        assertThat(embeddingText)
+        assertThat(chunkContext)
                 .doesNotContain("章节路径:")
                 .doesNotContain("null");
     }
 
     @Test
-    void formatQueryForEmbeddingStripsQuestion() {
-        assertThat(ChunkContextFormatter.formatQueryForEmbedding("  What is RAG?\n"))
+    void formatQueryTextStripsQuestion() {
+        assertThat(RagTextFormatter.formatQueryText("  What is RAG?\n"))
                 .isEqualTo("What is RAG?");
     }
 
     @Test
-    void formatQueryForEmbeddingReturnsEmptyStringForNull() {
-        assertThat(ChunkContextFormatter.formatQueryForEmbedding(null)).isEmpty();
+    void formatQueryTextReturnsEmptyStringForNull() {
+        assertThat(RagTextFormatter.formatQueryText(null)).isEmpty();
     }
 }

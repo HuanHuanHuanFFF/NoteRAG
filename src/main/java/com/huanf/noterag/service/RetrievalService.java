@@ -11,7 +11,7 @@ import com.huanf.noterag.config.RetrievalProperties;
 import com.huanf.noterag.mapper.ChunkRetrievalMapper;
 import com.huanf.noterag.model.EmbeddingModel;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.ChunkContextFormatter;
+import com.huanf.noterag.util.RagTextFormatter;
 
 @Service
 public class RetrievalService {
@@ -43,7 +43,7 @@ public class RetrievalService {
 
         EmbeddingModel embeddingModel = embeddingModelResolver.resolveRequired1024Model();
 
-        String queryText = ChunkContextFormatter.formatQueryForEmbedding(question);
+        String queryText = RagTextFormatter.formatQueryText(question);
         float[] queryEmbedding = embeddingClient.embed(queryText);
         validateQueryEmbedding(queryEmbedding, embeddingModel.getDimension());
 

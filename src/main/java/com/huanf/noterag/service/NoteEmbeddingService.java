@@ -14,7 +14,7 @@ import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
 import com.huanf.noterag.model.ChunkEmbedding1024;
 import com.huanf.noterag.model.EmbeddingModel;
 import com.huanf.noterag.model.NoteChunk;
-import com.huanf.noterag.util.ChunkContextFormatter;
+import com.huanf.noterag.util.RagTextFormatter;
 
 /**
  * Note chunk 向量化编排服务。
@@ -55,7 +55,7 @@ public class NoteEmbeddingService {
         EmbeddingModel embeddingModel = embeddingModelResolver.resolveRequired1024Model();
 
         List<String> embeddingTexts = chunks.stream()
-                .map(chunk -> ChunkContextFormatter.formatChunkForEmbedding(
+                .map(chunk -> RagTextFormatter.formatChunkContext(
                         title,
                         chunk.getHeadingPath(),
                         chunk.getContent()))
