@@ -205,77 +205,76 @@ function handleToggleSource(turnId: number, index: number) {
 </script>
 
 <template>
-  <div class="grid h-[calc(100vh-56px)] gap-3 px-4 py-3 lg:gap-4 lg:px-6 lg:py-4"
-    :class="
-      sourcesOpen || sourcesClosing
-        ? 'grid-cols-[260px_1fr_400px]'
-        : 'grid-cols-[260px_1fr]'
-    "
-  >
+  <div class="relative h-[calc(100vh-56px)]">
     <div
-      class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
-    >
-      <NotesPanel
-        :notes="notes"
-        :selected-note-ids="selectedNoteIdList"
-        @toggle="handleToggleNote"
-        @open-import="openImport"
-      />
-    </div>
-
-    <div class="flex min-w-0 flex-col">
-      <div class="flex items-center justify-between pb-3">
-        <SessionSelector
-          :sessions="sessions"
-          :active-id="activeSessionId"
-          @switch="handleSwitchSession"
-          @create="handleCreateSession"
-          @rename="handleRenameSession"
-        />
-        <div class="hidden items-center gap-2 text-[11px] text-white/35 lg:flex">
-          <span class="h-1 w-1 rounded-full bg-accent/70"></span>
-          <span class="font-mono">localhost:9000</span>
-        </div>
-      </div>
-      <div
-        class="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5 backdrop-blur-sm"
-      >
-        <ChatPanel
-          :session="activeSession"
-          :selected-notes="selectedNotes"
-          :active-citation="activeCitation"
-          :expanded-citation="expandedCitation"
-          @submit="handleSubmit"
-          @open-citation="handleOpenCitation"
-          @toggle-source="handleToggleSource"
-        />
-      </div>
-    </div>
-
-    <transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 translate-x-4"
-      enter-to-class="opacity-100 translate-x-0"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100 translate-x-0"
-      leave-to-class="opacity-0 translate-x-4"
-      @after-leave="handleSourcesAfterLeave"
+      class="grid h-full gap-3 px-4 py-3 lg:gap-4 lg:px-6 lg:py-4"
+      :class="
+        sourcesOpen || sourcesClosing
+          ? 'grid-cols-[260px_1fr_400px]'
+          : 'grid-cols-[260px_1fr]'
+      "
     >
       <div
-        v-if="sourcesOpen"
         class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
       >
-        <SourcesPanel
-          :sources="sourcesData"
-          :highlight-index="activeCitation?.index ?? null"
-          :expanded-indices="expandedCitation?.indices ?? []"
-          :loading="sourcesLoading"
-          @close="closeSources"
-          @expanded-change="handleSourcesExpandedChange"
+        <NotesPanel
+          :notes="notes"
+          :selected-note-ids="selectedNoteIdList"
+          @toggle="handleToggleNote"
+          @open-import="openImport"
         />
       </div>
-    </transition>
-  </div>
 
-  <ImportModal :open="importOpen" @close="importOpen = false" @imported="handleImported" />
+      <div class="flex min-w-0 flex-col">
+        <div class="flex items-center justify-between pb-3">
+          <SessionSelector
+            :sessions="sessions"
+            :active-id="activeSessionId"
+            @switch="handleSwitchSession"
+            @create="handleCreateSession"
+            @rename="handleRenameSession"
+          />
+        </div>
+        <div
+          class="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5 backdrop-blur-sm"
+        >
+          <ChatPanel
+            :session="activeSession"
+            :selected-notes="selectedNotes"
+            :active-citation="activeCitation"
+            :expanded-citation="expandedCitation"
+            @submit="handleSubmit"
+            @open-citation="handleOpenCitation"
+            @toggle-source="handleToggleSource"
+          />
+        </div>
+      </div>
+
+      <transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 translate-x-4"
+        enter-to-class="opacity-100 translate-x-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-x-0"
+        leave-to-class="opacity-0 translate-x-4"
+        @after-leave="handleSourcesAfterLeave"
+      >
+        <div
+          v-if="sourcesOpen"
+          class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
+        >
+          <SourcesPanel
+            :sources="sourcesData"
+            :highlight-index="activeCitation?.index ?? null"
+            :expanded-indices="expandedCitation?.indices ?? []"
+            :loading="sourcesLoading"
+            @close="closeSources"
+            @expanded-change="handleSourcesExpandedChange"
+          />
+        </div>
+      </transition>
+    </div>
+
+    <ImportModal :open="importOpen" @close="importOpen = false" @imported="handleImported" />
+  </div>
 </template>

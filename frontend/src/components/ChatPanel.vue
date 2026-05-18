@@ -129,16 +129,15 @@ function handleSourceButtonClick(turnId: number, index: number) {
         class="flex h-full flex-col items-center justify-center px-8 text-center"
       >
         <div
-          class="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm"
+          class="mb-5 flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-accent/20 bg-black/35 shadow-[0_0_42px_-20px_rgba(45,212,191,0.9)] ring-1 ring-white/[0.04]"
         >
-          <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.8"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
+          <img
+            src="/NoteRAG.png"
+            width="56"
+            height="56"
+            alt="NoteRAG"
+            class="h-full w-full object-cover"
+          />
         </div>
         <h3 class="text-[15px] font-medium text-white/85">开始向 NoteRAG 提问</h3>
         <p class="mt-1.5 text-[13px] text-white/40">输入问题或选择下方示例</p>
