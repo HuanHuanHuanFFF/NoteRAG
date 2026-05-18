@@ -1,4 +1,4 @@
-package com.huanf.noterag.prompt;
+package com.huanf.noterag.rag;
 
 public record RagPrompt(String system, String user) {
 }

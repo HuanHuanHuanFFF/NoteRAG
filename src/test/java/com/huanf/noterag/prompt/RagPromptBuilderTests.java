@@ -1,70 +1,110 @@
 package com.huanf.noterag.prompt;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.huanf.noterag.common.exception.BusinessException;
+import com.huanf.noterag.common.result.CodeStatus;
+import com.huanf.noterag.model.RetrievedChunk;
+import com.huanf.noterag.rag.CitationMarkers;
+import com.huanf.noterag.rag.RagPrompt;
+import com.huanf.noterag.rag.RagPromptBuilder;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
-
-import com.huanf.noterag.model.RetrievedChunk;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RagPromptBuilderTests {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final RagPromptBuilder builder = new RagPromptBuilder();
 
     @Test
-    void systemPromptIncludesStrictRules() {
-        RagPrompt prompt = builder.build("question", List.of(chunk("MySQL", "MySQL > 事务", "body")));
+    void systemPromptIncludesCitationRulesAndAllowsMarkdown() {
+        RagPrompt prompt = builder.build("question", List.of(chunk(140L, "MySQL", "MySQL > Tx", "body")));
 
         assertThat(prompt.system())
-                .contains("不得使用任何外部知识或网络信息")
-                .contains("不得声称自己进行了联网搜索")
-                .contains("根据当前笔记内容无法确定")
-                .contains("使用与用户问题相同的语言")
-                .contains("[1]");
+                .contains(CitationMarkers.formatPlaceholder())
+                .contains(CitationMarkers.format(140L))
+                .contains(CitationMarkers.format(141L))
+                .contains("sourceId")
+                .contains("Markdown")
+                .contains("代码块")
+                .contains("相关性从高到低")
+                .contains("片段互相矛盾")
+                .contains("片段有限信息")
+                .contains("片段都无关")
+                .contains("未检索到相关笔记片段")
+                .contains("不加空格")
+                .contains("参考来源")
+                .contains("前端会负责渲染")
+                .contains("严禁写进代码块内部")
+                .doesNotContain("[1]")
+                .doesNotContain("s1")
+                .doesNotContain("不要输出 Markdown 代码块");
     }
 
     @Test
-    void userPromptIncludesNumberedSourcesAndQuestion() {
+    void userPromptIncludesChunkIdSourcesAndQuestion() {
         List<RetrievedChunk> sources = List.of(
-                chunk("MySQL", "MySQL > 事务", "first body"),
-                chunk("MySQL", "MySQL > MVCC", "second body"));
+                chunk(140L, "MySQL", "MySQL > Tx", "first body"),
+                chunk(218L, "MySQL", "MySQL > MVCC", "second body"));
 
-        RagPrompt prompt = builder.build("MVCC是什么?", sources);
+        RagPrompt prompt = builder.build(" what is MVCC? ", sources);
 
         String user = prompt.user();
-        assertThat(user).contains("用户问题:\nMVCC是什么?");
-        assertThat(user).contains("[1]");
-        assertThat(user).contains("[2]");
-        assertThat(user.indexOf("[1]")).isLessThan(user.indexOf("[2]"));
-        assertThat(user).contains("文档标题: MySQL");
-        assertThat(user).contains("章节路径: MySQL > 事务");
-        assertThat(user).contains("章节路径: MySQL > MVCC");
-        assertThat(user).contains("正文:\nfirst body");
-        assertThat(user).contains("正文:\nsecond body");
+        assertThat(user).contains("what is MVCC?");
+        assertThat(user).contains("笔记片段（按与问题的相关性从高到低排列）:");
+        assertThat(user).contains("sourceId: 140");
+        assertThat(user).contains("sourceId: 218");
+        assertThat(user).doesNotContain("sourceId: 1\n");
+        assertThat(user).doesNotContain("sourceId: 2\n");
+        assertThat(user.indexOf("sourceId: 140")).isLessThan(user.indexOf("sourceId: 218"));
+        assertThat(user).contains("MySQL > Tx");
+        assertThat(user).contains("MySQL > MVCC");
+        assertThat(user).contains("first body");
+        assertThat(user).contains("second body");
+    }
+
+    @Test
+    void printsBuiltPromptJsonWithSourcesForReview() throws JsonProcessingException {
+        List<RetrievedChunk> sources = List.of(
+                chunk(140L, "MySQL interview notes", "MySQL > Tx > MVCC", "MVCC depends on ReadView and undo log."),
+                chunk(305L, "MySQL interview notes", "MySQL > Locks", "Next-Key Lock combines record and gap locks."));
+
+        RagPrompt prompt = builder.build("What does MVCC depend on?", sources);
+
+        System.out.println("----- rag prompt json -----");
+        System.out.println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(prompt));
+        System.out.println("----- rag prompt json end -----");
+
+        assertThat(prompt.system()).contains(CitationMarkers.formatPlaceholder());
+        assertThat(prompt.user()).contains("What does MVCC depend on?");
+        assertThat(prompt.user()).contains("sourceId: 140");
+        assertThat(prompt.user()).contains("sourceId: 305");
     }
 
     @Test
     void userPromptOmitsHeadingLineWhenHeadingPathNull() {
-        RagPrompt prompt = builder.build("question", List.of(chunk("MySQL", null, "body")));
+        RagPrompt prompt = builder.build("question", List.of(chunk(140L, "MySQL", null, "body")));
 
-        assertThat(prompt.user()).doesNotContain("章节路径:");
         assertThat(prompt.user()).doesNotContain("null");
     }
 
     @Test
     void userPromptOmitsHeadingLineWhenHeadingPathBlank() {
-        RagPrompt prompt = builder.build("question", List.of(chunk("MySQL", "   ", "body")));
+        RagPrompt prompt = builder.build("question", List.of(chunk(140L, "MySQL", "   ", "body")));
 
-        assertThat(prompt.user()).doesNotContain("章节路径:");
+        assertThat(prompt.user()).doesNotContain("   ");
     }
 
     @Test
     void userPromptNormalizesQuestion() {
-        RagPrompt prompt = builder.build("  hello  ", List.of(chunk("t", "h", "c")));
+        RagPrompt prompt = builder.build("  hello  ", List.of(chunk(140L, "t", "h", "c")));
 
-        assertThat(prompt.user()).contains("用户问题:\nhello\n");
+        assertThat(prompt.user()).contains("hello");
         assertThat(prompt.user()).doesNotContain("  hello");
     }
 
@@ -72,9 +112,10 @@ class RagPromptBuilderTests {
     void userPromptAddsNoticeWhenSourcesEmpty() {
         RagPrompt prompt = builder.build("question", List.of());
 
-        assertThat(prompt.user()).contains("用户问题:\nquestion");
+        assertThat(prompt.user()).contains("question");
+        assertThat(prompt.user()).contains("笔记片段（按与问题的相关性从高到低排列）:");
         assertThat(prompt.user()).contains("（未检索到相关笔记片段）");
-        assertThat(prompt.user()).doesNotContain("[1]");
+        assertThat(prompt.user()).doesNotContain("sourceId:");
     }
 
     @Test
@@ -95,7 +136,16 @@ class RagPromptBuilderTests {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    private RetrievedChunk chunk(String title, String headingPath, String content) {
-        return new RetrievedChunk(1L, 1L, title, headingPath, content, 0.9);
+    @Test
+    void buildThrowsWhenChunkIdNull() {
+        RetrievedChunk chunk = new RetrievedChunk(1L, null, "title", "heading", "content", 0.9);
+
+        assertThatThrownBy(() -> builder.build("question", List.of(chunk)))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.INTERNAL_ERROR));
+    }
+
+    private RetrievedChunk chunk(Long chunkId, String title, String headingPath, String content) {
+        return new RetrievedChunk(1L, chunkId, title, headingPath, content, 0.9);
     }
 }

@@ -1,6 +1,6 @@
 package com.huanf.noterag.client;
 
-import com.huanf.noterag.prompt.RagPrompt;
+import com.huanf.noterag.rag.RagPrompt;
 
 /**
  * LLM 关闭时使用的占位 client。

@@ -1,8 +1,8 @@
 package com.huanf.noterag.client;
 
-import java.util.List;
-import java.util.Objects;
-
+import com.huanf.noterag.common.exception.BusinessException;
+import com.huanf.noterag.common.result.CodeStatus;
+import com.huanf.noterag.rag.RagPrompt;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -10,9 +10,8 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.chat.prompt.Prompt;
 
-import com.huanf.noterag.common.exception.BusinessException;
-import com.huanf.noterag.common.result.CodeStatus;
-import com.huanf.noterag.prompt.RagPrompt;
+import java.util.List;
+import java.util.Objects;
 
 public class SpringAiLlmClient implements LlmClient {
 

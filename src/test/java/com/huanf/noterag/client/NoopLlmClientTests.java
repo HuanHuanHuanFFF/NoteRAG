@@ -1,11 +1,11 @@
 package com.huanf.noterag.client;
 
+import com.huanf.noterag.rag.RagPrompt;
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.jupiter.api.Test;
-
-import com.huanf.noterag.prompt.RagPrompt;
 
 class NoopLlmClientTests {
 
