@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue';
 import type { ChatSession, ChatTurn, NoteListItem } from '@/api/types';
+import MarkdownAnswer from '@/components/MarkdownAnswer.vue';
 
 const props = defineProps<{
   session: ChatSession | null;
@@ -58,34 +59,6 @@ function handleKeydown(event: KeyboardEvent) {
 
 function pick(question: string) {
   input.value = question;
-}
-
-interface AnswerSegment {
-  type: 'text' | 'citation';
-  value: string;
-  index?: number;
-}
-
-function parseAnswer(answer: string): AnswerSegment[] {
-  const segments: AnswerSegment[] = [];
-  const regex = /\[(\d+)\]/g;
-  let lastIndex = 0;
-  let match;
-  while ((match = regex.exec(answer)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({ type: 'text', value: answer.slice(lastIndex, match.index) });
-    }
-    segments.push({ type: 'citation', value: match[0], index: parseInt(match[1], 10) });
-    lastIndex = regex.lastIndex;
-  }
-  if (lastIndex < answer.length) {
-    segments.push({ type: 'text', value: answer.slice(lastIndex) });
-  }
-  return segments;
-}
-
-function isCitationActive(turnId: number, index: number): boolean {
-  return props.activeCitation?.turnId === turnId && props.activeCitation?.index === index;
 }
 
 function isSourceExpanded(turnId: number, index: number): boolean {
@@ -190,28 +163,12 @@ function handleSourceButtonClick(turnId: number, index: number) {
               <div v-else-if="turn.error" class="text-[13px] text-rose-400">{{ turn.error }}</div>
 
               <div v-else>
-                <div class="text-[14px] leading-[1.75] text-white/85">
-                  <template
-                    v-for="(seg, i) in parseAnswer(turn.answer)"
-                    :key="i"
-                  >
-                    <span v-if="seg.type === 'text'" class="whitespace-pre-wrap">{{ seg.value }}</span>
-                    <button
-                      v-else
-                      type="button"
-                      class="mx-0.5 inline-flex h-[18px] min-w-[20px] items-center justify-center rounded px-1 align-middle font-mono text-[11px] font-medium transition-all duration-150"
-                      :class="
-                        isCitationActive(turn.id, seg.index!)
-                          ? 'bg-accent/20 text-accent ring-1 ring-accent/50'
-                          : 'bg-white/[0.06] text-accent hover:bg-accent/15'
-                      "
-                      :aria-label="`查看来源 ${seg.index}`"
-                      @click="emit('open-citation', turn.id, seg.index!)"
-                    >
-                      {{ seg.index }}
-                    </button>
-                  </template>
-                </div>
+                <MarkdownAnswer
+                  :answer="turn.answer"
+                  :sources="turn.sources"
+                  :active-index="activeCitation?.turnId === turn.id ? activeCitation.index : null"
+                  @open-citation="(index) => emit('open-citation', turn.id, index)"
+                />
 
                 <div
                   v-if="turn.sources.length > 0"

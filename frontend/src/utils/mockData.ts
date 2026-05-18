@@ -1,5 +1,9 @@
 import type { ChatSession, NoteListItem, SourceChunk } from '@/api/types';
 
+function cite(chunkId: number): string {
+  return `\uE200cite\uE202${chunkId}\uE201`;
+}
+
 export const mockNotes: NoteListItem[] = [
   {
     id: 1,
@@ -103,7 +107,7 @@ export const mockSessions: ChatSession[] = [
         id: 1,
         question: 'MySQL 的 MVCC 依赖哪些机制实现?',
         answer:
-          'MVCC 主要依赖三个核心机制 [1]：隐藏字段 trx_id 和 roll_pointer 用于追踪版本与回滚链；undo log 保存历史版本，串成链表；ReadView 在快照读时生成一致性视图。\n\nReadView 通过比较 trx_id 与 min_trx_id / max_trx_id / 活跃事务列表来判断版本可见性 [1]。在 REPEATABLE READ 隔离级别下，事务首次快照读时生成的 ReadView 会被整个事务复用，从而保证可重复读 [2]。',
+          `MVCC 主要依赖三个核心机制 ${cite(211)}：隐藏字段 trx_id 和 roll_pointer 用于追踪版本与回滚链；undo log 保存历史版本，串成链表；ReadView 在快照读时生成一致性视图。\n\nReadView 通过比较 trx_id 与 min_trx_id / max_trx_id / 活跃事务列表来判断版本可见性 ${cite(211)}。在 REPEATABLE READ 隔离级别下，事务首次快照读时生成的 ReadView 会被整个事务复用，从而保证可重复读 ${cite(218)}。`,
         sources: mvccSources,
         loading: false,
       },
@@ -111,7 +115,7 @@ export const mockSessions: ChatSession[] = [
         id: 2,
         question: '那 Next-Key Lock 在这里起什么作用?',
         answer:
-          'Next-Key Lock 是 InnoDB 在 RR 隔离级别下解决幻读的关键 [1]。它由 Record Lock 和 Gap Lock 组成，锁定一条索引记录及其前面的间隙，从而阻止其他事务在该范围内插入新记录。\n\n需要注意的是，Next-Key Lock 只对当前读生效（SELECT ... FOR UPDATE 等），普通 SELECT 走 MVCC 快照读不会加锁。',
+          `Next-Key Lock 是 InnoDB 在 RR 隔离级别下解决幻读的关键 ${cite(305)}。它由 Record Lock 和 Gap Lock 组成，锁定一条索引记录及其前面的间隙，从而阻止其他事务在该范围内插入新记录。\n\n需要注意的是，Next-Key Lock 只对当前读生效（SELECT ... FOR UPDATE 等），普通 SELECT 走 MVCC 快照读不会加锁。`,
         sources: [mvccSources[2]],
         loading: false,
       },
@@ -125,7 +129,7 @@ export const mockSessions: ChatSession[] = [
         id: 1,
         question: '为什么 MySQL 选择 B+ 树作为索引结构?',
         answer:
-          'MySQL 选择 B+ 树主要因为它适合磁盘 IO 场景 [1]：\n\n1. 树高低（矮胖）：扇出大，3-4 层即可容纳千万级数据。\n2. 非叶子节点不存数据：单页能容纳更多键，进一步降低树高。\n3. 叶子节点链表：范围查询非常高效。\n\n相比之下，InnoDB 的聚簇索引把整行数据放在主键 B+ 树的叶子节点，二级索引则需要"回表" [2]。',
+          `MySQL 选择 B+ 树主要因为它适合磁盘 IO 场景 ${cite(102)}：\n\n1. 树高低（矮胖）：扇出大，3-4 层即可容纳千万级数据。\n2. 非叶子节点不存数据：单页能容纳更多键，进一步降低树高。\n3. 叶子节点链表：范围查询非常高效。\n\n相比之下，InnoDB 的聚簇索引把整行数据放在主键 B+ 树的叶子节点，二级索引则需要"回表" ${cite(117)}。`,
         sources: indexSources,
         loading: false,
       },
@@ -155,7 +159,7 @@ export function buildMockAnswerText(question: string, sources: SourceChunk[]): s
     return '根据当前笔记内容无法确定。';
   }
   const top = sources.slice(0, Math.min(3, sources.length));
-  const refs = top.map((_, i) => `[${i + 1}]`).join('');
+  const refs = top.map((source) => cite(source.chunkId)).join('');
   const headings = top
     .map((c, i) => `${i + 1}. ${c.headingPath?.trim() || c.title}`)
     .join('\n');
