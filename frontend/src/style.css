@@ -25,8 +25,8 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(52, 211, 153, 0.08), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(16, 185, 129, 0.04), transparent 50%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(45, 212, 191, 0.07), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(20, 184, 166, 0.035), transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -60,8 +60,19 @@ body::before {
 }
 
 ::selection {
-  background-color: rgba(52, 211, 153, 0.25);
+  background-color: rgba(45, 212, 191, 0.24);
   color: #fafafa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 button {

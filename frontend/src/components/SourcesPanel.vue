@@ -6,10 +6,14 @@ import type { SourceChunk } from '@/api/types';
 const props = defineProps<{
   sources: SourceChunk[];
   highlightIndex: number | null;
+  expandedIndices: number[];
   loading?: boolean;
 }>();
 
-defineEmits<{ (e: 'close'): void }>();
+const emit = defineEmits<{
+  (e: 'close'): void;
+  (e: 'expanded-change', indices: number[]): void;
+}>();
 
 const containerRef = ref<HTMLElement | null>(null);
 const expandedSet = ref<Set<number>>(new Set());
@@ -24,8 +28,14 @@ const items = computed(() =>
 watch(
   () => props.sources,
   () => {
-    expandedSet.value =
-      props.highlightIndex == null ? new Set() : new Set([props.highlightIndex]);
+    setExpandedSet(props.highlightIndex == null ? new Set() : new Set([props.highlightIndex]));
+  }
+);
+
+watch(
+  () => props.expandedIndices,
+  (indices) => {
+    expandedSet.value = new Set(indices);
   }
 );
 
@@ -33,12 +43,12 @@ watch(
   () => props.highlightIndex,
   async (idx) => {
     if (idx == null) {
-      expandedSet.value = new Set();
+      setExpandedSet(new Set());
       return;
     }
     const next = new Set(expandedSet.value);
     next.add(idx);
-    expandedSet.value = next;
+    setExpandedSet(next);
     await new Promise((r) => requestAnimationFrame(r));
     const el = containerRef.value?.querySelector(`#source-${idx}`) as HTMLElement | null;
     if (el && containerRef.value) {
@@ -53,7 +63,12 @@ function toggle(index: number) {
   const next = new Set(expandedSet.value);
   if (next.has(index)) next.delete(index);
   else next.add(index);
+  setExpandedSet(next);
+}
+
+function setExpandedSet(next: Set<number>) {
   expandedSet.value = next;
+  emit('expanded-change', [...next]);
 }
 </script>
 
@@ -68,7 +83,7 @@ function toggle(index: number) {
       </div>
       <button
         type="button"
-        class="inline-flex h-7 w-7 items-center justify-center rounded-md text-white/45 transition-colors duration-150 hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        class="inline-flex h-7 w-7 appearance-none items-center justify-center rounded-md border border-transparent bg-transparent text-white/45 shadow-none transition-colors duration-150 hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         title="关闭来源面板"
         aria-label="关闭来源面板"
         @click="$emit('close')"

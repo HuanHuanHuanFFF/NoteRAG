@@ -19,9 +19,9 @@ export default {
       },
       colors: {
         accent: {
-          DEFAULT: '#34d399',
-          hover: '#6ee7b7',
-          pressed: '#10b981',
+          DEFAULT: '#2dd4bf',
+          hover: '#5eead4',
+          pressed: '#14b8a6',
         },
       },
       animation: {

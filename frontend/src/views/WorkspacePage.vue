@@ -22,23 +22,26 @@ import {
 
 const notes = ref<NoteListItem[]>([...mockNotes]);
 const sessions = ref<ChatSession[]>(JSON.parse(JSON.stringify(mockSessions)));
-const selectedNoteId = ref<number | null>(null);
+const selectedNoteIds = ref<Set<number>>(new Set());
 const activeSessionId = ref<string>(sessions.value[0]?.id ?? createSessionInternal().id);
 const importOpen = ref(false);
 
 const sourcesOpen = ref(false);
+const sourcesClosing = ref(false);
 const sourcesLoading = ref(false);
 const sourcesData = ref<SourceChunk[]>([]);
 const activeCitation = ref<{ turnId: number; index: number | null } | null>(null);
+const expandedCitation = ref<{ turnId: number; indices: number[] } | null>(null);
+let sourcesRequestToken = 0;
 
 const activeSession = computed<ChatSession | null>(
   () => sessions.value.find((s) => s.id === activeSessionId.value) ?? null
 );
 
-const selectedNote = computed<NoteListItem | null>(() =>
-  selectedNoteId.value == null
-    ? null
-    : notes.value.find((n) => n.id === selectedNoteId.value) ?? null
+const selectedNoteIdList = computed<number[]>(() => [...selectedNoteIds.value]);
+
+const selectedNotes = computed<NoteListItem[]>(() =>
+  notes.value.filter((note) => selectedNoteIds.value.has(note.id))
 );
 
 let nextSessionIdx = sessions.value.length + 1;
@@ -72,8 +75,11 @@ function handleRenameSession(id: string, title: string) {
   if (session) session.title = title;
 }
 
-function handleSelectNote(id: number | null) {
-  selectedNoteId.value = id;
+function handleToggleNote(id: number) {
+  const next = new Set(selectedNoteIds.value);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  selectedNoteIds.value = next;
 }
 
 function openImport() {
@@ -123,33 +129,85 @@ function handleOpenCitation(turnId: number, index: number | null) {
     sourcesData.value === turn.sources;
 
   if (!same) {
+    const requestToken = ++sourcesRequestToken;
+    sourcesClosing.value = false;
     sourcesOpen.value = true;
     sourcesLoading.value = true;
     sourcesData.value = [];
     activeCitation.value = { turnId, index };
+    expandedCitation.value = { turnId, indices: [] };
     nextTick(() => {
       setTimeout(() => {
+        if (requestToken !== sourcesRequestToken || !sourcesOpen.value) return;
         sourcesData.value = turn.sources;
         sourcesLoading.value = false;
       }, 280);
     });
   } else {
     activeCitation.value = { turnId, index };
+    if (index == null) {
+      expandedCitation.value = { turnId, indices: [] };
+    } else {
+      const current = expandedCitation.value?.turnId === turnId ? expandedCitation.value.indices : [];
+      expandedCitation.value = {
+        turnId,
+        indices: current.includes(index) ? current : [...current, index],
+      };
+    }
   }
 }
 
 function closeSources() {
+  sourcesRequestToken++;
+  if (!sourcesOpen.value) {
+    resetSources();
+    sourcesClosing.value = false;
+    return;
+  }
   sourcesOpen.value = false;
+  sourcesLoading.value = false;
+  sourcesClosing.value = true;
+}
+
+function resetSources() {
   sourcesData.value = [];
   activeCitation.value = null;
+  expandedCitation.value = null;
   sourcesLoading.value = false;
+}
+
+function handleSourcesAfterLeave() {
+  if (!sourcesClosing.value) return;
+  resetSources();
+  sourcesClosing.value = false;
+}
+
+function handleSourcesExpandedChange(indices: number[]) {
+  if (activeCitation.value == null) return;
+  expandedCitation.value = {
+    turnId: activeCitation.value.turnId,
+    indices,
+  };
+}
+
+function handleToggleSource(turnId: number, index: number) {
+  if (expandedCitation.value?.turnId !== turnId) {
+    handleOpenCitation(turnId, index);
+    return;
+  }
+
+  const next = expandedCitation.value.indices.includes(index)
+    ? expandedCitation.value.indices.filter((item) => item !== index)
+    : [...expandedCitation.value.indices, index];
+
+  expandedCitation.value = { turnId, indices: next };
 }
 </script>
 
 <template>
   <div class="grid h-[calc(100vh-56px)] gap-3 px-4 py-3 lg:gap-4 lg:px-6 lg:py-4"
     :class="
-      sourcesOpen
+      sourcesOpen || sourcesClosing
         ? 'grid-cols-[260px_1fr_400px]'
         : 'grid-cols-[260px_1fr]'
     "
@@ -159,8 +217,8 @@ function closeSources() {
     >
       <NotesPanel
         :notes="notes"
-        :selected-note-id="selectedNoteId"
-        @select="handleSelectNote"
+        :selected-note-ids="selectedNoteIdList"
+        @toggle="handleToggleNote"
         @open-import="openImport"
       />
     </div>
@@ -184,10 +242,12 @@ function closeSources() {
       >
         <ChatPanel
           :session="activeSession"
-          :selected-note="selectedNote"
+          :selected-notes="selectedNotes"
           :active-citation="activeCitation"
+          :expanded-citation="expandedCitation"
           @submit="handleSubmit"
           @open-citation="handleOpenCitation"
+          @toggle-source="handleToggleSource"
         />
       </div>
     </div>
@@ -199,6 +259,7 @@ function closeSources() {
       leave-active-class="transition duration-150 ease-in"
       leave-from-class="opacity-100 translate-x-0"
       leave-to-class="opacity-0 translate-x-4"
+      @after-leave="handleSourcesAfterLeave"
     >
       <div
         v-if="sourcesOpen"
@@ -207,8 +268,10 @@ function closeSources() {
         <SourcesPanel
           :sources="sourcesData"
           :highlight-index="activeCitation?.index ?? null"
+          :expanded-indices="expandedCitation?.indices ?? []"
           :loading="sourcesLoading"
           @close="closeSources"
+          @expanded-change="handleSourcesExpandedChange"
         />
       </div>
     </transition>

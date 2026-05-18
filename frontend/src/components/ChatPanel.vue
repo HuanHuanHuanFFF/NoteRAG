@@ -4,13 +4,15 @@ import type { ChatSession, ChatTurn, NoteListItem } from '@/api/types';
 
 const props = defineProps<{
   session: ChatSession | null;
-  selectedNote: NoteListItem | null;
+  selectedNotes: NoteListItem[];
   activeCitation: { turnId: number; index: number | null } | null;
+  expandedCitation: { turnId: number; indices: number[] } | null;
 }>();
 
 const emit = defineEmits<{
   (e: 'submit', question: string): void;
   (e: 'open-citation', turnId: number, index: number | null): void;
+  (e: 'toggle-source', turnId: number, index: number): void;
 }>();
 
 const input = ref('');
@@ -24,6 +26,12 @@ const presetQuestions = [
 ];
 
 const turns = computed<ChatTurn[]>(() => props.session?.turns ?? []);
+const scopeText = computed(() => {
+  const count = props.selectedNotes.length;
+  if (count === 0) return '跨全部笔记检索';
+  if (count === 1) return `已限定到笔记 ${props.selectedNotes[0].title}`;
+  return `已限定到 ${count} 篇笔记`;
+});
 
 watch(
   turns,
@@ -79,6 +87,18 @@ function parseAnswer(answer: string): AnswerSegment[] {
 function isCitationActive(turnId: number, index: number): boolean {
   return props.activeCitation?.turnId === turnId && props.activeCitation?.index === index;
 }
+
+function isSourceExpanded(turnId: number, index: number): boolean {
+  return props.expandedCitation?.turnId === turnId && props.expandedCitation.indices.includes(index);
+}
+
+function handleSourceButtonClick(turnId: number, index: number) {
+  if (isSourceExpanded(turnId, index)) {
+    emit('toggle-source', turnId, index);
+    return;
+  }
+  emit('open-citation', turnId, index);
+}
 </script>
 
 <template>
@@ -93,14 +113,13 @@ function isCitationActive(turnId: number, index: number): boolean {
         </span>
       </div>
       <p class="mt-1 flex items-center gap-1.5 text-[12px] text-white/40">
-        <span v-if="selectedNote" class="inline-flex items-center gap-1">
+        <span v-if="selectedNotes.length > 0" class="inline-flex items-center gap-1">
           <svg class="h-3 w-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
-          已限定到笔记
-          <span class="font-medium text-white/70">{{ selectedNote.title }}</span>
+          <span class="font-medium text-white/70">{{ scopeText }}</span>
         </span>
-        <span v-else>跨全部笔记检索</span>
+        <span v-else>{{ scopeText }}</span>
       </p>
     </header>
 
@@ -201,7 +220,7 @@ function isCitationActive(turnId: number, index: number): boolean {
                 >
                   <button
                     type="button"
-                    class="inline-flex h-6 items-center rounded-md px-2 text-[11px] font-medium text-white/55 transition-colors duration-150 hover:text-white/85 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+                    class="inline-flex h-6 appearance-none items-center rounded-md border border-white/[0.08] bg-white/[0.035] px-2 text-[11px] font-medium text-white/60 shadow-none transition-all duration-150 hover:border-accent/35 hover:bg-accent/[0.08] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                     @click="emit('open-citation', turn.id, null)"
                   >
                     参考来源
@@ -212,11 +231,11 @@ function isCitationActive(turnId: number, index: number): boolean {
                     type="button"
                     class="inline-flex h-6 min-w-[24px] items-center justify-center rounded-md border px-1.5 font-mono text-[11px] font-medium transition-all duration-150"
                     :class="
-                      isCitationActive(turn.id, i + 1)
+                      isSourceExpanded(turn.id, i + 1)
                         ? 'border-accent/50 bg-accent/[0.12] text-accent'
                         : 'border-white/[0.08] bg-white/[0.02] text-white/55 hover:border-accent/40 hover:bg-accent/5 hover:text-accent'
                     "
-                    @click="emit('open-citation', turn.id, i + 1)"
+                    @click="handleSourceButtonClick(turn.id, i + 1)"
                   >
                     {{ i + 1 }}
                   </button>

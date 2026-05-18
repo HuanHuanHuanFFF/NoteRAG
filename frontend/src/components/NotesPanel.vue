@@ -4,20 +4,20 @@ import type { NoteListItem } from '@/api/types';
 
 const props = defineProps<{
   notes: NoteListItem[];
-  selectedNoteId: number | null;
+  selectedNoteIds: number[];
 }>();
 
 const emit = defineEmits<{
-  (e: 'select', noteId: number | null): void;
+  (e: 'toggle', noteId: number): void;
   (e: 'open-import'): void;
 }>();
 
 const COLOR_PRESETS = [
-  'from-emerald-400/30 to-teal-500/20 text-emerald-300',
-  'from-sky-400/30 to-indigo-500/20 text-sky-300',
-  'from-amber-300/30 to-orange-500/20 text-amber-300',
-  'from-rose-400/30 to-pink-500/20 text-rose-300',
-  'from-violet-400/30 to-fuchsia-500/20 text-violet-300',
+  'from-teal-400/16 to-cyan-400/8 text-teal-200 ring-teal-300/15',
+  'from-indigo-400/16 to-sky-400/8 text-indigo-200 ring-indigo-300/15',
+  'from-amber-300/16 to-yellow-400/8 text-amber-200 ring-amber-300/15',
+  'from-rose-300/16 to-fuchsia-400/8 text-rose-200 ring-rose-300/15',
+  'from-slate-300/16 to-blue-400/8 text-slate-200 ring-slate-300/15',
 ];
 
 function colorFor(id: number): string {
@@ -38,8 +38,13 @@ const sortedNotes = computed(() =>
   [...props.notes].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
 );
 
+const selectedIdSet = computed(() => new Set(props.selectedNoteIds));
+const selectionLabel = computed(() =>
+  props.selectedNoteIds.length === 0 ? 'all' : `${props.selectedNoteIds.length} selected`
+);
+
 function handleClick(id: number) {
-  emit('select', props.selectedNoteId === id ? null : id);
+  emit('toggle', id);
 }
 </script>
 
@@ -48,7 +53,7 @@ function handleClick(id: number) {
     <header class="flex items-center justify-between px-5 pb-3 pt-5">
       <h2 class="text-[18px] font-semibold tracking-tight text-white">Notes</h2>
       <span class="font-mono text-[11px] tabular-nums text-white/30">
-        {{ sortedNotes.length }}
+        {{ selectionLabel }}
       </span>
     </header>
 
@@ -57,21 +62,21 @@ function handleClick(id: number) {
         v-for="note in sortedNotes"
         :key="note.id"
         type="button"
-        class="group relative flex w-full items-center gap-3 rounded-lg border px-2.5 py-2.5 text-left transition-all duration-150"
+        class="group relative flex w-full appearance-none items-center gap-3 rounded-lg border px-2.5 py-2.5 text-left shadow-none transition-all duration-150"
         :class="
-          selectedNoteId === note.id
-            ? 'border-accent/30 bg-accent/[0.06]'
-            : 'border-transparent hover:border-white/[0.08] hover:bg-white/[0.03]'
+          selectedIdSet.has(note.id)
+            ? 'border-accent/35 bg-accent/[0.075] shadow-[0_10px_30px_-26px_rgba(45,212,191,0.75)]'
+            : 'border-white/[0.045] bg-white/[0.025] hover:border-white/[0.09] hover:bg-white/[0.045]'
         "
         @click="handleClick(note.id)"
       >
         <span
-          v-if="selectedNoteId === note.id"
+          v-if="selectedIdSet.has(note.id)"
           class="absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 rounded-r bg-accent"
           aria-hidden="true"
         ></span>
         <span
-          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-gradient-to-br font-mono text-[13px] font-semibold"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-gradient-to-br font-mono text-[13px] font-semibold ring-1 ring-inset"
           :class="colorFor(note.id)"
         >
           {{ initial(note.title) }}

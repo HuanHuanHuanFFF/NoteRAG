@@ -24,7 +24,7 @@ const scoreDisplay = computed(() => {
     class="rounded-xl border bg-white/[0.02] backdrop-blur-sm transition-all duration-200"
     :class="
       highlight
-        ? 'border-accent/40 ring-1 ring-accent/30 shadow-[0_0_24px_-12px_rgba(52,211,153,0.5)]'
+        ? 'border-accent/40 ring-1 ring-accent/30 shadow-[0_0_24px_-12px_rgba(45,212,191,0.48)]'
         : 'border-white/[0.06]'
     "
   >
@@ -44,14 +44,9 @@ const scoreDisplay = computed(() => {
     </header>
 
     <div class="px-4 pb-3.5 pt-2.5">
-      <pre
-        v-if="expanded"
-        class="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.05] bg-black/30 p-3 font-mono text-[12px] leading-relaxed text-white/75"
-        >{{ source.content }}</pre
-      >
       <button
         type="button"
-        class="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-white/40 transition-colors duration-150 hover:text-accent focus:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+        class="inline-flex appearance-none items-center gap-1 rounded border border-transparent bg-transparent px-0 text-[11px] font-medium text-white/40 shadow-none transition-colors duration-150 hover:text-accent focus:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
         :aria-expanded="expanded"
         @click="emit('toggle')"
       >
@@ -67,6 +62,11 @@ const scoreDisplay = computed(() => {
         </svg>
         {{ expanded ? '收起内容' : '展开完整内容' }}
       </button>
+      <pre
+        v-if="expanded"
+        class="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.05] bg-black/30 p-3 font-mono text-[12px] leading-relaxed text-white/75"
+        >{{ source.content }}</pre
+      >
     </div>
   </article>
 </template>
