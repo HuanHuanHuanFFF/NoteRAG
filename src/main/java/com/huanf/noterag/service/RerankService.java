@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import com.huanf.noterag.client.RerankClient;
@@ -15,6 +16,7 @@ import com.huanf.noterag.config.RerankProperties;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.util.RagTextFormatter;
 
+@Slf4j
 @Service
 public class RerankService {
 
@@ -54,8 +56,14 @@ public class RerankService {
                             .formatted(candidates.size(), rerankProperties.getMaxDocuments()));
         }
 
+        log.info("Rerank 开始, candidateCount={}, topK={}, enabled={}", candidates.size(), topK, rerankProperties.isEnabled());
+        long startNanos = System.nanoTime();
+
         if (!rerankProperties.isEnabled()) {
-            return copyTopCandidates(candidates, topK);
+            List<RetrievedChunk> result = copyTopCandidates(candidates, topK);
+            long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+            log.info("Rerank 跳过(disabled), returnedCount={}, elapsedMs={}", result.size(), elapsedMs);
+            return result;
         }
 
         List<String> documents = candidates.stream()
@@ -70,7 +78,16 @@ public class RerankService {
                 Math.min(topK, candidates.size()),
                 rerankProperties.getInstruct());
 
-        return applyResults(candidates, results, Math.min(topK, candidates.size()));
+        List<RetrievedChunk> reranked = applyResults(candidates, results, Math.min(topK, candidates.size()));
+        long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+        log.info("Rerank 完成, returnedCount={}, elapsedMs={}", reranked.size(), elapsedMs);
+        if (log.isDebugEnabled()) {
+            log.debug("Rerank 结果 chunkIds/scores={}",
+                    reranked.stream()
+                            .map(c -> c.getChunkId() + ":" + String.format("%.4f", c.getScore()))
+                            .toList());
+        }
+        return reranked;
     }
 
     private void validateTopK(int topK) {

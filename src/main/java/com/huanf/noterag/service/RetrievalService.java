@@ -2,6 +2,7 @@ package com.huanf.noterag.service;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import com.huanf.noterag.client.EmbeddingClient;
@@ -13,6 +14,7 @@ import com.huanf.noterag.model.EmbeddingModel;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.util.RagTextFormatter;
 
+@Slf4j
 @Service
 public class RetrievalService {
 
@@ -41,13 +43,26 @@ public class RetrievalService {
         validateQuestion(question);
         validateTopN(topN);
 
+        log.info("Retrieval 开始, questionLength={}, topN={}", question.length(), topN);
+        log.debug("Retrieval question={}", question);
+        long startNanos = System.nanoTime();
+
         EmbeddingModel embeddingModel = embeddingModelResolver.resolveRequired1024Model();
 
         String queryText = RagTextFormatter.formatQueryText(question);
         float[] queryEmbedding = embeddingClient.embed(queryText);
         validateQueryEmbedding(queryEmbedding, embeddingModel.getDimension());
 
-        return chunkRetrievalMapper.searchTopN(embeddingModel.getId(), queryEmbedding, topN);
+        List<RetrievedChunk> results = chunkRetrievalMapper.searchTopN(embeddingModel.getId(), queryEmbedding, topN);
+        long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+        log.info("Retrieval 完成, returnedCount={}, elapsedMs={}", results.size(), elapsedMs);
+        if (log.isDebugEnabled()) {
+            log.debug("Retrieval 命中 chunkIds/scores={}",
+                    results.stream()
+                            .map(c -> c.getChunkId() + ":" + String.format("%.4f", c.getScore()))
+                            .toList());
+        }
+        return results;
     }
 
     private void validateQuestion(String question) {

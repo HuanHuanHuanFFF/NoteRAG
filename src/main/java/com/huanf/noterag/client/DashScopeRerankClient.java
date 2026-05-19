@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.RerankProperties;
 
+@Slf4j
 @Component
 public class DashScopeRerankClient implements RerankClient {
 
@@ -51,6 +53,7 @@ public class DashScopeRerankClient implements RerankClient {
         } catch (BusinessException ex) {
             throw ex;
         } catch (RestClientException ex) {
+            log.error("Rerank 调用失败, model={}, docCount={}, topK={}", rerankProperties.getModel(), documents.size(), topK, ex);
             throw new BusinessException(CodeStatus.RERANK_FAILED, RERANK_FAILED_MESSAGE, ex);
         }
     }

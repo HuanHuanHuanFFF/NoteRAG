@@ -3,6 +3,7 @@ package com.huanf.noterag.service;
 import java.util.ArrayList;
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -23,6 +24,7 @@ import com.huanf.noterag.util.RagTextFormatter;
  * 不负责 Markdown 导入、chunk 生成或查询检索。外部 embedding API 调用必须保持在数据库写入事务之外，
  * 避免远程调用期间长时间占用数据库连接。</p>
  */
+@Slf4j
 @Service
 public class NoteEmbeddingService {
 
@@ -49,10 +51,15 @@ public class NoteEmbeddingService {
     public int embedAndStore(String title, List<NoteChunk> chunks) {
         validateChunks(chunks);
         if (chunks.isEmpty()) {
+            log.warn("Embedding 跳过, 原因 chunks 为空");
             return 0;
         }
 
+        Long noteId = chunks.get(0).getNoteId();
         EmbeddingModel embeddingModel = embeddingModelResolver.resolveRequired1024Model();
+        log.info("Embedding 开始, noteId={}, chunkCount={}, model={}, dimension={}",
+                noteId, chunks.size(), embeddingModel.getModelName(), embeddingModel.getDimension());
+        long startNanos = System.nanoTime();
 
         List<String> embeddingTexts = chunks.stream()
                 .map(chunk -> RagTextFormatter.formatChunkContext(
@@ -64,7 +71,10 @@ public class NoteEmbeddingService {
         validateEmbeddingResults(embeddings, chunks.size(), embeddingModel.getDimension());
 
         Integer inserted = transactionTemplate.execute(status -> insertEmbeddings(chunks, embeddings, embeddingModel.getId()));
-        return inserted == null ? 0 : inserted;
+        int insertedCount = inserted == null ? 0 : inserted;
+        long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+        log.info("Embedding 完成, noteId={}, inserted={}, elapsedMs={}", noteId, insertedCount, elapsedMs);
+        return insertedCount;
     }
 
     /**

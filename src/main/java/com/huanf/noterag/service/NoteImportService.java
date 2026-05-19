@@ -3,6 +3,7 @@ package com.huanf.noterag.service;
 import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -18,6 +19,7 @@ import com.huanf.noterag.model.Note;
 import com.huanf.noterag.model.NoteChunk;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
+@Slf4j
 @Service
 public class NoteImportService {
 
@@ -52,6 +54,7 @@ public class NoteImportService {
         String content = normalizeContent(request.getContent());
         int charCount = content.length();
         int tokenCount = EstimatedTokenCounter.estimate(content);
+        log.info("Note 导入开始, titleLength={}, charCount={}, tokenCount={}", title.length(), charCount, tokenCount);
 
         SavedChunks savedChunks = transactionTemplate.execute(status ->
                 saveNoteAndChunks(title, content, charCount, tokenCount));
@@ -61,6 +64,8 @@ public class NoteImportService {
 
         noteEmbeddingService.embedAndStore(title, savedChunks.chunks());
 
+        log.info("Note 导入完成, noteId={}, chunkCount={}, charCount={}, tokenCount={}",
+                savedChunks.noteId(), savedChunks.chunks().size(), charCount, tokenCount);
         return new ImportTextResponse(savedChunks.noteId(), savedChunks.chunks().size(), charCount, tokenCount);
     }
 

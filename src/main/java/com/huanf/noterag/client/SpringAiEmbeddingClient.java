@@ -3,11 +3,13 @@ package com.huanf.noterag.client;
 import java.util.List;
 import java.util.Objects;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.embedding.EmbeddingModel;
 
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 
+@Slf4j
 public class SpringAiEmbeddingClient implements EmbeddingClient {
 
     private static final String EMBEDDING_FAILED_MESSAGE = "Embedding 服务调用失败";
@@ -25,6 +27,7 @@ public class SpringAiEmbeddingClient implements EmbeddingClient {
         try {
             return embeddingModel.embed(text);
         } catch (RuntimeException ex) {
+            log.error("Embedding 单条调用失败, textLength={}", text.length(), ex);
             throw new BusinessException(CodeStatus.EMBEDDING_FAILED, EMBEDDING_FAILED_MESSAGE, ex);
         }
     }
@@ -39,6 +42,7 @@ public class SpringAiEmbeddingClient implements EmbeddingClient {
         try {
             return embeddingModel.embed(texts);
         } catch (RuntimeException ex) {
+            log.error("Embedding 批量调用失败, batchSize={}", texts.size(), ex);
             throw new BusinessException(CodeStatus.EMBEDDING_FAILED, EMBEDDING_FAILED_MESSAGE, ex);
         }
     }

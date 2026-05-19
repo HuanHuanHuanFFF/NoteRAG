@@ -10,6 +10,7 @@ import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.rag.AnswerCitationExtractor;
 import com.huanf.noterag.rag.RagPrompt;
 import com.huanf.noterag.rag.RagPromptBuilder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class QueryService {
 
@@ -47,6 +49,10 @@ public class QueryService {
             throw new BusinessException(CodeStatus.INVALID_REQUEST, "question must not be null or blank");
         }
         String normalizedQuestion = question.strip();
+        log.info("Query 开始, questionLength={}", normalizedQuestion.length());
+        log.debug("Query question={}", normalizedQuestion);
+        long startNanos = System.nanoTime();
+
         List<RetrievedChunk> retrievedChunks = retrievalService.retrieveTopN(normalizedQuestion);
         List<RetrievedChunk> rerankedChunks = rerankService.rerank(normalizedQuestion, retrievedChunks);
         RagPrompt prompt = ragPromptBuilder.build(normalizedQuestion, rerankedChunks);
@@ -54,6 +60,10 @@ public class QueryService {
         List<SourceChunkResponse> sources = llmProperties.isEnabled()
                 ? filterSourcesByAnswerCitations(answer, rerankedChunks)
                 : allSources(rerankedChunks);
+
+        long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+        log.info("Query 完成, retrievedCount={}, rerankedCount={}, citedSourceCount={}, answerLength={}, elapsedMs={}",
+                retrievedChunks.size(), rerankedChunks.size(), sources.size(), answer.length(), elapsedMs);
         return new QueryResponse(answer, sources);
     }
 

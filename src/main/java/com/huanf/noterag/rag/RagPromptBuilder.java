@@ -2,6 +2,7 @@ package com.huanf.noterag.rag;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import com.huanf.noterag.common.exception.BusinessException;
@@ -9,6 +10,7 @@ import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.util.RagTextFormatter;
 
+@Slf4j
 @Component
 public class RagPromptBuilder {
 
@@ -42,8 +44,24 @@ public class RagPromptBuilder {
         if (sources == null) {
             throw new IllegalArgumentException("sources must not be null");
         }
+        if (sources.isEmpty()) {
+            log.warn("Prompt 构建时 sources 为空, questionLength={}", question.length());
+        }
         String normalizedQuestion = question.strip();
-        return new RagPrompt(SYSTEM_PROMPT, buildUserPrompt(normalizedQuestion, sources));
+        RagPrompt prompt = new RagPrompt(SYSTEM_PROMPT, buildUserPrompt(normalizedQuestion, sources));
+        if (log.isDebugEnabled()) {
+            log.debug("Prompt 构建完成, sourceCount={}, sourceIds={}, systemLength={}, userLength={}",
+                    sources.size(),
+                    sources.stream().map(c -> c.getChunkId() + "(" + truncate(c.getTitle(), 15) + "/" + truncate(c.getHeadingPath(), 20) + ")").toList(),
+                    prompt.system().length(),
+                    prompt.user().length());
+        }
+        return prompt;
+    }
+
+    private static String truncate(String text, int maxLen) {
+        if (text == null || text.isEmpty()) return "";
+        return text.length() <= maxLen ? text : text.substring(0, maxLen) + "...";
     }
 
     private String buildUserPrompt(String question, List<RetrievedChunk> sources) {

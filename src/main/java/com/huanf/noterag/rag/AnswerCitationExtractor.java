@@ -6,12 +6,9 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * 从 LLM answer 中提取实际引用过的 sourceId。
- *
- * <p>该类只负责解析 {@link com.huanf.noterag.rag.CitationMarkers} 定义的 citation marker，并按首次出现顺序去重。
- * 它不判断 sourceId 是否存在于本次候选列表；越界校验由调用方结合候选 sources 数量完成。</p>
- */
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public final class AnswerCitationExtractor {
 
     private static final Pattern SOURCE_ID_PATTERN = Pattern.compile("[1-9]\\d*");
@@ -38,10 +35,12 @@ public final class AnswerCitationExtractor {
         while (matcher.find()) {
             String rawSourceId = matcher.group(1);
             if (!SOURCE_ID_PATTERN.matcher(rawSourceId).matches()) {
+                log.warn("Citation 解析发现非法 sourceId: '{}'", rawSourceId);
                 throw new IllegalArgumentException("invalid citation source id: " + rawSourceId);
             }
             sourceIds.add(parseSourceId(rawSourceId));
         }
+        log.debug("Citation 解析完成, extractedSourceIds={}", sourceIds);
         return List.copyOf(sourceIds);
     }
 

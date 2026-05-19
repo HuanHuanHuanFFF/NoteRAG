@@ -3,6 +3,7 @@ package com.huanf.noterag.client;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.rag.RagPrompt;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -13,6 +14,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import java.util.List;
 import java.util.Objects;
 
+@Slf4j
 public class SpringAiLlmClient implements LlmClient {
 
     private static final String LLM_FAILED_MESSAGE = "LLM 服务调用失败";
@@ -31,12 +33,17 @@ public class SpringAiLlmClient implements LlmClient {
                 new SystemMessage(prompt.system()),
                 new UserMessage(prompt.user())));
 
+        long startNanos = System.nanoTime();
         try {
             ChatResponse response = chatModel.call(springPrompt);
-            return extractAnswer(response);
+            String answer = extractAnswer(response);
+            long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
+            log.info("LLM 调用完成, answerLength={}, elapsedMs={}", answer.length(), elapsedMs);
+            return answer;
         } catch (BusinessException ex) {
             throw ex;
         } catch (RuntimeException ex) {
+            log.error("LLM 调用失败, systemPromptLength={}, userPromptLength={}", prompt.system().length(), prompt.user().length(), ex);
             throw new BusinessException(CodeStatus.LLM_FAILED, LLM_FAILED_MESSAGE, ex);
         }
     }
