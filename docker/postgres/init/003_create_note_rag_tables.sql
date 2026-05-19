@@ -1,11 +1,3 @@
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = now();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 CREATE TABLE IF NOT EXISTS notes (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
@@ -17,6 +9,13 @@ CREATE TABLE IF NOT EXISTS notes (
     CONSTRAINT notes_char_count_non_negative CHECK (char_count >= 0),
     CONSTRAINT notes_token_count_non_negative CHECK (token_count >= 0)
 );
+
+DROP TRIGGER IF EXISTS trg_notes_set_updated_at ON notes;
+
+CREATE TRIGGER trg_notes_set_updated_at
+BEFORE UPDATE ON notes
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE IF NOT EXISTS note_chunks (
     id BIGSERIAL PRIMARY KEY,
@@ -48,13 +47,6 @@ CREATE TABLE IF NOT EXISTS embedding_models (
     CONSTRAINT embedding_models_distance_metric_supported CHECK (distance_metric IN ('cosine')),
     CONSTRAINT embedding_models_provider_model_dimension_key UNIQUE (provider, model_name, dimension)
 );
-
-DROP TRIGGER IF EXISTS trg_notes_set_updated_at ON notes;
-
-CREATE TRIGGER trg_notes_set_updated_at
-BEFORE UPDATE ON notes
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
 
 DROP TRIGGER IF EXISTS trg_embedding_models_set_updated_at ON embedding_models;
 
