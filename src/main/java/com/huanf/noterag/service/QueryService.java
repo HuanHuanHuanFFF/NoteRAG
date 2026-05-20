@@ -20,6 +20,9 @@ public class QueryService {
         this.rerankService = rerankService;
     }
 
+    /**
+     * 执行单轮 query sources 调试链路，只返回 rerank 后的候选片段。
+     */
     public List<RetrievedChunk> querySources(String question) {
         if (question == null || question.isBlank()) {
             throw new BusinessException(CodeStatus.INVALID_REQUEST, "question must not be null or blank");

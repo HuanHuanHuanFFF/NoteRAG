@@ -2,9 +2,7 @@ package com.huanf.noterag.mapper;
 
 import java.time.Instant;
 
-import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
@@ -18,14 +16,14 @@ import com.huanf.noterag.model.ChatSession;
 public interface ChatSessionMapper {
 
     /**
-     * 插入 chat 会话并回填主键。
+     * 插入 chat 会话并返回主键。
      */
-    @Insert("""
+    @Select("""
             INSERT INTO chat_sessions (title, status)
             VALUES (COALESCE(#{title}, ''), #{status})
+            RETURNING id
             """)
-    @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
-    int insert(ChatSession chatSession);
+    Long insert(ChatSession chatSession);
 
     /**
      * 按主键查询 chat 会话。
