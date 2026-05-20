@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 
-import com.huanf.noterag.model.EmbeddingModel;
+import com.huanf.noterag.entity.EmbeddingModel;
 
 @MybatisTest
 @TestPropertySource(properties = {

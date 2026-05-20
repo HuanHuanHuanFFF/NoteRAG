@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-import com.huanf.noterag.model.NoteChunk;
+import com.huanf.noterag.entity.NoteChunk;
 
 @Mapper
 public interface NoteChunkMapper {

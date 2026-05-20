@@ -4,7 +4,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
 
-import com.huanf.noterag.model.ChunkEmbedding1024;
+import com.huanf.noterag.entity.ChunkEmbedding1024;
 
 @Mapper
 public interface ChunkEmbedding1024Mapper {

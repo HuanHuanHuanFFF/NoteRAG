@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
-import com.huanf.noterag.model.ChatMessage;
-import com.huanf.noterag.model.ChatMessageRole;
-import com.huanf.noterag.model.ChatMessageStatus;
+import com.huanf.noterag.entity.ChatMessage;
+import com.huanf.noterag.entity.ChatMessageRole;
+import com.huanf.noterag.entity.ChatMessageStatus;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.rag.ChatPromptBuilder;
 import com.huanf.noterag.rag.CitationMarkers;

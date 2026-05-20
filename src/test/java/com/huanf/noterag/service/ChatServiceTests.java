@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 
+import com.huanf.noterag.entity.ChatMessageSource;
 import com.huanf.noterag.model.ChatResult;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,11 +31,11 @@ import com.huanf.noterag.config.LlmProperties;
 import com.huanf.noterag.mapper.ChatMessageMapper;
 import com.huanf.noterag.mapper.ChatMessageSourceMapper;
 import com.huanf.noterag.mapper.ChatSessionMapper;
-import com.huanf.noterag.model.ChatMessage;
-import com.huanf.noterag.model.ChatMessageRole;
-import com.huanf.noterag.model.ChatMessageStatus;
-import com.huanf.noterag.model.ChatSession;
-import com.huanf.noterag.model.ChatSessionStatus;
+import com.huanf.noterag.entity.ChatMessage;
+import com.huanf.noterag.entity.ChatMessageRole;
+import com.huanf.noterag.entity.ChatMessageStatus;
+import com.huanf.noterag.entity.ChatSession;
+import com.huanf.noterag.entity.ChatSessionStatus;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.rag.ChatPromptBuilder;
 import com.huanf.noterag.rag.CitationMarkers;
@@ -129,7 +130,7 @@ class ChatServiceTests {
         assertThat(completedAssistantCaptor.getValue().getCharCount()).isEqualTo(result.getAnswer().length());
 
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<com.huanf.noterag.model.ChatMessageSource>> sourceCaptor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<ChatMessageSource>> sourceCaptor = ArgumentCaptor.forClass(List.class);
         verify(chatMessageSourceMapper).batchInsert(sourceCaptor.capture());
         assertThat(sourceCaptor.getValue()).hasSize(2);
         assertThat(sourceCaptor.getValue()).extracting("messageId").containsOnly(102L);

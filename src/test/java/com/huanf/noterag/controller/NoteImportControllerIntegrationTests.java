@@ -24,7 +24,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.huanf.noterag.mapper.NoteChunkMapper;
-import com.huanf.noterag.model.NoteChunk;
+import com.huanf.noterag.entity.NoteChunk;
 import com.huanf.noterag.service.NoteEmbeddingService;
 
 @SpringBootTest

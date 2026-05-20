@@ -12,9 +12,9 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.EmbeddingProperties;
 import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
-import com.huanf.noterag.model.ChunkEmbedding1024;
-import com.huanf.noterag.model.EmbeddingModel;
-import com.huanf.noterag.model.NoteChunk;
+import com.huanf.noterag.entity.ChunkEmbedding1024;
+import com.huanf.noterag.entity.EmbeddingModel;
+import com.huanf.noterag.entity.NoteChunk;
 import com.huanf.noterag.util.RagTextFormatter;
 
 /**

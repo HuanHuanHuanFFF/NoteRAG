@@ -15,7 +15,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import com.huanf.noterag.NoteRagApplication;
 import com.huanf.noterag.client.EmbeddingClient;
 import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
-import com.huanf.noterag.model.ChunkEmbedding1024;
+import com.huanf.noterag.entity.ChunkEmbedding1024;
 
 /**
  * 手动触发的真实链路测试：调用外部 Embedding API，并把返回向量写入 PostgreSQL pgvector。

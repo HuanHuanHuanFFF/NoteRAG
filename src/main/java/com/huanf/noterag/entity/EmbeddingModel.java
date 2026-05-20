@@ -1,4 +1,4 @@
-package com.huanf.noterag.model;
+package com.huanf.noterag.entity;
 
 import java.time.Instant;
 import lombok.AllArgsConstructor;

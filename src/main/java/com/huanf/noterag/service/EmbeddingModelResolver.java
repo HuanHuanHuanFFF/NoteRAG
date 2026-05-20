@@ -6,7 +6,7 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.EmbeddingProperties;
 import com.huanf.noterag.mapper.EmbeddingModelMapper;
-import com.huanf.noterag.model.EmbeddingModel;
+import com.huanf.noterag.entity.EmbeddingModel;
 
 /**
  * 解析当前启用的 embedding model 配置。

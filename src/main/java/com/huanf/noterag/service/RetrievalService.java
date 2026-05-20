@@ -10,7 +10,7 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.RetrievalProperties;
 import com.huanf.noterag.mapper.ChunkRetrievalMapper;
-import com.huanf.noterag.model.EmbeddingModel;
+import com.huanf.noterag.entity.EmbeddingModel;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.util.RagTextFormatter;
 

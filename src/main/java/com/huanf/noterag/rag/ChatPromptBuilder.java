@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
-import com.huanf.noterag.model.ChatMessage;
-import com.huanf.noterag.model.ChatMessageRole;
+import com.huanf.noterag.entity.ChatMessage;
+import com.huanf.noterag.entity.ChatMessageRole;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.util.RagTextFormatter;
 

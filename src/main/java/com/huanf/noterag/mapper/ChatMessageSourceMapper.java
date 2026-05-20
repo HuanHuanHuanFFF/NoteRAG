@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.huanf.noterag.model.ChatMessageSource;
+import com.huanf.noterag.entity.ChatMessageSource;
 
 /**
  * Chat 回答引用来源持久化。

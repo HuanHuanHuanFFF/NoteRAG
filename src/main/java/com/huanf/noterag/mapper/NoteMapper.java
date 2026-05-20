@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-import com.huanf.noterag.model.Note;
+import com.huanf.noterag.entity.Note;
 
 @Mapper
 public interface NoteMapper {

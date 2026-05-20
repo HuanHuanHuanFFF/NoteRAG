@@ -7,7 +7,7 @@ import java.lang.reflect.Method;
 import org.apache.ibatis.annotations.Insert;
 import org.junit.jupiter.api.Test;
 
-import com.huanf.noterag.model.ChunkEmbedding1024;
+import com.huanf.noterag.entity.ChunkEmbedding1024;
 
 class ChunkEmbedding1024MapperTests {
 

@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
-import com.huanf.noterag.model.ChatSession;
+import com.huanf.noterag.entity.ChatSession;
 
 /**
  * Chat 会话持久化。

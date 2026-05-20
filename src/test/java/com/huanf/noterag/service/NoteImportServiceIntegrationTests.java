@@ -26,8 +26,8 @@ import com.huanf.noterag.dto.ImportTextRequest;
 import com.huanf.noterag.dto.ImportTextResponse;
 import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
-import com.huanf.noterag.model.Note;
-import com.huanf.noterag.model.NoteChunk;
+import com.huanf.noterag.entity.Note;
+import com.huanf.noterag.entity.NoteChunk;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
 @SpringBootTest
