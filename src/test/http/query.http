@@ -1,7 +1,8 @@
 @baseUrl = http://localhost:9000
 
-### Query debug - MyISAM vs InnoDB differences
+### Query sources debug - MyISAM vs InnoDB differences
 # Expected: 200 OK
+# Use this endpoint to inspect rerank 后的 sources，不再返回 answer。
 POST {{baseUrl}}/api/query
 Content-Type: application/json
 Accept: application/json
@@ -10,7 +11,7 @@ Accept: application/json
   "question": "MyISAM和InnoDB有什么区别?"
 }
 
-### Query debug - MVCC implementation
+### Query sources debug - MVCC implementation
 # Expected: 200 OK
 POST {{baseUrl}}/api/query
 Content-Type: application/json

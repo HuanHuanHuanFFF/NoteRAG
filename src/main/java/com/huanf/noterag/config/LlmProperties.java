@@ -10,8 +10,8 @@ import org.springframework.validation.annotation.Validated;
 /**
  * LLM 问答阶段配置。
  *
- * <p>本地开发默认关闭，关闭时 /api/query 仍返回空 answer 和 rerank sources，
- * 便于继续调试 retrieval/rerank。开启后必须配置 Spring AI ChatModel 所需参数。</p>
+ * <p>本地开发默认关闭，关闭时仍可继续调试 retrieval/rerank 或后续 chat 链路中
+ * 不依赖 LLM 的部分。开启后必须配置 Spring AI ChatModel 所需参数。</p>
  */
 @Setter
 @Getter

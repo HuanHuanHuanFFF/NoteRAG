@@ -12,7 +12,7 @@ import com.huanf.noterag.client.SpringAiLlmClient;
 /**
  * LLM client 配置。
  *
- * <p>LLM 关闭时返回 no-op client，保证 /api/query 仍可作为 retrieval/rerank 调试入口。
+ * <p>LLM 关闭时返回 no-op client，避免未启用问答生成时阻断应用启动。
  * LLM 开启时依赖 Spring AI 的通用 ChatModel，不在业务代码中绑定具体 provider。</p>
  */
 @Configuration

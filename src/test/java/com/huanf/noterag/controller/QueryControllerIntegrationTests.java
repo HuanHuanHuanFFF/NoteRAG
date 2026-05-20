@@ -20,8 +20,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import com.huanf.noterag.dto.QueryResponse;
-import com.huanf.noterag.dto.SourceChunkResponse;
+import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.service.QueryService;
 
 @SpringBootTest
@@ -53,17 +52,15 @@ class QueryControllerIntegrationTests {
     private MockMvc mockMvc;
 
     @Test
-    void queryWrapsAnswerAndRerankedSources() throws Exception {
-        when(queryService.query("what is JVM?"))
-                .thenReturn(new QueryResponse(
-                        "",
-                        List.of(new SourceChunkResponse(
-                                1L,
-                                11L,
-                                "Java Guide",
-                                "JVM > GC",
-                                "GC notes",
-                                0.97))));
+    void queryWrapsRerankedSources() throws Exception {
+        when(queryService.querySources("what is JVM?"))
+                .thenReturn(List.of(new RetrievedChunk(
+                        1L,
+                        11L,
+                        "Java Guide",
+                        "JVM > GC",
+                        "GC notes",
+                        0.97)));
 
         mockMvc.perform(post("/api/query")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -75,7 +72,6 @@ class QueryControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.answer").value(""))
                 .andExpect(jsonPath("$.data.sources[0].noteId").value(1))
                 .andExpect(jsonPath("$.data.sources[0].chunkId").value(11))
                 .andExpect(jsonPath("$.data.sources[0].title").value("Java Guide"))
@@ -83,7 +79,7 @@ class QueryControllerIntegrationTests {
                 .andExpect(jsonPath("$.data.sources[0].content").value("GC notes"))
                 .andExpect(jsonPath("$.data.sources[0].score").value(0.97));
 
-        verify(queryService).query(eq("what is JVM?"));
+        verify(queryService).querySources(eq("what is JVM?"));
     }
 
     @Test
