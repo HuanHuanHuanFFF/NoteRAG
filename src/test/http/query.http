@@ -21,6 +21,16 @@ Accept: application/json
   "question": "MySQL的MVCC依赖哪些机制实现?"
 }
 
+### Query sources debug - MySQL 的 MVCC 依赖哪些机制实现
+# Expected: 200 OK
+POST {{baseUrl}}/api/query
+Content-Type: application/json
+Accept: application/json
+
+{
+  "question": "MySQL 的 MVCC 依赖哪些机制实现？"
+}
+
 ### Query debug - invalid blank question
 # Expected: 400 Bad Request
 POST {{baseUrl}}/api/query

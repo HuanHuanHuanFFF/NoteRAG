@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -46,6 +47,7 @@ public class ChatService {
     static final String ERROR_CODE_LLM_RESULT_INVALID = "LLM_RESULT_INVALID";
     static final String ERROR_CODE_CHAT_FAILED = "CHAT_FAILED";
     static final String ERROR_CODE_SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
+    static final String UNABLE_TO_ANSWER = "根据当前笔记内容无法确定";
 
     private final ChatSessionMapper chatSessionMapper;
     private final ChatMessageMapper chatMessageMapper;
@@ -97,8 +99,14 @@ public class ChatService {
                     pendingContext.userMessage().getId(),
                     HISTORY_LIMIT);
             List<RetrievedChunk> rerankedSources = queryService.querySources(normalizedContent);
+            log.info("Chat 候选 source chunkIds, sessionId={}, userMessageId={}, sourceCount={}, chunkIds={}",
+                    pendingContext.session().getId(),
+                    pendingContext.userMessage().getId(),
+                    rerankedSources.size(),
+                    formatChunkIdsForLog(rerankedSources));
             RagPrompt prompt = chatPromptBuilder.build(historyMessages, normalizedContent, rerankedSources);
             String answer = llmClient.chat(prompt);
+            log.debug("LLM answer={}", answer);
             List<RetrievedChunk> citedSources = filterSourcesByAnswerCitations(answer, rerankedSources);
 
             ChatResult result = transactionTemplate.execute(status ->
@@ -220,6 +228,9 @@ public class ChatService {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(CodeStatus.LLM_RESULT_INVALID, "LLM 返回了非法引用信息，请重试", exception);
         }
+        if (citedSourceIds.isEmpty() && !rerankedSources.isEmpty() && !isUnableToAnswer(answer)) {
+            throw new BusinessException(CodeStatus.LLM_RESULT_INVALID, "LLM 返回缺少引用信息，请重试");
+        }
 
         Map<Long, RetrievedChunk> sourceByChunkId = new LinkedHashMap<>();
         for (RetrievedChunk source : rerankedSources) {
@@ -235,6 +246,17 @@ public class ChatService {
             citedSources.add(chunk);
         }
         return citedSources;
+    }
+
+    private boolean isUnableToAnswer(String answer) {
+        return answer != null && answer.strip().contains(UNABLE_TO_ANSWER);
+    }
+
+    private String formatChunkIdsForLog(List<RetrievedChunk> sources) {
+        return sources.stream()
+                .map(RetrievedChunk::getChunkId)
+                .map(String::valueOf)
+                .collect(Collectors.joining("|"));
     }
 
     /**

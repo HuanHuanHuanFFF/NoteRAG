@@ -25,6 +25,8 @@ services:
         condition: service_healthy
     environment:
       SERVER_PORT: ${SERVER_PORT:-9000}
+      # Log level for local debugging. Set DEBUG to inspect NoteRAG service internals such as LLM answers.
+      LOGGING_LEVEL_COM_HUANF_NOTERAG: ${LOGGING_LEVEL_COM_HUANF_NOTERAG:-INFO}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?SPRING_DATASOURCE_URL is required}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?SPRING_DATASOURCE_USERNAME is required}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?SPRING_DATASOURCE_PASSWORD is required}

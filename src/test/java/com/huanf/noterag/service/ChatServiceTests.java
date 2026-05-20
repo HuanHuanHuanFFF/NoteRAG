@@ -196,6 +196,55 @@ class ChatServiceTests {
     }
 
     @Test
+    void sendMessageMarksAssistantFailedWhenCitationMissingWithSources() {
+        ChatSession existingSession = new ChatSession(8L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(8L)).thenReturn(existingSession);
+        mockMessageInsert(501L, 502L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(8L, 501L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(601L, 61L, "MySQL", "MVCC", "body", 0.88));
+        when(queryService.querySources("question")).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("question"), eq(rerankedSources))).thenReturn(prompt);
+        when(llmClient.chat(prompt)).thenReturn("answer without citation");
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+
+        assertThatThrownBy(() -> chatService.sendMessage(8L, "question"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.LLM_RESULT_INVALID);
+                    assertThat(exception).hasMessage("LLM 返回缺少引用信息，请重试");
+                });
+
+        ArgumentCaptor<ChatMessage> failedAssistantCaptor = ArgumentCaptor.forClass(ChatMessage.class);
+        verify(chatMessageMapper).updateResult(failedAssistantCaptor.capture());
+        assertThat(failedAssistantCaptor.getValue().getId()).isEqualTo(502L);
+        assertThat(failedAssistantCaptor.getValue().getStatus()).isEqualTo(ChatMessageStatus.FAILED);
+        assertThat(failedAssistantCaptor.getValue().getErrorCode()).isEqualTo(ChatService.ERROR_CODE_LLM_RESULT_INVALID);
+        verify(chatMessageSourceMapper, never()).batchInsert(any());
+    }
+
+    @Test
+    void sendMessageAllowsUnableToAnswerWithoutCitations() {
+        ChatSession existingSession = new ChatSession(6L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(6L)).thenReturn(existingSession);
+        mockMessageInsert(701L, 702L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(6L, 701L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(801L, 81L, "MySQL", "MVCC", "body", 0.88));
+        when(queryService.querySources("question")).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("question"), eq(rerankedSources))).thenReturn(prompt);
+        when(llmClient.chat(prompt)).thenReturn(ChatService.UNABLE_TO_ANSWER);
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+
+        ChatResult result = chatService.sendMessage(6L, "question");
+
+        assertThat(result.getAnswer()).isEqualTo(ChatService.UNABLE_TO_ANSWER);
+        assertThat(result.getSources()).isEmpty();
+        verify(chatMessageSourceMapper, never()).batchInsert(any());
+    }
+
+    @Test
     void sendMessageMarksAssistantFailedAsChatFailedWhenQuerySourcesFails() {
         ChatSession existingSession = new ChatSession(9L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(9L)).thenReturn(existingSession);
