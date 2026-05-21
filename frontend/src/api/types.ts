@@ -13,12 +13,24 @@ export interface SourceChunk {
   score: number | null;
 }
 
-export interface QueryResponse {
+export interface SendChatMessageRequest {
+  content: string;
+}
+
+export interface ChatMessageResponse {
+  sessionId: number;
+  sessionTitle: string;
+  userMessageId: number;
+  assistantMessageId: number;
   answer: string;
   sources: SourceChunk[];
 }
 
 export interface RetrievalSearchResponse {
+  sources: SourceChunk[];
+}
+
+export interface QuerySourcesResponse {
   sources: SourceChunk[];
 }
 
@@ -45,6 +57,8 @@ export interface NoteListItem {
 
 export interface ChatTurn {
   id: number;
+  userMessageId?: number;
+  assistantMessageId?: number;
   question: string;
   answer: string;
   sources: SourceChunk[];
@@ -54,6 +68,7 @@ export interface ChatTurn {
 
 export interface ChatSession {
   id: string;
+  backendSessionId?: number;
   title: string;
   turns: ChatTurn[];
 }

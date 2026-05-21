@@ -6,6 +6,7 @@ import MarkdownAnswer from '@/components/MarkdownAnswer.vue';
 const props = defineProps<{
   session: ChatSession | null;
   selectedNotes: NoteListItem[];
+  submitting: boolean;
   activeCitation: { turnId: number; index: number | null } | null;
   expandedCitation: { turnId: number; indices: number[] } | null;
 }>();
@@ -27,12 +28,7 @@ const presetQuestions = [
 ];
 
 const turns = computed<ChatTurn[]>(() => props.session?.turns ?? []);
-const scopeText = computed(() => {
-  const count = props.selectedNotes.length;
-  if (count === 0) return '跨全部笔记检索';
-  if (count === 1) return `已限定到笔记 ${props.selectedNotes[0].title}`;
-  return `已限定到 ${count} 篇笔记`;
-});
+const scopeText = computed(() => '跨全部笔记检索');
 
 watch(
   turns,
@@ -45,7 +41,7 @@ watch(
 
 function submit() {
   const q = input.value.trim();
-  if (!q) return;
+  if (!q || props.submitting) return;
   emit('submit', q);
   input.value = '';
 }
@@ -82,17 +78,11 @@ function handleSourceButtonClick(turnId: number, index: number) {
         <span
           class="rounded-md bg-amber-300/[0.08] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-amber-300/85"
         >
-          mock data
+          live api
         </span>
       </div>
       <p class="mt-1 flex items-center gap-1.5 text-[12px] text-white/40">
-        <span v-if="selectedNotes.length > 0" class="inline-flex items-center gap-1">
-          <svg class="h-3 w-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="font-medium text-white/70">{{ scopeText }}</span>
-        </span>
-        <span v-else>{{ scopeText }}</span>
+        <span>{{ scopeText }}</span>
       </p>
     </header>
 
@@ -213,6 +203,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
           maxlength="2000"
           placeholder="输入问题，Enter 发送，Shift+Enter 换行"
           class="block w-full resize-none rounded-2xl bg-transparent px-4 py-3 text-[14px] leading-relaxed text-white placeholder-white/30 focus:outline-none"
+          :disabled="submitting"
           @keydown="handleKeydown"
         />
         <div class="flex items-center justify-between px-4 pb-3">
@@ -221,7 +212,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
           </span>
           <button
             type="button"
-            :disabled="!input.trim()"
+            :disabled="!input.trim() || submitting"
             class="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-black transition-all duration-150 hover:bg-accent-hover active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/30 disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
             @click="submit"
           >

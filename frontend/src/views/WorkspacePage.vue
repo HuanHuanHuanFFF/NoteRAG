@@ -5,6 +5,8 @@ import SessionSelector from '@/components/SessionSelector.vue';
 import ChatPanel from '@/components/ChatPanel.vue';
 import SourcesPanel from '@/components/SourcesPanel.vue';
 import ImportModal from '@/components/ImportModal.vue';
+import { ApiError } from '@/api/client';
+import { sendChatMessage, sendFirstChatMessage } from '@/api/noterag';
 import type {
   ChatSession,
   ChatTurn,
@@ -12,18 +14,12 @@ import type {
   NoteListItem,
   SourceChunk,
 } from '@/api/types';
-import {
-  buildMockAnswerText,
-  mockNotes,
-  mockSessions,
-  pickMockSources,
-  summarizeQuestion,
-} from '@/utils/mockData';
+import { mockNotes } from '@/utils/mockData';
 
 const notes = ref<NoteListItem[]>([...mockNotes]);
-const sessions = ref<ChatSession[]>(JSON.parse(JSON.stringify(mockSessions)));
+const sessions = ref<ChatSession[]>([]);
 const selectedNoteIds = ref<Set<number>>(new Set());
-const activeSessionId = ref<string>(sessions.value[0]?.id ?? createSessionInternal().id);
+const activeSessionId = ref<string>('');
 const importOpen = ref(false);
 
 const sourcesOpen = ref(false);
@@ -38,14 +34,18 @@ const activeSession = computed<ChatSession | null>(
   () => sessions.value.find((s) => s.id === activeSessionId.value) ?? null
 );
 
+const activeSessionSubmitting = computed(
+  () => activeSession.value?.turns.some((turn) => turn.loading) ?? false
+);
+
 const selectedNoteIdList = computed<number[]>(() => [...selectedNoteIds.value]);
 
 const selectedNotes = computed<NoteListItem[]>(() =>
   notes.value.filter((note) => selectedNoteIds.value.has(note.id))
 );
 
-let nextSessionIdx = sessions.value.length + 1;
-let nextTurnId = sessions.value.flatMap((s) => s.turns).reduce((max, t) => Math.max(max, t.id), 0);
+let nextSessionIdx = 1;
+let nextTurnId = 0;
 
 function createSessionInternal(): ChatSession {
   const session: ChatSession = {
@@ -56,6 +56,8 @@ function createSessionInternal(): ChatSession {
   sessions.value.unshift(session);
   return session;
 }
+
+activeSessionId.value = createSessionInternal().id;
 
 function handleCreateSession() {
   const session = createSessionInternal();
@@ -98,7 +100,8 @@ function handleImported(result: ImportTextResponse) {
 }
 
 async function handleSubmit(question: string) {
-  if (!activeSession.value) return;
+  const session = activeSession.value ?? createSessionInternal();
+  activeSessionId.value = session.id;
   const turn: ChatTurn = {
     id: ++nextTurnId,
     question,
@@ -106,16 +109,27 @@ async function handleSubmit(question: string) {
     sources: [],
     loading: true,
   };
-  activeSession.value.turns.push(turn);
-  if (activeSession.value.turns.length === 1) {
-    activeSession.value.title = summarizeQuestion(question);
-  }
+  session.turns.push(turn);
 
-  await new Promise((r) => setTimeout(r, 600 + Math.random() * 600));
-  const sources = pickMockSources(question);
-  turn.sources = sources;
-  turn.answer = buildMockAnswerText(question, sources);
-  turn.loading = false;
+  try {
+    const response =
+      session.backendSessionId == null
+        ? await sendFirstChatMessage(question)
+        : await sendChatMessage(session.backendSessionId, question);
+
+    session.backendSessionId = response.sessionId;
+    session.title = response.sessionTitle?.trim() || session.title;
+    turn.userMessageId = response.userMessageId;
+    turn.assistantMessageId = response.assistantMessageId;
+    turn.answer = response.answer ?? '';
+    turn.sources = response.sources ?? [];
+  } catch (e) {
+    turn.error = e instanceof ApiError ? e.message : '发送失败，请稍后重试';
+    turn.answer = '';
+    turn.sources = [];
+  } finally {
+    turn.loading = false;
+  }
 }
 
 function handleOpenCitation(turnId: number, index: number | null) {
@@ -241,6 +255,7 @@ function handleToggleSource(turnId: number, index: number) {
           <ChatPanel
             :session="activeSession"
             :selected-notes="selectedNotes"
+            :submitting="activeSessionSubmitting"
             :active-citation="activeCitation"
             :expanded-citation="expandedCitation"
             @submit="handleSubmit"
