@@ -228,10 +228,6 @@ public class ChatService {
         } catch (IllegalArgumentException exception) {
             throw new BusinessException(CodeStatus.LLM_RESULT_INVALID, "LLM 返回了非法引用信息，请重试", exception);
         }
-        if (citedSourceIds.isEmpty() && !rerankedSources.isEmpty() && !isUnableToAnswer(answer)) {
-            throw new BusinessException(CodeStatus.LLM_RESULT_INVALID, "LLM 返回缺少引用信息，请重试");
-        }
-
         Map<Long, RetrievedChunk> sourceByChunkId = new LinkedHashMap<>();
         for (RetrievedChunk source : rerankedSources) {
             sourceByChunkId.putIfAbsent(source.getChunkId(), source);
@@ -246,10 +242,6 @@ public class ChatService {
             citedSources.add(chunk);
         }
         return citedSources;
-    }
-
-    private boolean isUnableToAnswer(String answer) {
-        return answer != null && answer.strip().contains(UNABLE_TO_ANSWER);
     }
 
     private String formatChunkIdsForLog(List<RetrievedChunk> sources) {

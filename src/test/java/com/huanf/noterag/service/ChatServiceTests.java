@@ -196,7 +196,7 @@ class ChatServiceTests {
     }
 
     @Test
-    void sendMessageMarksAssistantFailedWhenCitationMissingWithSources() {
+    void sendMessageAllowsAnswerWithoutCitationsAndReturnsEmptySources() {
         ChatSession existingSession = new ChatSession(8L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(8L)).thenReturn(existingSession);
         mockMessageInsert(501L, 502L);
@@ -209,17 +209,15 @@ class ChatServiceTests {
         when(llmClient.chat(prompt)).thenReturn("answer without citation");
         when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
 
-        assertThatThrownBy(() -> chatService.sendMessage(8L, "question"))
-                .isInstanceOfSatisfying(BusinessException.class, exception -> {
-                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.LLM_RESULT_INVALID);
-                    assertThat(exception).hasMessage("LLM 返回缺少引用信息，请重试");
-                });
+        ChatResult result = chatService.sendMessage(8L, "question");
 
-        ArgumentCaptor<ChatMessage> failedAssistantCaptor = ArgumentCaptor.forClass(ChatMessage.class);
-        verify(chatMessageMapper).updateResult(failedAssistantCaptor.capture());
-        assertThat(failedAssistantCaptor.getValue().getId()).isEqualTo(502L);
-        assertThat(failedAssistantCaptor.getValue().getStatus()).isEqualTo(ChatMessageStatus.FAILED);
-        assertThat(failedAssistantCaptor.getValue().getErrorCode()).isEqualTo(ChatService.ERROR_CODE_LLM_RESULT_INVALID);
+        assertThat(result.getAnswer()).isEqualTo("answer without citation");
+        assertThat(result.getSources()).isEmpty();
+        ArgumentCaptor<ChatMessage> completedAssistantCaptor = ArgumentCaptor.forClass(ChatMessage.class);
+        verify(chatMessageMapper).updateResult(completedAssistantCaptor.capture());
+        assertThat(completedAssistantCaptor.getValue().getId()).isEqualTo(502L);
+        assertThat(completedAssistantCaptor.getValue().getStatus()).isEqualTo(ChatMessageStatus.COMPLETED);
+        assertThat(completedAssistantCaptor.getValue().getErrorCode()).isNull();
         verify(chatMessageSourceMapper, never()).batchInsert(any());
     }
 
