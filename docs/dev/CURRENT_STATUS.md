@@ -1,6 +1,6 @@
 # NoteRAG 当前开发状态
 
-更新时间：2026-05-21
+更新时间：2026-05-22
 
 这份文档用于换电脑后通过 Git 恢复开发上下文。它描述当前主线状态、开发数据库快照、恢复步骤和下一步工作重点。
 
@@ -15,10 +15,10 @@ Markdown import -> chunking -> token estimate -> embedding -> pgvector storage -
 编写本文档时，`master` 已同步到远端，最近关键提交包括：
 
 ```text
-2a04dc6 fix(chat): 校验回答引用并补充调试日志
-4e3a494 refactor(model): 分离数据库实体包
-889931a feat(chat): 实现单会话消息主链路
-9c031ca refactor(query): 改为返回重排后的 sources
+8560d88 docs(dev): 记录前端后续事项
+971aaee feat(frontend): 接入同步聊天接口
+033bed5 fix(prompt): 优化聊天引用提示词
+d03d851 fix(chat): 允许回答不引用来源
 ```
 
 当前新增的开发快照文件：
@@ -40,6 +40,7 @@ docs/dev/db/noterag-dev-db-20260521.dump
 - Rerank：接入 DashScope `qwen3-rerank`，默认从 retrieval top20 中重排到 top8。
 - Query 调试接口：`POST /api/query`，当前只返回 rerank 后的 `sources`，不再生成 answer。
 - Chat 主链路：已经支持同步单会话问答、历史消息入库、LLM 调用、引用解析和 sources 回写。
+- 前端主 Q&A：已经从 mock answer 切到同步 chat API，可用来调试真实 LLM answer 和 citation sources。
 
 ## 当前 API
 
@@ -95,8 +96,27 @@ POST /api/chat-sessions/{sessionId}/messages
 
 - pending assistant 不进入 prompt 历史。
 - prompt 历史最多取最近 25 条。
-- LLM 返回如果缺少引用标记，且不是固定无法回答句子，会返回 `LLM_RESULT_INVALID`。
+- LLM 不输出 citation marker 时允许成功返回，最终 `sources=[]`。
+- LLM 输出非法 marker 或引用不存在的 sourceId 时，返回 `LLM_RESULT_INVALID`。
 - 当前日志会在 INFO 打印候选 `chunkIds`，DEBUG 会打印 LLM 原始 answer。
+
+## 前端当前状态
+
+前端主工作台已经接入同步 chat API：
+
+```text
+首条消息 -> POST /api/chat-sessions
+后续消息 -> POST /api/chat-sessions/{sessionId}/messages
+```
+
+当前前端行为：
+
+- `ChatSession.id` 仍是前端本地 string，后端 ID 存在 `backendSessionId`。
+- 单个前端会话中只允许一个请求进行中，避免首条消息未返回时创建多个后端 session。
+- 成功后回填 `sessionTitle`、`userMessageId`、`assistantMessageId`、`answer`、`sources`。
+- 失败时只在当前 turn 上展示错误，不提前写入后端 session id。
+- 左侧 Notes 仍是 mock notes，chat 请求暂时不携带 note scope，顶部只显示跨全部笔记检索。
+- 刷新页面后前端本地会话会丢失，因为还没有会话列表和历史消息接口。
 
 ## 开发数据库快照
 
@@ -145,14 +165,14 @@ docker logs -f noterag-app
 
 ## 当前已知问题
 
-最需要继续处理的是 chat 的引用协议稳定性。
+最需要继续观察的是 chat 的引用协议稳定性和前端真实链路体验。
 
 已观察到：
 
-- LLM 有时不会稳定输出私有引用标记。
-- 后端会根据引用标记过滤 sources，所以标记缺失会导致 `sources` 为空。
-- 当前已经加了校验：有候选 sources 但 LLM 回答没有引用标记时，返回 `LLM_RESULT_INVALID`，让前端重试。
-- 这说明主链路能跑，但 prompt 约束和 citation marker 仍需要继续打磨。
+- 调整后的 `ChatPromptBuilder` 明显改善了 citation marker 输出，但仍需要继续用真实前端交互观察。
+- 后端会根据 citation marker 过滤 sources；如果 LLM 没有标记，允许返回 answer，但 `sources=[]`。
+- 当前 citation marker 仍使用真实 `chunkId`，后续如果稳定性仍不够，可考虑改成 prompt 内局部 source 编号，再在后端映射回真实 chunkId。
+- 前端 API client 还没有统一请求超时；后端未启动或网络异常时，可能需要等浏览器 fetch 自己失败。
 
 暂时不是重点：
 
@@ -169,12 +189,11 @@ docker logs -f noterag-app
 
 优先顺序：
 
-1. 继续调整 `ChatPromptBuilder`，让模型更稳定输出 citation marker。
-2. 补充 `ChatPromptBuilderTests`，测试中打印或断言最终发给 LLM 的 prompt 结构。
-3. 使用 `src/test/http/chat.http` 做真实接口测试，重点观察 answer 和 sources 是否一致。
-4. 如果 prompt 约束仍不稳定，再考虑一次轻量 retry 或更强结构化输出协议。
-5. Chat 同步接口稳定后，再做 SSE 流式返回。
-6. SSE 后再做会话列表、历史消息查询、多会话切换。
+1. 用前端主 Q&A 真实测试同步 chat，重点观察 answer、citation marker、sources panel 是否一致。
+2. 如果 citation 仍不稳定，优先考虑局部 source 编号方案，而不是继续堆长提示词。
+3. 补 API client 请求超时和网络错误包装，避免页面长时间 loading。
+4. Chat 同步接口稳定后，再做 SSE 流式返回。
+5. SSE 后再做会话列表、历史消息查询、多会话切换。
 
 ## 常用命令
 
@@ -215,6 +234,7 @@ docker logs -f noterag-app
 ```text
 AGENTS.md
 docs/dev/CURRENT_STATUS.md
+docs/dev/FRONTEND_TODO.md
 src/main/java/com/huanf/noterag/service/ChatService.java
 src/main/java/com/huanf/noterag/rag/ChatPromptBuilder.java
 src/main/java/com/huanf/noterag/rag/CitationMarkers.java
@@ -224,6 +244,9 @@ src/main/java/com/huanf/noterag/service/RetrievalService.java
 src/main/java/com/huanf/noterag/service/RerankService.java
 src/test/java/com/huanf/noterag/service/ChatServiceTests.java
 src/test/java/com/huanf/noterag/prompt/ChatPromptBuilderTests.java
+frontend/src/views/WorkspacePage.vue
+frontend/src/components/ChatPanel.vue
+frontend/src/api/noterag.ts
 src/test/http/chat.http
 ```
 
@@ -232,12 +255,12 @@ src/test/http/chat.http
 ```text
 先阅读 AGENTS.md 和 docs/dev/CURRENT_STATUS.md，了解当前 NoteRAG 开发状态。
 不要先改代码。
-重点检查当前 chat 主链路、prompt 构建、citation marker 解析和 sources 过滤逻辑。
-当前首要目标是稳定 LLM 输出引用标记，保证 /api/chat-sessions 返回的 answer 和 sources 一致。
+重点检查当前 chat 主链路、prompt 构建、citation marker 解析、sources 过滤逻辑和前端同步 chat API 对接。
+当前首要目标是用前端真实测试 /api/chat-sessions 返回的 answer 和 sources 是否一致。
 不要引入用户系统、权限、多租户、PDF/Word、Redis/MQ、Agent workflow 或复杂前端。
 如果要修改文件，先说明会改哪些文件和原因。
 ```
 
 ## 当前判断
 
-当前项目已经跑通核心 RAG 闭环和同步单会话 chat 主链路。短期最值得投入的是让引用协议稳定下来；只有 `answer + sources` 足够可靠，后续 SSE、多会话和前端体验才有稳定基础。
+当前项目已经跑通核心 RAG 闭环、同步单会话 chat 主链路，并且前端主 Q&A 已接入同步 chat API。短期最值得投入的是用真实前端交互验证 `answer + sources` 是否稳定；这个基础可靠后，再推进 SSE、会话列表和历史恢复。
