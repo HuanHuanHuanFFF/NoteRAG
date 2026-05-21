@@ -37,9 +37,20 @@ class ChatPromptBuilderTests {
         assertThat(prompt.user()).contains("用户:\n什么是 MVCC?");
         assertThat(prompt.user()).contains("助手:\n旧回答");
         assertThat(prompt.user()).doesNotContain(CitationMarkers.format(140L));
-        assertThat(prompt.user()).contains("当前问题:\n那它依赖什么?");
+        assertThat(prompt.user()).contains("可用 sourceId：140, 141");
         assertThat(prompt.user()).contains("sourceId: 140");
         assertThat(prompt.user()).contains("sourceId: 141");
+        assertThat(prompt.user()).contains("当前问题:\n那它依赖什么?");
+        assertThat(prompt.user()).contains("输出要求:");
+        assertThat(prompt.user()).contains("每个事实句、列表项、对比点末尾都必须带 citation marker。");
+        assertThat(prompt.user()).contains("只能引用上方候选片段中的 sourceId。");
+        assertThat(prompt.user()).contains("如果无法添加合法 citation marker，只回答：根据当前笔记内容无法确定。");
+        assertThat(prompt.user().indexOf("历史对话:"))
+                .isLessThan(prompt.user().indexOf("候选笔记片段（按与当前问题的相关性从高到低排列）:"));
+        assertThat(prompt.user().indexOf("候选笔记片段（按与当前问题的相关性从高到低排列）:"))
+                .isLessThan(prompt.user().indexOf("当前问题:\n那它依赖什么?"));
+        assertThat(prompt.user().indexOf("当前问题:\n那它依赖什么?"))
+                .isLessThan(prompt.user().indexOf("输出要求:"));
     }
 
     @Test
@@ -48,6 +59,8 @@ class ChatPromptBuilderTests {
 
         assertThat(prompt.user()).contains("（无历史对话）");
         assertThat(prompt.user()).contains("（未检索到相关笔记片段）");
+        assertThat(prompt.user()).contains("当前问题:\n问题");
+        assertThat(prompt.user()).contains("输出要求:\n只回答：根据当前笔记内容无法确定。");
     }
 
     @Test
