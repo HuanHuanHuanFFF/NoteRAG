@@ -6,6 +6,7 @@ vi.stubGlobal('fetch', fetchMock);
 
 afterEach(() => {
   fetchMock.mockReset();
+  vi.useRealTimers();
 });
 
 function jsonResponse(status: number, body: unknown): Response {
@@ -52,5 +53,49 @@ describe('postJson', () => {
       new Response('not-json', { status: 500, headers: { 'Content-Type': 'text/plain' } })
     );
     await expect(postJson('/api/test', {})).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('wraps network failure as ApiError', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    await expect(postJson('/api/test', {})).rejects.toMatchObject({
+      name: 'ApiError',
+      code: -1,
+      httpStatus: 0,
+      message: '无法连接服务器，请确认后端服务已启动',
+    });
+  });
+
+  it('throws ApiError when request body cannot be serialized', async () => {
+    const circularBody: Record<string, unknown> = {};
+    circularBody.self = circularBody;
+
+    await expect(postJson('/api/test', circularBody)).rejects.toMatchObject({
+      name: 'ApiError',
+      code: -1,
+      httpStatus: 0,
+      message: '请求参数序列化失败',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('aborts and wraps timeout as ApiError', async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementationOnce((_path: string, init?: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'));
+        });
+      });
+    });
+
+    const request = postJson('/api/test', {}, { timeoutMs: 10 }).catch((error) => error);
+    await vi.advanceTimersByTimeAsync(10);
+
+    await expect(request).resolves.toMatchObject({
+      name: 'ApiError',
+      code: -1,
+      httpStatus: 0,
+      message: '请求超时，请稍后重试',
+    });
   });
 });
