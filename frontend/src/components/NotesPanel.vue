@@ -49,15 +49,15 @@ function handleClick(id: number) {
 </script>
 
 <template>
-  <aside class="flex h-full w-full flex-col">
-    <header class="flex items-center justify-between px-5 pb-3 pt-5">
+  <aside class="flex h-full min-h-0 w-full flex-col overflow-hidden">
+    <header class="flex shrink-0 items-center justify-between px-5 pb-3 pt-5">
       <h2 class="text-[18px] font-semibold tracking-tight text-white">Notes</h2>
       <span class="font-mono text-[11px] tabular-nums text-white/30">
         {{ selectionLabel }}
       </span>
     </header>
 
-    <div class="flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
+    <div class="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 pb-3">
       <button
         v-for="note in sortedNotes"
         :key="note.id"
@@ -96,7 +96,7 @@ function handleClick(id: number) {
       </div>
     </div>
 
-    <footer class="border-t border-white/[0.04] p-3">
+    <footer class="shrink-0 border-t border-white/[0.04] p-3">
       <button
         type="button"
         class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-white/[0.12] bg-white/[0.02] px-3 py-2.5 text-[13px] font-medium text-white/65 transition-all duration-150 hover:border-accent/40 hover:bg-accent/[0.04] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"

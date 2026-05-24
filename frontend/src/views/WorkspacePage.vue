@@ -14,20 +14,26 @@ import type {
   NoteListItem,
   SourceChunk,
 } from '@/api/types';
-import { mockNotes } from '@/utils/mockData';
+import { createWorkspaceSeed } from '@/utils/workspaceSeed';
 
-const notes = ref<NoteListItem[]>([...mockNotes]);
-const sessions = ref<ChatSession[]>([]);
+const workspaceSeed = createWorkspaceSeed();
+
+const notes = ref<NoteListItem[]>(workspaceSeed.notes);
+const sessions = ref<ChatSession[]>(workspaceSeed.sessions);
 const selectedNoteIds = ref<Set<number>>(new Set());
 const activeSessionId = ref<string>('');
 const importOpen = ref(false);
 
-const sourcesOpen = ref(false);
+const sourcesOpen = ref(workspaceSeed.sourcesOpen);
 const sourcesClosing = ref(false);
 const sourcesLoading = ref(false);
-const sourcesData = ref<SourceChunk[]>([]);
-const activeCitation = ref<{ turnId: number; index: number | null } | null>(null);
-const expandedCitation = ref<{ turnId: number; indices: number[] } | null>(null);
+const sourcesData = ref<SourceChunk[]>(workspaceSeed.sourcesData);
+const activeCitation = ref<{ turnId: number; index: number | null } | null>(
+  workspaceSeed.activeCitation
+);
+const expandedCitation = ref<{ turnId: number; indices: number[] } | null>(
+  workspaceSeed.expandedCitation
+);
 let sourcesRequestToken = 0;
 
 const activeSession = computed<ChatSession | null>(
@@ -47,6 +53,16 @@ const selectedNotes = computed<NoteListItem[]>(() =>
 let nextSessionIdx = 1;
 let nextTurnId = 0;
 
+initializeSessionCounters();
+
+function initializeSessionCounters() {
+  nextSessionIdx = sessions.value.length + 1;
+  nextTurnId = Math.max(
+    0,
+    ...sessions.value.flatMap((session) => session.turns.map((turn) => turn.id))
+  );
+}
+
 function createSessionInternal(): ChatSession {
   const session: ChatSession = {
     id: `session-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -57,7 +73,7 @@ function createSessionInternal(): ChatSession {
   return session;
 }
 
-activeSessionId.value = createSessionInternal().id;
+activeSessionId.value = sessions.value[0]?.id ?? createSessionInternal().id;
 
 function handleCreateSession() {
   const session = createSessionInternal();
@@ -219,17 +235,17 @@ function handleToggleSource(turnId: number, index: number) {
 </script>
 
 <template>
-  <div class="relative h-[calc(100vh-56px)]">
+  <div class="relative h-[calc(100vh-56px)] min-h-0 overflow-x-auto overflow-y-hidden">
     <div
-      class="grid h-full gap-3 px-4 py-3 lg:gap-4 lg:px-6 lg:py-4"
+      class="grid h-full min-h-0 gap-3 overflow-y-hidden px-4 py-3 lg:gap-4 lg:px-6 lg:py-4"
       :class="
         sourcesOpen || sourcesClosing
-          ? 'grid-cols-[260px_1fr_400px]'
-          : 'grid-cols-[260px_1fr]'
+          ? 'min-w-[900px] grid-cols-[240px_minmax(320px,1fr)_minmax(320px,400px)] lg:min-w-0 lg:grid-cols-[260px_minmax(0,1fr)_400px]'
+          : 'min-w-[620px] grid-cols-[240px_minmax(320px,1fr)] lg:min-w-0 lg:grid-cols-[260px_minmax(0,1fr)]'
       "
     >
       <div
-        class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
+        class="min-h-0 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
       >
         <NotesPanel
           :notes="notes"
@@ -239,8 +255,8 @@ function handleToggleSource(turnId: number, index: number) {
         />
       </div>
 
-      <div class="flex min-w-0 flex-col">
-        <div class="flex items-center justify-between pb-3">
+      <div class="flex min-h-0 min-w-0 flex-col overflow-hidden">
+        <div class="flex shrink-0 items-center justify-between pb-3">
           <SessionSelector
             :sessions="sessions"
             :active-id="activeSessionId"
@@ -250,7 +266,7 @@ function handleToggleSource(turnId: number, index: number) {
           />
         </div>
         <div
-          class="flex min-h-0 flex-1 flex-col rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5 backdrop-blur-sm"
+          class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5 backdrop-blur-sm"
         >
           <ChatPanel
             :session="activeSession"
@@ -276,7 +292,7 @@ function handleToggleSource(turnId: number, index: number) {
       >
         <div
           v-if="sourcesOpen"
-          class="overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
+          class="min-h-0 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
         >
           <SourcesPanel
             :sources="sourcesData"

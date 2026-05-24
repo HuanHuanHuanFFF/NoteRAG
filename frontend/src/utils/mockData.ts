@@ -4,7 +4,7 @@ function cite(chunkId: number): string {
   return `\uE200cite\uE202${chunkId}\uE201`;
 }
 
-export const mockNotes: NoteListItem[] = [
+export const baseMockNotes: NoteListItem[] = [
   {
     id: 1,
     title: 'MySQL 索引详解',
@@ -45,6 +45,45 @@ export const mockNotes: NoteListItem[] = [
     tokenCount: 6712,
     createdAt: '2026-05-16T08:15:00+08:00',
   },
+];
+
+const extraMockNoteTitles = [
+  'Java 并发编程基础',
+  'ThreadLocal 与内存泄漏',
+  'Spring Boot 自动配置',
+  'Spring 事务传播行为',
+  'MyBatis Mapper 调试记录',
+  'PostgreSQL 索引与执行计划',
+  'pgvector 检索实验',
+  'Docker Compose 本地开发',
+  'Linux 网络排障清单',
+  'Nginx 反向代理笔记',
+  'Kafka 消费位移与重平衡',
+  'RabbitMQ 消息可靠性',
+  '分布式锁实现对比',
+  '缓存穿透与缓存击穿',
+  '一致性 Hash 与分片',
+  'HTTP 缓存与 ETag',
+  'OAuth2 授权码流程',
+  'JWT 签名与刷新',
+  'CI 构建失败排查',
+  '前端 Vite 调试记录',
+  'Vue 响应式边界',
+  'TypeScript 类型收窄',
+  'LLM Prompt 调试日志',
+  'RAG 召回评估记录',
+];
+
+export const mockNotes: NoteListItem[] = [
+  ...baseMockNotes,
+  ...extraMockNoteTitles.map((title, index) => ({
+    id: 100 + index,
+    title,
+    chunkCount: 12 + (index % 7) * 4,
+    charCount: 5200 + index * 731,
+    tokenCount: 1700 + index * 213,
+    createdAt: `2026-05-${String(17 + (index % 8)).padStart(2, '0')}T${String(8 + (index % 10)).padStart(2, '0')}:20:00+08:00`,
+  })),
 ];
 
 const mvccSources: SourceChunk[] = [
@@ -98,7 +137,60 @@ const indexSources: SourceChunk[] = [
   },
 ];
 
+const layoutDemoSources: SourceChunk[] = Array.from({ length: 18 }, (_, index) => {
+  const sourceIndex = index + 1;
+  const topic = [
+    'MVCC 可见性判断',
+    'ReadView 生命周期',
+    'Undo Log 版本链',
+    'Next-Key Lock 边界',
+    'B+ 树范围扫描',
+    '覆盖索引与回表',
+  ][index % 6];
+
+  return {
+    noteId: 200 + (index % 6),
+    chunkId: 900 + sourceIndex,
+    title: `滚动验证笔记 ${String(sourceIndex).padStart(2, '0')}`,
+    headingPath: `Layout Demo > ${topic} > chunk ${sourceIndex}`,
+    score: 0.96 - index * 0.018,
+    content:
+      `${topic} 的测试片段 ${sourceIndex}。\n\n` +
+      '这段内容用于撑开 Sources 面板，验证右侧列表只在面板内部滚动，标题和关闭按钮保持固定。\n\n' +
+      '模拟正文包含多行 Markdown 技术笔记：\n' +
+      '- 第一行说明概念背景和适用场景。\n' +
+      '- 第二行说明关键判断条件、边界和常见误区。\n' +
+      '- 第三行说明排查时应观察的日志、SQL 或配置项。\n\n' +
+      '当多个 source card 展开或折叠时，页面外层不应该出现纵向滚动条。',
+  };
+});
+
+const layoutDemoTurns: ChatSession['turns'] = Array.from({ length: 12 }, (_, index) => {
+  const turnIndex = index + 1;
+  const firstSource = layoutDemoSources[index % layoutDemoSources.length];
+  const secondSource = layoutDemoSources[(index + 5) % layoutDemoSources.length];
+  const thirdSource = layoutDemoSources[(index + 11) % layoutDemoSources.length];
+
+  return {
+    id: 1000 + turnIndex,
+    question: `滚动验证问题 ${turnIndex}: 独立滚动时第 ${turnIndex} 轮消息是否只影响中间列?`,
+    answer:
+      `这是第 ${turnIndex} 轮 mock 回答，用来把 Q&A 消息列表撑长。它引用了几个来源片段 ${cite(firstSource.chunkId)}${cite(secondSource.chunkId)}，方便点击 citation 后打开右侧 Sources 面板。\n\n` +
+      `- 观察点一：继续滚动中间消息列表时，左侧 Notes 不应该跟着移动。\n` +
+      `- 观察点二：底部输入框应该固定在中间列底部。\n` +
+      `- 观察点三：打开 Sources 后，右侧列表应该独立滚动，header 和关闭按钮保持稳定 ${cite(thirdSource.chunkId)}。\n\n` +
+      '这段回答故意保留多段文本和列表，用来模拟真实 RAG answer 的高度。',
+    sources: index === 0 ? layoutDemoSources : [firstSource, secondSource, thirdSource],
+    loading: false,
+  };
+});
+
 export const mockSessions: ChatSession[] = [
+  {
+    id: 'session-layout-demo',
+    title: '三栏滚动验证数据',
+    turns: layoutDemoTurns,
+  },
   {
     id: 'session-1',
     title: 'MVCC 实现机制',

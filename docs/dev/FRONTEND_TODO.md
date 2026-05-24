@@ -1,6 +1,6 @@
 # NoteRAG 前端后续事项
 
-更新时间：2026-05-22
+更新时间：2026-05-24
 
 这份文件记录前端主 Q&A 接入后端同步 chat API 后，后续需要补齐但暂不在当前任务中处理的事项。它不是产品需求文档，只作为开发备忘。
 
@@ -12,17 +12,22 @@
 - 前端本地 `ChatSession.id` 仍使用 string，只额外保存 `backendSessionId`。
 - 当前只支持内存态会话；刷新页面后本地会话会丢失。
 - 当前没有 SSE 流式返回。
+- API client 已统一处理请求超时、fetch 网络错误、HTTP 错误、业务错误和 JSON 解析错误。
+- 主工作台已实现三栏独立滚动：Notes、Q&A、Sources 分别在各自面板内滚动，页面外层固定在视口内。
+- 工作台初始化已通过 `frontend/src/utils/workspaceSeed.ts` 收敛，页面不直接依赖 mock sessions；真实发送仍调用后端同步 chat API。
+- 长 Notes、长 Q&A、长 Sources 的布局演示数据由 `VITE_ENABLE_LAYOUT_DEMO=true` 控制；关闭时 sessions 为空并创建新会话，Sources 默认关闭。
 
 ## 请求超时与网络错误
 
-当前 `api/client.ts` 没有统一请求超时。后端未启动、代理挂起或网络异常时，页面可能长时间停留在 loading 状态。
+当前 `api/client.ts` 已统一处理请求超时和网络错误。后端未启动、代理挂起、网络异常或响应格式异常时，调用方会收到 `ApiError`，页面不会长时间停留在 loading 状态。
 
-后续建议在 API client 层统一处理：
+已完成：
 
 - 使用 `AbortController` 增加请求超时。
 - 将 `fetch` 网络错误包装成 `ApiError`。
 - 区分后端业务错误、HTTP 错误、响应 JSON 解析失败和网络不可达。
 - 给主 Q&A、导入、检索调试复用同一套错误处理。
+- 请求体无法 JSON 序列化时，在调用 `fetch` 前返回明确的 `ApiError`。
 
 ## 会话列表与历史恢复
 
@@ -39,24 +44,31 @@
 
 设计参考见 `docs/design/front.png`。图中左侧 Notes、中间 Q&A、右侧 Sources 是三个独立滚动区域。
 
-当前页面更接近整体区域一起滚动：当 chat 内容变长时，左右两侧也需要跟随上下滑动，和设计目标不一致。
-
-后续需要调整布局：
+当前已完成布局调整：
 
 - 外层页面固定在视口高度内，避免主页面出现统一滚动条。
 - Notes 列、Q&A 列、Sources 列分别拥有自己的滚动容器。
 - 中间 Q&A 的消息列表独立滚动，底部输入框固定在中间列底部。
 - 左侧导入按钮固定在 Notes 列底部，笔记列表单独滚动。
 - 右侧 Sources 列只让 sources 列表滚动，标题和关闭按钮保持稳定。
+- 窄屏下工作台保持横向可访问，避免 Sources 打开后被裁切且无法关闭。
+- 布局演示 seed 已从页面中解耦，开启 `VITE_ENABLE_LAYOUT_DEMO=true` 后才会注入长会话并默认打开 Sources。
 
-预计改动范围是中等，不是纯 CSS 小改，但应集中在前端布局组件：
+已调整的布局组件：
 
 - `WorkspacePage.vue`：重新理顺外层 grid 高度、三列容器的 `min-h-0` 和 `overflow-hidden`。
 - `ChatPanel.vue`：确认消息列表与输入框的 flex 高度链路，保证消息列表独立滚动。
 - `NotesPanel.vue`：拆成笔记列表滚动区域和底部固定 import 按钮。
 - `SourcesPanel.vue`：拆成固定 header 和独立滚动的 sources 列表。
 
-主要风险是 flex/grid 高度链路。任意父级漏掉 `min-h-0` 或 `overflow-hidden`，都可能退回整页滚动。实现后需要实际测试长 chat、长 notes、长 sources 三种情况。
+后续测试清单：
+
+- 长 chat 内容只滚动中间消息列表，顶部会话选择和底部输入框保持固定。
+- 长 notes 列表只滚动左侧笔记列表，底部 import note 按钮保持固定。
+- 长 sources 列表只滚动右侧 sources 内容，Sources 标题和关闭按钮保持固定。
+- Sources 面板打开和关闭时，主页面不出现整体滚动条。
+- 窄屏打开 Sources 时可以横向滚动访问右侧面板和关闭按钮。
+- 任意父级后续改动如果移除 `min-h-0` 或 `overflow-hidden`，都需要重新验证长 chat、长 notes、长 sources 三种情况。
 
 ## 笔记范围选择
 

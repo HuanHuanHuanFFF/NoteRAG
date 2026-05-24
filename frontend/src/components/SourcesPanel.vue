@@ -28,7 +28,7 @@ const items = computed(() =>
 watch(
   () => props.sources,
   () => {
-    setExpandedSet(props.highlightIndex == null ? new Set() : new Set([props.highlightIndex]));
+    syncExpandedState();
   }
 );
 
@@ -36,7 +36,8 @@ watch(
   () => props.expandedIndices,
   (indices) => {
     expandedSet.value = new Set(indices);
-  }
+  },
+  { immediate: true }
 );
 
 watch(
@@ -70,11 +71,19 @@ function setExpandedSet(next: Set<number>) {
   expandedSet.value = next;
   emit('expanded-change', [...next]);
 }
+
+function syncExpandedState() {
+  if (props.expandedIndices.length > 0) {
+    setExpandedSet(new Set(props.expandedIndices));
+    return;
+  }
+  setExpandedSet(props.highlightIndex == null ? new Set() : new Set([props.highlightIndex]));
+}
 </script>
 
 <template>
-  <aside class="flex h-full flex-col">
-    <header class="flex items-center justify-between border-b border-white/[0.04] px-5 py-4">
+  <aside class="flex h-full min-h-0 flex-col overflow-hidden">
+    <header class="flex shrink-0 items-center justify-between border-b border-white/[0.04] px-5 py-4">
       <div class="flex items-center gap-2">
         <h2 class="text-[14px] font-semibold tracking-tight text-white">Sources</h2>
         <span class="font-mono text-[11px] tabular-nums text-white/30">
@@ -94,7 +103,7 @@ function setExpandedSet(next: Set<number>) {
       </button>
     </header>
 
-    <div ref="containerRef" class="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+    <div ref="containerRef" class="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
       <div v-if="loading" class="flex h-full items-center justify-center">
         <span class="inline-flex items-center gap-2 text-[12px] text-white/40">
           <span class="block h-3 w-3 animate-spin rounded-full border-[1.5px] border-white/20 border-t-accent"></span>

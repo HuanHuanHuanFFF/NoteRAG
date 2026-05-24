@@ -71,8 +71,8 @@ function handleSourceButtonClick(turnId: number, index: number) {
 </script>
 
 <template>
-  <section class="relative flex h-full flex-col">
-    <header class="px-1 pb-4">
+  <section class="relative flex h-full min-h-0 flex-col overflow-hidden">
+    <header class="shrink-0 px-1 pb-4">
       <div class="flex items-center gap-2">
         <h2 class="text-[18px] font-semibold tracking-tight text-white">Q&amp;A</h2>
         <span
@@ -86,7 +86,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
       </p>
     </header>
 
-    <div ref="listRef" class="flex-1 overflow-y-auto pr-1">
+    <div ref="listRef" class="min-h-0 flex-1 overflow-y-auto pr-1">
       <div
         v-if="turns.length === 0"
         class="flex h-full flex-col items-center justify-center px-8 text-center"
@@ -193,7 +193,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
       </div>
     </div>
 
-    <div class="relative mt-4">
+    <div class="relative mt-4 shrink-0">
       <div
         class="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl transition-colors duration-150 focus-within:border-accent/40 focus-within:bg-white/[0.03]"
       >
