@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { ChatSession, ChatTurn, NoteListItem } from '@/api/types';
 import MarkdownAnswer from '@/components/MarkdownAnswer.vue';
 
@@ -13,18 +13,29 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'submit', question: string): void;
+  (e: 'retry', question: string): void;
   (e: 'open-citation', turnId: number, index: number | null): void;
   (e: 'toggle-source', turnId: number, index: number): void;
 }>();
 
 const input = ref('');
 const listRef = ref<HTMLElement | null>(null);
+const loadingTextStep = ref(0);
+let loadingTextTimer: number | null = null;
 
 const presetQuestions = [
   'MyISAM 和 InnoDB 有什么区别?',
   'MySQL 的 MVCC 依赖哪些机制实现?',
   'B+ 树为什么适合数据库索引?',
   '如何防止幻读?',
+];
+
+const loadingTexts = [
+  '正在等待 NoteRAG 返回',
+  '正在处理这次提问',
+  '仍在连接后端同步接口',
+  '正在等待回答完成',
+  '请稍候，仍在等待响应',
 ];
 
 const turns = computed<ChatTurn[]>(() => props.session?.turns ?? []);
@@ -38,6 +49,19 @@ watch(
   },
   { deep: true, flush: 'post' }
 );
+
+onMounted(() => {
+  loadingTextTimer = window.setInterval(() => {
+    loadingTextStep.value = (loadingTextStep.value + 1) % loadingTexts.length;
+  }, 2200);
+});
+
+onBeforeUnmount(() => {
+  if (loadingTextTimer != null) {
+    window.clearInterval(loadingTextTimer);
+    loadingTextTimer = null;
+  }
+});
 
 function submit() {
   const q = input.value.trim();
@@ -55,6 +79,15 @@ function handleKeydown(event: KeyboardEvent) {
 
 function pick(question: string) {
   input.value = question;
+}
+
+function retry(turn: ChatTurn) {
+  if (props.submitting) return;
+  emit('retry', turn.question);
+}
+
+function loadingTextFor(turnId: number): string {
+  return loadingTexts[(loadingTextStep.value + turnId) % loadingTexts.length];
 }
 
 function isSourceExpanded(turnId: number, index: number): boolean {
@@ -147,10 +180,36 @@ function handleSourceButtonClick(turnId: number, index: number) {
                     style="animation-delay: 300ms"
                   ></span>
                 </span>
-                <span>正在检索笔记…</span>
+                <span>{{ loadingTextFor(turn.id) }}…</span>
               </div>
 
-              <div v-else-if="turn.error" class="text-[13px] text-rose-400">{{ turn.error }}</div>
+              <div
+                v-else-if="turn.error"
+                class="rounded-xl border border-rose-400/20 bg-rose-400/[0.06] px-3.5 py-3 text-[13px] text-rose-100/85"
+              >
+                <div class="flex items-start gap-2.5">
+                  <span
+                    class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-400/15 text-[12px] font-semibold text-rose-300 ring-1 ring-inset ring-rose-300/25"
+                    aria-hidden="true"
+                  >
+                    !
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <div class="font-medium text-rose-100">回答生成失败</div>
+                    <div class="mt-1 whitespace-pre-wrap leading-relaxed text-rose-100/65">
+                      {{ turn.error }}
+                    </div>
+                    <button
+                      type="button"
+                      :disabled="submitting"
+                      class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-rose-300/25 bg-rose-300/[0.08] px-3 py-1.5 text-[12px] font-medium text-rose-100 transition-all duration-150 hover:border-rose-200/45 hover:bg-rose-300/[0.13] disabled:cursor-not-allowed disabled:border-white/[0.08] disabled:bg-white/[0.04] disabled:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/40"
+                      @click="retry(turn)"
+                    >
+                      重新发送
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div v-else>
                 <MarkdownAnswer

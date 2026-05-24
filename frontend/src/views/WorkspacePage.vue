@@ -148,6 +148,11 @@ async function handleSubmit(question: string) {
   }
 }
 
+function handleRetry(question: string) {
+  if (activeSessionSubmitting.value) return;
+  void handleSubmit(question);
+}
+
 function handleOpenCitation(turnId: number, index: number | null) {
   const turn = activeSession.value?.turns.find((t) => t.id === turnId);
   if (!turn) return;
@@ -275,6 +280,7 @@ function handleToggleSource(turnId: number, index: number) {
             :active-citation="activeCitation"
             :expanded-citation="expandedCitation"
             @submit="handleSubmit"
+            @retry="handleRetry"
             @open-citation="handleOpenCitation"
             @toggle-source="handleToggleSource"
           />

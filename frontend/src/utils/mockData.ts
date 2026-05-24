@@ -165,25 +165,35 @@ const layoutDemoSources: SourceChunk[] = Array.from({ length: 18 }, (_, index) =
   };
 });
 
-const layoutDemoTurns: ChatSession['turns'] = Array.from({ length: 12 }, (_, index) => {
-  const turnIndex = index + 1;
-  const firstSource = layoutDemoSources[index % layoutDemoSources.length];
-  const secondSource = layoutDemoSources[(index + 5) % layoutDemoSources.length];
-  const thirdSource = layoutDemoSources[(index + 11) % layoutDemoSources.length];
-
-  return {
-    id: 1000 + turnIndex,
-    question: `滚动验证问题 ${turnIndex}: 独立滚动时第 ${turnIndex} 轮消息是否只影响中间列?`,
-    answer:
-      `这是第 ${turnIndex} 轮 mock 回答，用来把 Q&A 消息列表撑长。它引用了几个来源片段 ${cite(firstSource.chunkId)}${cite(secondSource.chunkId)}，方便点击 citation 后打开右侧 Sources 面板。\n\n` +
-      `- 观察点一：继续滚动中间消息列表时，左侧 Notes 不应该跟着移动。\n` +
-      `- 观察点二：底部输入框应该固定在中间列底部。\n` +
-      `- 观察点三：打开 Sources 后，右侧列表应该独立滚动，header 和关闭按钮保持稳定 ${cite(thirdSource.chunkId)}。\n\n` +
-      '这段回答故意保留多段文本和列表，用来模拟真实 RAG answer 的高度。',
-    sources: index === 0 ? layoutDemoSources : [firstSource, secondSource, thirdSource],
+const layoutDemoTurns: ChatSession['turns'] = [
+  {
+    id: 1000,
+    question: '滚动验证失败问题: 如果同步 chat API 超时，当前失败记录应该如何恢复?',
+    answer: '',
+    sources: [],
     loading: false,
-  };
-});
+    error: '请求超时：后端同步接口未在预期时间内返回。失败记录会保留，点击重新发送会在当前会话末尾追加一条新请求。',
+  },
+  ...Array.from({ length: 12 }, (_, index) => {
+    const turnIndex = index + 1;
+    const firstSource = layoutDemoSources[index % layoutDemoSources.length];
+    const secondSource = layoutDemoSources[(index + 5) % layoutDemoSources.length];
+    const thirdSource = layoutDemoSources[(index + 11) % layoutDemoSources.length];
+
+    return {
+      id: 1000 + turnIndex + 1,
+      question: `滚动验证问题 ${turnIndex}: 独立滚动时第 ${turnIndex} 轮消息是否只影响中间列?`,
+      answer:
+        `这是第 ${turnIndex} 轮 mock 回答，用来把 Q&A 消息列表撑长。它引用了几个来源片段 ${cite(firstSource.chunkId)}${cite(secondSource.chunkId)}，方便点击 citation 后打开右侧 Sources 面板。\n\n` +
+        `- 观察点一：继续滚动中间消息列表时，左侧 Notes 不应该跟着移动。\n` +
+        `- 观察点二：底部输入框应该固定在中间列底部。\n` +
+        `- 观察点三：打开 Sources 后，右侧列表应该独立滚动，header 和关闭按钮保持稳定 ${cite(thirdSource.chunkId)}。\n\n` +
+        '这段回答故意保留多段文本和列表，用来模拟真实 RAG answer 的高度。',
+      sources: index === 0 ? layoutDemoSources : [firstSource, secondSource, thirdSource],
+      loading: false,
+    };
+  }),
+];
 
 export const mockSessions: ChatSession[] = [
   {
