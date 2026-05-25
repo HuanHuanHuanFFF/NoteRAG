@@ -15,7 +15,6 @@ const markdown = new MarkdownIt({
 const props = defineProps<{
   answer: string;
   sources: SourceChunk[];
-  activeIndex: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -51,8 +50,7 @@ const renderedAnswer = computed(() => {
 });
 
 function renderCitationButton(displayIndex: number): string {
-  const activeClass = props.activeIndex === displayIndex ? ' markdown-answer__citation--active' : '';
-  return `<button type="button" class="markdown-answer__citation${activeClass}" data-citation-index="${displayIndex}" aria-label="View source ${displayIndex}">${displayIndex}</button>`;
+  return `<button type="button" class="markdown-answer__citation" data-citation-index="${displayIndex}" aria-label="View source ${displayIndex}">${displayIndex}</button>`;
 }
 
 function handleClick(event: MouseEvent) {
@@ -211,9 +209,4 @@ function handleClick(event: MouseEvent) {
   background: rgb(45 212 191 / 0.15);
 }
 
-.markdown-answer :deep(.markdown-answer__citation--active) {
-  background: rgb(45 212 191 / 0.2);
-  color: rgb(45 212 191);
-  box-shadow: 0 0 0 1px rgb(45 212 191 / 0.5);
-}
 </style>

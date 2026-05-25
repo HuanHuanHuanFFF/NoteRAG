@@ -24,7 +24,6 @@ describe('MarkdownAnswer', () => {
       props: {
         answer: '## Title\n\n**bold** and `code` <span>raw</span>',
         sources: [],
-        activeIndex: null,
       },
     });
 
@@ -40,14 +39,12 @@ describe('MarkdownAnswer', () => {
       props: {
         answer: `first ${cite(218)} second ${cite(211)}`,
         sources: [source(211), source(218)],
-        activeIndex: 2,
       },
     });
 
     const buttons = wrapper.findAll('button[data-citation-index]');
     expect(buttons).toHaveLength(2);
     expect(buttons.map((button) => button.text())).toEqual(['2', '1']);
-    expect(buttons[0].classes()).toContain('markdown-answer__citation--active');
 
     await buttons[0].trigger('click');
 
@@ -59,7 +56,6 @@ describe('MarkdownAnswer', () => {
       props: {
         answer: 'legacy [1] reference',
         sources: [source(211)],
-        activeIndex: null,
       },
     });
 

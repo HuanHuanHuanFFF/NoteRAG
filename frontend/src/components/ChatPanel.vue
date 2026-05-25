@@ -215,7 +215,6 @@ function handleSourceButtonClick(turnId: number, index: number) {
                 <MarkdownAnswer
                   :answer="turn.answer"
                   :sources="turn.sources"
-                  :active-index="activeCitation?.turnId === turn.id ? activeCitation.index : null"
                   @open-citation="(index) => emit('open-citation', turn.id, index)"
                 />
 
