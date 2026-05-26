@@ -1,15 +1,14 @@
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL,
+    status record_status NOT NULL DEFAULT 'ACTIVE',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    last_message_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT chat_sessions_status_supported CHECK (status IN ('ACTIVE', 'ARCHIVED'))
+    last_message_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_message_at_id
-    ON chat_sessions (last_message_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_status_last_message_at_updated_id
+    ON chat_sessions (status, last_message_at DESC, updated_at DESC, id DESC);
 
 DROP TRIGGER IF EXISTS trg_chat_sessions_set_updated_at ON chat_sessions;
 

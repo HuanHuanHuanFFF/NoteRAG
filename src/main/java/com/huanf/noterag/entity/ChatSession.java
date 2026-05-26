@@ -18,7 +18,7 @@ public class ChatSession {
 
     private Long id;
     private String title;
-    private ChatSessionStatus status;
+    private RecordStatus status;
     private Instant createdAt;
     private Instant updatedAt;
 

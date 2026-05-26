@@ -17,6 +17,7 @@ import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
 import com.huanf.noterag.entity.Note;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.model.NoteListItem;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
@@ -92,12 +93,24 @@ public class NoteService {
     }
 
     /**
+     * 归档单篇 ACTIVE 笔记；归档后对列表、详情和检索表现为不存在。
+     */
+    public void archiveNote(Long noteId) {
+        int archived = noteMapper.archiveById(noteId);
+        if (archived != 1) {
+            throw new BusinessException(CodeStatus.DOCUMENT_NOT_FOUND, "note not found");
+        }
+        log.info("Note 已归档, noteId={}", noteId);
+    }
+
+    /**
      * 在导入事务内保存 note 原文和切块结果。
      */
     private SavedChunks saveNoteAndChunks(String title, String content, int charCount, int tokenCount) {
         Note note = new Note();
         note.setTitle(title);
         note.setContent(content);
+        note.setStatus(RecordStatus.ACTIVE);
         note.setCharCount(charCount);
         note.setTokenCount(tokenCount);
         noteMapper.insert(note);

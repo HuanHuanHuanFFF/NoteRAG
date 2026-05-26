@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS notes (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    status record_status NOT NULL DEFAULT 'ACTIVE',
     char_count INTEGER NOT NULL,
     token_count INTEGER NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -9,6 +10,9 @@ CREATE TABLE IF NOT EXISTS notes (
     CONSTRAINT notes_char_count_non_negative CHECK (char_count >= 0),
     CONSTRAINT notes_token_count_non_negative CHECK (token_count >= 0)
 );
+
+CREATE INDEX IF NOT EXISTS idx_notes_status_created_id
+    ON notes (status, created_at DESC, id DESC);
 
 DROP TRIGGER IF EXISTS trg_notes_set_updated_at ON notes;
 

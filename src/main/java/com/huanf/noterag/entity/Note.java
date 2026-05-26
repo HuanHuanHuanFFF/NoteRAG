@@ -15,6 +15,7 @@ public class Note {
     private Long id;
     private String title;
     private String content;
+    private RecordStatus status;
     private Integer charCount;
     private Integer tokenCount;
     private Instant createdAt;

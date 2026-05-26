@@ -1,12 +1,15 @@
 package com.huanf.noterag.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,7 +34,9 @@ import com.huanf.noterag.entity.ChatMessage;
 import com.huanf.noterag.entity.ChatMessageRole;
 import com.huanf.noterag.entity.ChatMessageStatus;
 import com.huanf.noterag.entity.ChatSession;
-import com.huanf.noterag.entity.ChatSessionStatus;
+import com.huanf.noterag.entity.RecordStatus;
+import com.huanf.noterag.common.exception.BusinessException;
+import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.mapper.ChatMessageMapper;
 import com.huanf.noterag.mapper.ChatMessageSourceMapper;
 import com.huanf.noterag.mapper.ChatSessionMapper;
@@ -157,7 +162,7 @@ class ChatControllerIntegrationTests {
         Instant updatedAt = Instant.parse("2026-05-21T10:01:00Z");
         Instant lastMessageAt = Instant.parse("2026-05-21T10:02:00Z");
         when(chatService.listSessions()).thenReturn(List.of(
-                new ChatSession(7L, "MySQL MVCC", ChatSessionStatus.ACTIVE, createdAt, updatedAt, lastMessageAt)));
+                new ChatSession(7L, "MySQL MVCC", RecordStatus.ACTIVE, createdAt, updatedAt, lastMessageAt)));
 
         mockMvc.perform(get("/api/chat-sessions"))
                 .andExpect(status().isOk())
@@ -217,6 +222,56 @@ class ChatControllerIntegrationTests {
     }
 
     @Test
+    void archiveSessionWrapsEmptySuccessResponse() throws Exception {
+        mockMvc.perform(delete("/api/chat-sessions/7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.message").value("success"))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        verify(chatService).archiveSession(7L);
+    }
+
+    @Test
+    void renameSessionWrapsUpdatedSession() throws Exception {
+        Instant createdAt = Instant.parse("2026-05-21T10:00:00Z");
+        Instant updatedAt = Instant.parse("2026-05-21T10:03:00Z");
+        Instant lastMessageAt = Instant.parse("2026-05-21T10:02:00Z");
+        when(chatService.renameSession(7L, "New title")).thenReturn(
+                new ChatSession(7L, "New title", RecordStatus.ACTIVE, createdAt, updatedAt, lastMessageAt));
+
+        mockMvc.perform(patch("/api/chat-sessions/7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "New title"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id").value(7))
+                .andExpect(jsonPath("$.data.title").value("New title"))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.lastMessageAt").isString());
+
+        verify(chatService).renameSession(7L, "New title");
+    }
+
+    @Test
+    void renameSessionRejectsBlankTitle() throws Exception {
+        mockMvc.perform(patch("/api/chat-sessions/7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": " "
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40001))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
     void sendMessageRejectsBlankContent() throws Exception {
         mockMvc.perform(post("/api/chat-sessions")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -269,12 +324,79 @@ class ChatControllerIntegrationTests {
                 "2026-05-21T09:00:00Z", "2026-05-21T11:00:00Z", "2026-05-21T12:00:00Z");
         insertChatSession(103L, "same-last-same-updated-higher-id", "ACTIVE",
                 "2026-05-21T09:00:00Z", "2026-05-21T11:00:00Z", "2026-05-21T12:00:00Z");
+        insertChatSession(104L, "archived-newest", "ARCHIVED",
+                "2026-05-21T09:00:00Z", "2026-05-21T13:00:00Z", "2026-05-21T13:00:00Z");
 
         List<ChatSession> sessions = chatSessionMapper.findAll();
 
         assertThat(sessions)
                 .extracting(ChatSession::getId)
                 .containsExactly(103L, 102L, 101L, 100L);
+    }
+
+    @Test
+    void chatSessionMapperFindByIdReturnsOnlyActiveSession() {
+        insertChatSession(110L, "active", "ACTIVE",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z");
+        insertChatSession(111L, "archived", "ARCHIVED",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z");
+
+        assertThat(chatSessionMapper.findById(110L)).isNotNull();
+        assertThat(chatSessionMapper.findById(111L)).isNull();
+    }
+
+    @Test
+    void chatSessionMapperArchiveByIdArchivesActiveSessionOnly() {
+        insertChatSession(120L, "active", "ACTIVE",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z");
+
+        assertThat(chatSessionMapper.archiveById(120L)).isEqualTo(1);
+        assertThat(chatSessionMapper.archiveById(120L)).isZero();
+        assertThat(chatSessionMapper.findById(120L)).isNull();
+    }
+
+    @Test
+    void chatSessionMapperUpdateTitleOnlyUpdatesActiveSession() {
+        insertChatSession(130L, "active", "ACTIVE",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T10:00:00Z");
+        insertChatSession(131L, "archived", "ARCHIVED",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T10:00:00Z");
+
+        assertThat(chatSessionMapper.updateTitle(130L, "renamed")).isEqualTo(1);
+        assertThat(chatSessionMapper.updateTitle(131L, "should-not-change")).isZero();
+
+        String activeTitle = jdbcTemplate.queryForObject("SELECT title FROM chat_sessions WHERE id = ?", String.class, 130L);
+        String archivedTitle = jdbcTemplate.queryForObject("SELECT title FROM chat_sessions WHERE id = ?", String.class, 131L);
+        Instant lastMessageAt = jdbcTemplate.queryForObject(
+                "SELECT last_message_at FROM chat_sessions WHERE id = ?",
+                Timestamp.class,
+                130L).toInstant();
+        assertThat(activeTitle).isEqualTo("renamed");
+        assertThat(archivedTitle).isEqualTo("archived");
+        assertThat(lastMessageAt).isEqualTo(Instant.parse("2026-05-21T10:00:00Z"));
+    }
+
+    @Test
+    void chatSessionMapperUpdateLastMessageAtOnlyUpdatesActiveSession() {
+        insertChatSession(140L, "active", "ACTIVE",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T10:00:00Z");
+        insertChatSession(141L, "archived", "ARCHIVED",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T10:00:00Z");
+        Instant newLastMessageAt = Instant.parse("2026-05-21T11:00:00Z");
+
+        assertThat(chatSessionMapper.updateLastMessageAt(140L, newLastMessageAt)).isEqualTo(1);
+        assertThat(chatSessionMapper.updateLastMessageAt(141L, newLastMessageAt)).isZero();
+
+        Instant activeLastMessageAt = jdbcTemplate.queryForObject(
+                "SELECT last_message_at FROM chat_sessions WHERE id = ?",
+                Timestamp.class,
+                140L).toInstant();
+        Instant archivedLastMessageAt = jdbcTemplate.queryForObject(
+                "SELECT last_message_at FROM chat_sessions WHERE id = ?",
+                Timestamp.class,
+                141L).toInstant();
+        assertThat(activeLastMessageAt).isEqualTo(newLastMessageAt);
+        assertThat(archivedLastMessageAt).isEqualTo(Instant.parse("2026-05-21T10:00:00Z"));
     }
 
     @Test
@@ -369,6 +491,25 @@ class ChatControllerIntegrationTests {
                 .containsExactly(602L);
         assertThat(messages.get(1).getSources().get(0).getTitle()).isEqualTo("MySQL");
         assertThat(messages.get(1).getSources().get(0).getScore()).isEqualTo(0.90);
+    }
+
+    @Test
+    void chatServiceListMessagesTreatsArchivedSessionAsNotFoundUsingRealSql() {
+        insertChatSession(7000L, "archived chat", "ARCHIVED",
+                "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z", "2026-05-21T09:00:00Z");
+        ChatService readService = new ChatService(
+                chatSessionMapper,
+                chatMessageMapper,
+                chatMessageSourceMapper,
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        assertThatThrownBy(() -> readService.listMessages(7000L))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.NOT_FOUND));
     }
 
     private void insertChatSession(

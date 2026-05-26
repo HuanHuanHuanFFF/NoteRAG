@@ -27,6 +27,7 @@ public interface ChunkRetrievalMapper {
             JOIN notes n ON n.id = nc.note_id
             CROSS JOIN query_vector
             WHERE ce.embedding_model_id = #{embeddingModelId}
+              AND n.status = 'ACTIVE'
             <if test='noteIds != null and noteIds.size() > 0'>
               AND n.id IN
               <foreach collection='noteIds' item='noteId' open='(' separator=',' close=')'>

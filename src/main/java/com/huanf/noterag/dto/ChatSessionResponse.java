@@ -3,7 +3,7 @@ package com.huanf.noterag.dto;
 import java.time.Instant;
 
 import com.huanf.noterag.entity.ChatSession;
-import com.huanf.noterag.entity.ChatSessionStatus;
+import com.huanf.noterag.entity.RecordStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,7 +21,7 @@ public class ChatSessionResponse {
 
     private Long id;
     private String title;
-    private ChatSessionStatus status;
+    private RecordStatus status;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant lastMessageAt;

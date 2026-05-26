@@ -2,6 +2,7 @@ package com.huanf.noterag.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -131,6 +132,38 @@ class NoteControllerIntegrationTests {
                 .andExpect(jsonPath("$.data.charCount").value(21))
                 .andExpect(jsonPath("$.data.tokenCount").value(9))
                 .andExpect(jsonPath("$.data.createdAt").isString());
+    }
+
+    @Test
+    void archiveNoteReturnsEmptyDataAndHidesArchivedNote() throws Exception {
+        insertNote(1003L, "Archive API", "# Archive API", 13, 6);
+        insertChunk(1003L, 0, "Archive API", "chunk", 5, 2);
+
+        mockMvc.perform(delete("/api/notes/1003"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.message").value("success"))
+                .andExpect(jsonPath("$.data").value(Matchers.nullValue()));
+
+        mockMvc.perform(get("/api/notes/1003"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(40401));
+
+        mockMvc.perform(get("/api/notes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.notes[?(@.id == 1003)]").isEmpty());
+    }
+
+    @Test
+    void archiveNoteTreatsArchivedNoteAsNotFound() throws Exception {
+        insertNote(1004L, "Archive Twice API", "# Archive Twice", 15, 7);
+        mockMvc.perform(delete("/api/notes/1004"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/notes/1004"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(40401))
+                .andExpect(jsonPath("$.data").value(Matchers.nullValue()));
     }
 
     @Test

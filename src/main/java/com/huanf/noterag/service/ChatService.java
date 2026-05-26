@@ -25,7 +25,7 @@ import com.huanf.noterag.model.ChatMessageSourceChunk;
 import com.huanf.noterag.model.ChatMessageWithSources;
 import com.huanf.noterag.model.ChatResult;
 import com.huanf.noterag.entity.ChatSession;
-import com.huanf.noterag.entity.ChatSessionStatus;
+import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.rag.AnswerCitationExtractor;
 import com.huanf.noterag.rag.ChatPromptBuilder;
@@ -45,6 +45,7 @@ public class ChatService {
 
     static final int HISTORY_LIMIT = 25;
     static final int SESSION_TITLE_MAX_CHARS = 17;
+    static final int SESSION_RENAME_MAX_CHARS = 50;
     static final String ERROR_CODE_LLM_FAILED = "LLM_FAILED";
     static final String ERROR_CODE_LLM_RESULT_INVALID = "LLM_RESULT_INVALID";
     static final String ERROR_CODE_CHAT_FAILED = "CHAT_FAILED";
@@ -169,6 +170,30 @@ public class ChatService {
     }
 
     /**
+     * 归档 ACTIVE 会话；归档后不能继续发消息，也不会出现在会话列表。
+     */
+    public void archiveSession(Long sessionId) {
+        int archived = chatSessionMapper.archiveById(sessionId);
+        if (archived != 1) {
+            throw new BusinessException(CodeStatus.NOT_FOUND, "chat session not found");
+        }
+        log.info("Chat 会话已归档, sessionId={}", sessionId);
+    }
+
+    /**
+     * 重命名 ACTIVE 会话，只更新标题和 updated_at，不改变 lastMessageAt。
+     */
+    public ChatSession renameSession(Long sessionId, String title) {
+        String normalizedTitle = normalizeSessionTitle(title);
+        int updated = chatSessionMapper.updateTitle(sessionId, normalizedTitle);
+        if (updated != 1) {
+            throw new BusinessException(CodeStatus.NOT_FOUND, "chat session not found");
+        }
+        log.info("Chat 会话已重命名, sessionId={}, titleLength={}", sessionId, normalizedTitle.length());
+        return requireExistingSession(sessionId);
+    }
+
+    /**
      * 按 assistant messageId 批量加载已持久化的引用来源，并组装成消息到 sources 的映射。
      */
     private Map<Long, List<RetrievedChunk>> loadSourcesByMessageId(List<Long> messageIds) {
@@ -256,7 +281,7 @@ public class ChatService {
     private ChatSession createSession(String normalizedContent) {
         ChatSession session = new ChatSession();
         session.setTitle(buildSessionTitle(normalizedContent));
-        session.setStatus(ChatSessionStatus.ACTIVE);
+        session.setStatus(RecordStatus.ACTIVE);
         Long sessionId = chatSessionMapper.insert(session);
         if (sessionId == null) {
             throw new BusinessException(CodeStatus.INTERNAL_ERROR, "chat session insert returned no id");
@@ -418,6 +443,23 @@ public class ChatService {
         String normalized = content.replace("\r\n", "\n").replace('\r', '\n').strip();
         if (normalized.isEmpty()) {
             throw new IllegalArgumentException("content must not be blank");
+        }
+        return normalized;
+    }
+
+    /**
+     * 规范化会话标题，并限制手动重命名标题长度。
+     */
+    private String normalizeSessionTitle(String title) {
+        if (title == null) {
+            throw new IllegalArgumentException("title must not be null");
+        }
+        String normalized = title.strip();
+        if (normalized.isEmpty()) {
+            throw new IllegalArgumentException("title must not be blank");
+        }
+        if (normalized.length() > SESSION_RENAME_MAX_CHARS) {
+            throw new IllegalArgumentException("title must not be greater than " + SESSION_RENAME_MAX_CHARS + " characters");
         }
         return normalized;
     }

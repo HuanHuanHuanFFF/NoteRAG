@@ -38,7 +38,7 @@ import com.huanf.noterag.entity.ChatMessage;
 import com.huanf.noterag.entity.ChatMessageRole;
 import com.huanf.noterag.entity.ChatMessageStatus;
 import com.huanf.noterag.entity.ChatSession;
-import com.huanf.noterag.entity.ChatSessionStatus;
+import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.model.RetrievedChunk;
 import com.huanf.noterag.rag.ChatPromptBuilder;
 import com.huanf.noterag.rag.CitationMarkers;
@@ -146,7 +146,7 @@ class ChatServiceTests {
 
     @Test
     void sendMessageContinuesExistingSession() {
-        ChatSession existingSession = new ChatSession(5L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(5L, "Old title", RecordStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(5L)).thenReturn(existingSession);
         mockMessageInsert(201L, 202L);
         when(chatMessageMapper.findPromptHistoryBySessionId(5L, 201L, ChatService.HISTORY_LIMIT))
@@ -170,7 +170,7 @@ class ChatServiceTests {
 
     @Test
     void sendMessagePassesNoteIdsToQuerySources() {
-        ChatSession existingSession = new ChatSession(5L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(5L, "Old title", RecordStatus.ACTIVE, null, null, null);
         List<Long> noteIds = List.of(1L, 2L);
         when(chatSessionMapper.findById(5L)).thenReturn(existingSession);
         mockMessageInsert(211L, 212L);
@@ -190,7 +190,7 @@ class ChatServiceTests {
 
     @Test
     void sendMessageMarksAssistantFailedWhenCitationInvalid() {
-        ChatSession existingSession = new ChatSession(7L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(7L, "Old title", RecordStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(7L)).thenReturn(existingSession);
         mockMessageInsert(301L, 302L);
         when(chatMessageMapper.findPromptHistoryBySessionId(7L, 301L, ChatService.HISTORY_LIMIT))
@@ -220,7 +220,7 @@ class ChatServiceTests {
 
     @Test
     void sendMessageAllowsAnswerWithoutCitationsAndReturnsEmptySources() {
-        ChatSession existingSession = new ChatSession(8L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(8L, "Old title", RecordStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(8L)).thenReturn(existingSession);
         mockMessageInsert(501L, 502L);
         when(chatMessageMapper.findPromptHistoryBySessionId(8L, 501L, ChatService.HISTORY_LIMIT))
@@ -246,7 +246,7 @@ class ChatServiceTests {
 
     @Test
     void sendMessageAllowsUnableToAnswerWithoutCitations() {
-        ChatSession existingSession = new ChatSession(6L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(6L, "Old title", RecordStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(6L)).thenReturn(existingSession);
         mockMessageInsert(701L, 702L);
         when(chatMessageMapper.findPromptHistoryBySessionId(6L, 701L, ChatService.HISTORY_LIMIT))
@@ -267,7 +267,7 @@ class ChatServiceTests {
 
     @Test
     void sendMessageMarksAssistantFailedAsChatFailedWhenQuerySourcesFails() {
-        ChatSession existingSession = new ChatSession(9L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(9L, "Old title", RecordStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(9L)).thenReturn(existingSession);
         mockMessageInsert(401L, 402L);
         when(chatMessageMapper.findPromptHistoryBySessionId(9L, 401L, ChatService.HISTORY_LIMIT))
@@ -303,16 +303,68 @@ class ChatServiceTests {
     @Test
     void listSessionsReturnsMapperResults() {
         List<ChatSession> sessions = List.of(
-                new ChatSession(1L, "first", ChatSessionStatus.ACTIVE, null, null, null),
-                new ChatSession(2L, "second", ChatSessionStatus.ACTIVE, null, null, null));
+                new ChatSession(1L, "first", RecordStatus.ACTIVE, null, null, null),
+                new ChatSession(2L, "second", RecordStatus.ACTIVE, null, null, null));
         when(chatSessionMapper.findAll()).thenReturn(sessions);
 
         assertThat(chatService.listSessions()).isSameAs(sessions);
     }
 
     @Test
+    void archiveSessionArchivesActiveSession() {
+        when(chatSessionMapper.archiveById(5L)).thenReturn(1);
+
+        chatService.archiveSession(5L);
+
+        verify(chatSessionMapper).archiveById(5L);
+    }
+
+    @Test
+    void archiveSessionTreatsMissingOrArchivedSessionAsNotFound() {
+        when(chatSessionMapper.archiveById(5L)).thenReturn(0);
+
+        assertThatThrownBy(() -> chatService.archiveSession(5L))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.NOT_FOUND);
+                    assertThat(exception).hasMessage("chat session not found");
+                });
+    }
+
+    @Test
+    void renameSessionUpdatesTitleAndReturnsUpdatedSession() {
+        ChatSession updatedSession = new ChatSession(5L, "New title", RecordStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.updateTitle(5L, "New title")).thenReturn(1);
+        when(chatSessionMapper.findById(5L)).thenReturn(updatedSession);
+
+        ChatSession result = chatService.renameSession(5L, "  New title  ");
+
+        assertThat(result).isSameAs(updatedSession);
+        verify(chatSessionMapper).updateTitle(5L, "New title");
+        verify(chatSessionMapper).findById(5L);
+    }
+
+    @Test
+    void renameSessionRejectsBlankTitle() {
+        assertThatThrownBy(() -> chatService.renameSession(5L, "   "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("title must not be blank");
+        verify(chatSessionMapper, never()).updateTitle(any(), any());
+    }
+
+    @Test
+    void renameSessionTreatsMissingOrArchivedSessionAsNotFound() {
+        when(chatSessionMapper.updateTitle(5L, "New title")).thenReturn(0);
+
+        assertThatThrownBy(() -> chatService.renameSession(5L, "New title"))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.NOT_FOUND);
+                    assertThat(exception).hasMessage("chat session not found");
+                });
+    }
+
+    @Test
     void listMessagesReturnsMessagesWithAssistantSources() {
-        ChatSession existingSession = new ChatSession(5L, "title", ChatSessionStatus.ACTIVE, null, null, null);
+        ChatSession existingSession = new ChatSession(5L, "title", RecordStatus.ACTIVE, null, null, null);
         when(chatSessionMapper.findById(5L)).thenReturn(existingSession);
         ChatMessage userMessage = new ChatMessage(
                 10L, 5L, ChatMessageRole.USER, "question", ChatMessageStatus.COMPLETED, null, 8, null, null);

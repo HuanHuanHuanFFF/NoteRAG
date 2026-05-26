@@ -3,8 +3,10 @@ package com.huanf.noterag.controller;
 import java.util.List;
 
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +17,7 @@ import com.huanf.noterag.dto.ChatMessageListResponse;
 import com.huanf.noterag.dto.ChatHistoryMessageResponse;
 import com.huanf.noterag.dto.ChatSessionListResponse;
 import com.huanf.noterag.dto.ChatSessionResponse;
+import com.huanf.noterag.dto.RenameChatSessionRequest;
 import com.huanf.noterag.dto.SendChatMessageRequest;
 import com.huanf.noterag.dto.SourceChunkResponse;
 import com.huanf.noterag.model.ChatResult;
@@ -65,6 +68,21 @@ public class ChatController {
                 chatService.listMessages(sessionId).stream()
                         .map(ChatHistoryMessageResponse::from)
                         .toList());
+    }
+
+    @DeleteMapping("/chat-sessions/{sessionId}")
+    public void archiveSession(@PathVariable("sessionId") Long sessionId) {
+        log.info("Chat 会话归档请求, sessionId={}", sessionId);
+        chatService.archiveSession(sessionId);
+    }
+
+    @PatchMapping(value = "/chat-sessions/{sessionId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ChatSessionResponse renameSession(
+            @PathVariable("sessionId") Long sessionId,
+            @Valid @RequestBody RenameChatSessionRequest request
+    ) {
+        log.info("Chat 会话重命名请求, sessionId={}, titleLength={}", sessionId, request.getTitle().strip().length());
+        return ChatSessionResponse.from(chatService.renameSession(sessionId, request.getTitle()));
     }
 
     /**

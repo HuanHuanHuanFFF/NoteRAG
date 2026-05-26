@@ -1,6 +1,7 @@
 package com.huanf.noterag.controller;
 
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,5 +47,10 @@ public class NoteController {
     @GetMapping("/notes/{noteId}")
     public NoteDetailResponse getNoteDetail(@PathVariable("noteId") Long noteId) {
         return NoteDetailResponse.from(noteService.getNoteDetail(noteId));
+    }
+
+    @DeleteMapping("/notes/{noteId}")
+    public void archiveNote(@PathVariable("noteId") Long noteId) {
+        noteService.archiveNote(noteId);
     }
 }

@@ -28,6 +28,7 @@ import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
 import com.huanf.noterag.entity.Note;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
 @SpringBootTest
@@ -96,6 +97,7 @@ class NoteServiceIntegrationTests {
         assertThat(savedNote).isNotNull();
         assertThat(savedNote.getTitle()).isEqualTo("Java Guide");
         assertThat(savedNote.getContent()).isEqualTo(normalizedContent);
+        assertThat(savedNote.getStatus()).isEqualTo(RecordStatus.ACTIVE);
         assertThat(savedNote.getCharCount()).isEqualTo(normalizedContent.length());
         assertThat(savedNote.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
 
@@ -175,6 +177,40 @@ class NoteServiceIntegrationTests {
                 Integer.class,
                 "Broken Returning");
         assertThat(noteCount).isZero();
+    }
+
+    @Test
+    void archiveNoteHidesNoteFromReadsAndList() {
+        ImportTextResponse response = noteService.importText(new ImportTextRequest(
+                "Archive Me",
+                "# Archive\n\ncontent"));
+
+        noteService.archiveNote(response.getDocumentId());
+
+        assertThat(noteMapper.findById(response.getDocumentId())).isNull();
+        assertThat(noteService.listNotes())
+                .extracting("id")
+                .doesNotContain(response.getDocumentId());
+        String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM notes WHERE id = ?",
+                String.class,
+                response.getDocumentId());
+        assertThat(status).isEqualTo("ARCHIVED");
+    }
+
+    @Test
+    void archiveNoteTreatsMissingOrArchivedNoteAsNotFound() {
+        ImportTextResponse response = noteService.importText(new ImportTextRequest(
+                "Archive Twice",
+                "# Archive\n\ncontent"));
+        noteService.archiveNote(response.getDocumentId());
+
+        assertThatThrownBy(() -> noteService.archiveNote(response.getDocumentId()))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.DOCUMENT_NOT_FOUND));
+        assertThatThrownBy(() -> noteService.archiveNote(999999L))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.DOCUMENT_NOT_FOUND));
     }
 
     private List<NoteChunk> insertChunksReturning(List<NoteChunk> chunks) {

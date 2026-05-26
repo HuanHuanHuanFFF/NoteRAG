@@ -31,7 +31,6 @@ public class ApiResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             ServerHttpRequest request,
             ServerHttpResponse response) {
         if (shouldSkip(request, response)
-                || body == null
                 || body instanceof ApiBody<?>
                 || body instanceof String
                 || body instanceof byte[]
