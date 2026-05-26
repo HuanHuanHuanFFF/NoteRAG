@@ -83,3 +83,43 @@ textarea,
 input {
   font-family: inherit;
 }
+
+.danger-icon-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(76 5 25 / 0.4);
+  border-radius: 0.375rem;
+  background-color: #2a1117;
+  color: rgb(253 164 175 / 0.8);
+  box-shadow: none;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.danger-icon-button:hover {
+  border-color: rgb(251 113 133 / 0.45);
+  background-color: rgb(251 113 133 / 0.16);
+  color: rgb(255 228 230);
+}
+
+.danger-icon-button:focus {
+  outline: none;
+}
+
+.danger-icon-button:focus-visible {
+  outline: 2px solid rgb(253 164 175 / 0.45);
+  outline-offset: 2px;
+}
+
+.danger-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}

@@ -15,6 +15,18 @@ export interface SourceChunk {
 
 export interface SendChatMessageRequest {
   content: string;
+  noteIds?: number[];
+}
+
+export interface QueryRequest {
+  question: string;
+  noteIds?: number[];
+}
+
+export interface RetrievalSearchRequest {
+  question: string;
+  topN?: number;
+  noteIds?: number[];
 }
 
 export interface ChatMessageResponse {
@@ -55,6 +67,54 @@ export interface NoteListItem {
   createdAt: string;
 }
 
+export interface NoteListResponse {
+  notes: NoteListItem[];
+}
+
+export interface NoteDetailResponse {
+  id: number;
+  title: string;
+  content: string;
+  charCount: number;
+  tokenCount: number;
+  createdAt: string;
+}
+
+export type ChatMessageRole = 'USER' | 'ASSISTANT';
+export type ChatMessageStatus = 'PENDING' | 'COMPLETED' | 'FAILED';
+export type ChatSessionStatus = 'ACTIVE' | 'ARCHIVED';
+
+export interface ChatSessionItemResponse {
+  id: number;
+  title: string;
+  status: ChatSessionStatus;
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string | null;
+}
+
+export interface ChatSessionListResponse {
+  sessions: ChatSessionItemResponse[];
+}
+
+export interface RenameChatSessionRequest {
+  title: string;
+}
+
+export interface ChatHistoryMessageResponse {
+  id: number;
+  role: ChatMessageRole;
+  content: string;
+  status: ChatMessageStatus;
+  errorCode: string | null;
+  createdAt: string;
+  sources: SourceChunk[];
+}
+
+export interface ChatMessageListResponse {
+  messages: ChatHistoryMessageResponse[];
+}
+
 export interface ChatTurn {
   id: number;
   userMessageId?: number;
@@ -63,6 +123,7 @@ export interface ChatTurn {
   answer: string;
   sources: SourceChunk[];
   loading: boolean;
+  pending?: boolean;
   error?: string;
 }
 
@@ -71,4 +132,5 @@ export interface ChatSession {
   backendSessionId?: number;
   title: string;
   turns: ChatTurn[];
+  messagesLoaded?: boolean;
 }

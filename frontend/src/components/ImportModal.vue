@@ -202,8 +202,9 @@ function resetFileInput() {
             </div>
             <button
               type="button"
-              class="inline-flex h-7 w-7 items-center justify-center rounded-md text-white/45 transition-colors duration-150 hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-40"
+              class="inline-flex h-8 w-8 appearance-none items-center justify-center rounded-md border border-white/[0.06] bg-[#101016]/85 text-white/50 shadow-none transition-colors duration-150 hover:border-accent/35 hover:bg-accent/[0.1] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-40"
               :disabled="busy"
+              title="关闭"
               aria-label="关闭"
               @click="close"
             >
@@ -296,6 +297,12 @@ function resetFileInput() {
             </div>
 
             <div
+              class="rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-[12px] leading-relaxed text-white/48"
+            >
+              导入后标题和内容暂不可修改，请确认文件和标题无误后再导入。
+            </div>
+
+            <div
               v-if="error"
               class="rounded-lg border border-rose-400/30 bg-rose-500/[0.08] px-3 py-2 text-[12px] text-rose-200"
               role="alert"
@@ -313,22 +320,22 @@ function resetFileInput() {
                 </svg>
                 导入成功
               </div>
-              <dl class="grid grid-cols-4 gap-x-4 gap-y-1 text-[12px]">
-                <div>
+              <dl class="grid grid-cols-4 gap-x-4 gap-y-2 text-[12px]">
+                <div class="min-w-0">
                   <dt class="text-white/40">ID</dt>
-                  <dd class="font-mono text-white">{{ lastResult.documentId }}</dd>
+                  <dd class="m-0 mt-1 font-mono text-white">{{ lastResult.documentId }}</dd>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <dt class="text-white/40">Chunks</dt>
-                  <dd class="font-mono text-white">{{ lastResult.chunkCount }}</dd>
+                  <dd class="m-0 mt-1 font-mono text-white">{{ lastResult.chunkCount }}</dd>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <dt class="text-white/40">字符</dt>
-                  <dd class="font-mono text-white">{{ lastResult.charCount.toLocaleString() }}</dd>
+                  <dd class="m-0 mt-1 font-mono text-white">{{ lastResult.charCount.toLocaleString() }}</dd>
                 </div>
-                <div>
+                <div class="min-w-0">
                   <dt class="text-white/40">Tokens</dt>
-                  <dd class="font-mono text-white">{{ lastResult.tokenCount.toLocaleString() }}</dd>
+                  <dd class="m-0 mt-1 font-mono text-white">{{ lastResult.tokenCount.toLocaleString() }}</dd>
                 </div>
               </dl>
             </div>

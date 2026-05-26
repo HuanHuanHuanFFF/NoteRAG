@@ -92,7 +92,7 @@ function syncExpandedState() {
       </div>
       <button
         type="button"
-        class="inline-flex h-7 w-7 appearance-none items-center justify-center rounded-md border border-transparent bg-transparent text-white/45 shadow-none transition-colors duration-150 hover:bg-white/[0.06] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+        class="inline-flex h-8 w-8 appearance-none items-center justify-center rounded-md border border-white/[0.06] bg-[#101016]/85 text-white/50 shadow-none transition-colors duration-150 hover:border-accent/35 hover:bg-accent/[0.1] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         title="关闭来源面板"
         aria-label="关闭来源面板"
         @click="$emit('close')"

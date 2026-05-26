@@ -20,6 +20,103 @@ export interface PostJsonOptions {
   timeoutMs?: number;
 }
 
+export async function deleteJson<TResp = void>(
+  path: string,
+  options: PostJsonOptions = {}
+): Promise<TResp> {
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId =
+    timeoutMs > 0 ? globalThis.setTimeout(() => controller.abort(), timeoutMs) : undefined;
+
+  try {
+    const response = await fetch(path, {
+      method: 'DELETE',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    if (response.status === 204) return undefined as TResp;
+    return await parseApiResponse<TResp>(response);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (isAbortError(error)) {
+      throw new ApiError('请求超时，请稍后重试', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+    }
+    throw new ApiError('无法连接服务器，请确认后端服务已启动', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+  } finally {
+    if (timeoutId !== undefined) {
+      globalThis.clearTimeout(timeoutId);
+    }
+  }
+}
+
+export async function getJson<TResp>(
+  path: string,
+  options: PostJsonOptions = {}
+): Promise<TResp> {
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId =
+    timeoutMs > 0 ? globalThis.setTimeout(() => controller.abort(), timeoutMs) : undefined;
+
+  try {
+    const response = await fetch(path, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    return await parseApiResponse<TResp>(response);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (isAbortError(error)) {
+      throw new ApiError('请求超时，请稍后重试', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+    }
+    throw new ApiError('无法连接服务器，请确认后端服务已启动', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+  } finally {
+    if (timeoutId !== undefined) {
+      globalThis.clearTimeout(timeoutId);
+    }
+  }
+}
+
+export async function patchJson<TResp, TReq = unknown>(
+  path: string,
+  body: TReq,
+  options: PostJsonOptions = {}
+): Promise<TResp> {
+  const requestBody = stringifyRequestBody(body);
+  const controller = new AbortController();
+  const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+  const timeoutId =
+    timeoutMs > 0 ? globalThis.setTimeout(() => controller.abort(), timeoutMs) : undefined;
+
+  try {
+    const response = await fetch(path, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: requestBody,
+      signal: controller.signal,
+    });
+    return await parseApiResponse<TResp>(response);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    if (isAbortError(error)) {
+      throw new ApiError('请求超时，请稍后重试', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+    }
+    throw new ApiError('无法连接服务器，请确认后端服务已启动', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+  } finally {
+    if (timeoutId !== undefined) {
+      globalThis.clearTimeout(timeoutId);
+    }
+  }
+}
+
 export async function postJson<TResp, TReq = unknown>(
   path: string,
   body: TReq,

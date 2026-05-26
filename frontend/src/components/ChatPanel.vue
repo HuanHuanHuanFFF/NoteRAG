@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import type { ChatSession, ChatTurn, NoteListItem } from '@/api/types';
+import type { ChatSession, ChatTurn } from '@/api/types';
 import MarkdownAnswer from '@/components/MarkdownAnswer.vue';
 
 const props = defineProps<{
   session: ChatSession | null;
-  selectedNotes: NoteListItem[];
   submitting: boolean;
+  scopeText: string;
+  healthStatus: 'checking' | 'connected' | 'disconnected' | 'network-error';
   activeCitation: { turnId: number; index: number | null } | null;
   expandedCitation: { turnId: number; indices: number[] } | null;
 }>();
@@ -39,7 +40,35 @@ const loadingTexts = [
 ];
 
 const turns = computed<ChatTurn[]>(() => props.session?.turns ?? []);
-const scopeText = computed(() => '跨全部笔记检索');
+
+const healthMeta = computed(() => {
+  switch (props.healthStatus) {
+    case 'connected':
+      return {
+        label: '知识库已连接',
+        pillClass: 'border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-100/80',
+        dotClass: 'bg-emerald-300',
+      };
+    case 'checking':
+      return {
+        label: '正在检查连接',
+        pillClass: 'border-white/[0.08] bg-white/[0.025] text-white/45',
+        dotClass: 'bg-white/35',
+      };
+    case 'network-error':
+      return {
+        label: '网络错误',
+        pillClass: 'border-rose-300/20 bg-rose-400/[0.07] text-rose-100/75',
+        dotClass: 'bg-rose-300',
+      };
+    default:
+      return {
+        label: '知识库未连接',
+        pillClass: 'border-white/[0.08] bg-white/[0.025] text-white/45',
+        dotClass: 'bg-white/28',
+      };
+  }
+});
 
 watch(
   turns,
@@ -106,17 +135,21 @@ function handleSourceButtonClick(turnId: number, index: number) {
 <template>
   <section class="relative flex h-full min-h-0 flex-col overflow-hidden">
     <header class="shrink-0 px-1 pb-4">
-      <div class="flex items-center gap-2">
-        <h2 class="text-[18px] font-semibold tracking-tight text-white">Q&amp;A</h2>
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="text-[18px] font-semibold tracking-tight text-white">Q&amp;A</h2>
+          <p class="mt-1 flex items-center gap-1.5 text-[12px] text-white/40">
+            <span>{{ scopeText }}</span>
+          </p>
+        </div>
         <span
-          class="rounded-md bg-amber-300/[0.08] px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-amber-300/85"
+          class="inline-flex h-7 shrink-0 items-center gap-2 rounded-lg border px-2.5 text-[12px] font-medium transition-colors duration-150"
+          :class="healthMeta.pillClass"
         >
-          live api
+          <span class="h-1.5 w-1.5 rounded-full" :class="healthMeta.dotClass" aria-hidden="true"></span>
+          {{ healthMeta.label }}
         </span>
       </div>
-      <p class="mt-1 flex items-center gap-1.5 text-[12px] text-white/40">
-        <span>{{ scopeText }}</span>
-      </p>
     </header>
 
     <div ref="listRef" class="min-h-0 flex-1 overflow-y-auto pr-1">
@@ -181,6 +214,13 @@ function handleSourceButtonClick(turnId: number, index: number) {
                   ></span>
                 </span>
                 <span>{{ loadingTextFor(turn.id) }}…</span>
+              </div>
+
+              <div
+                v-else-if="turn.pending"
+                class="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3.5 py-3 text-[13px] text-amber-100/80"
+              >
+                回答仍在生成中，请稍后刷新会话查看。
               </div>
 
               <div

@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import MarkdownIt from 'markdown-it';
 import type { SourceChunk } from '@/api/types';
+import { markdown } from '@/utils/markdown';
 
 const MARKER_PREFIX = '\uE200cite\uE202';
 const MARKER_END = '\uE201';
 const CITATION_PATTERN = new RegExp(`${MARKER_PREFIX}([1-9]\\d*)${MARKER_END}`, 'g');
-const markdown = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: false,
-});
 
 const props = defineProps<{
   answer: string;
