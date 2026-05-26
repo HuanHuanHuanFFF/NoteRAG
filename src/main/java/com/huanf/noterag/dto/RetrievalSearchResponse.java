@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * 检索调试响应。
+ */
 @Getter
 @Setter
 @NoArgsConstructor

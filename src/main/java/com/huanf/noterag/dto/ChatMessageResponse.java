@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * 同步 chat 发送消息响应。
+ */
 @Getter
 @Setter
 @NoArgsConstructor

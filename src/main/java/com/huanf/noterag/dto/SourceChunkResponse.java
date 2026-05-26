@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * 引用来源 chunk 响应。
+ */
 @Getter
 @Setter
 @NoArgsConstructor

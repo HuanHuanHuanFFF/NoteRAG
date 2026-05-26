@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/**
+ * Markdown 文本导入请求。
+ */
 @Getter
 @Setter
 @NoArgsConstructor

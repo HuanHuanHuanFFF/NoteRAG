@@ -7,6 +7,9 @@ import lombok.Setter;
 
 import java.util.List;
 
+/**
+ * Query sources 调试响应。
+ */
 @Getter
 @Setter
 @NoArgsConstructor
