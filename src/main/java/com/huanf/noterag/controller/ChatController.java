@@ -1,5 +1,7 @@
 package com.huanf.noterag.controller;
 
+import java.util.List;
+
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,7 +21,9 @@ import com.huanf.noterag.model.ChatResult;
 import com.huanf.noterag.service.ChatService;
 
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api")
 public class ChatController {
@@ -32,7 +36,9 @@ public class ChatController {
 
     @PostMapping(value = "/chat-sessions", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ChatMessageResponse sendFirstMessage(@Valid @RequestBody SendChatMessageRequest request) {
-        return toResponse(chatService.sendMessage(null, request.getContent()));
+        log.info("Chat 首条消息请求, contentLength={}, noteScopeCount={}",
+                request.getContent().length(), noteScopeCount(request.getNoteIds()));
+        return toResponse(chatService.sendMessage(null, request.getContent(), request.getNoteIds()));
     }
 
     @PostMapping(value = "/chat-sessions/{sessionId}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -40,7 +46,9 @@ public class ChatController {
             @PathVariable("sessionId") Long sessionId,
             @Valid @RequestBody SendChatMessageRequest request
     ) {
-        return toResponse(chatService.sendMessage(sessionId, request.getContent()));
+        log.info("Chat 追加消息请求, sessionId={}, contentLength={}, noteScopeCount={}",
+                sessionId, request.getContent().length(), noteScopeCount(request.getNoteIds()));
+        return toResponse(chatService.sendMessage(sessionId, request.getContent(), request.getNoteIds()));
     }
 
     @GetMapping("/chat-sessions")
@@ -72,5 +80,12 @@ public class ChatController {
                 result.getSources().stream()
                         .map(SourceChunkResponse::from)
                         .toList());
+    }
+
+    /**
+     * 统计请求中的 note scope 数量，仅用于日志，不在 controller 做 scope 清理。
+     */
+    private int noteScopeCount(List<Long> noteIds) {
+        return noteIds == null ? 0 : noteIds.size();
     }
 }

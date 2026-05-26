@@ -1,5 +1,7 @@
 package com.huanf.noterag.dto;
 
+import java.util.List;
+
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -23,4 +25,7 @@ public class RetrievalSearchRequest {
 
     @Min(1)
     private Integer topN;
+
+    @Size(max = 100)
+    private List<Long> noteIds;
 }

@@ -3,12 +3,15 @@ package com.huanf.noterag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -40,14 +43,14 @@ class RetrievalServiceTests {
         RetrievedChunk chunk = new RetrievedChunk(1L, 11L, "Java", "JVM", "content", 0.92);
         when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel);
         when(embeddingClient.embed("what is JVM?")).thenReturn(queryEmbedding);
-        when(chunkRetrievalMapper.searchTopN(7L, queryEmbedding, 5)).thenReturn(List.of(chunk));
+        when(chunkRetrievalMapper.searchTopN(7L, queryEmbedding, 5, null)).thenReturn(List.of(chunk));
 
         List<RetrievedChunk> chunks = retrievalService.retrieveTopN("  what is JVM?  ", 5);
 
         assertThat(chunks).containsExactly(chunk);
         verify(embeddingClient).embed("what is JVM?");
         verify(embeddingModelResolver).resolveRequired1024Model();
-        verify(chunkRetrievalMapper).searchTopN(eq(7L), same(queryEmbedding), eq(5));
+        verify(chunkRetrievalMapper).searchTopN(eq(7L), same(queryEmbedding), eq(5), isNull());
     }
 
     @Test
@@ -59,7 +62,49 @@ class RetrievalServiceTests {
 
         retrievalService.retrieveTopN("what is JVM?");
 
-        verify(chunkRetrievalMapper).searchTopN(eq(7L), same(queryEmbedding), eq(20));
+        verify(chunkRetrievalMapper).searchTopN(eq(7L), same(queryEmbedding), eq(20), isNull());
+    }
+
+    @Test
+    void retrieveTopNNormalizesNoteIdsBeforeSearching() {
+        EmbeddingModel embeddingModel = embeddingModel(7L, 1024);
+        float[] queryEmbedding = embedding(1.0f);
+        RetrievedChunk chunk = new RetrievedChunk(2L, 21L, "MySQL", "Index", "content", 0.91);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel);
+        when(embeddingClient.embed("what is index?")).thenReturn(queryEmbedding);
+        when(chunkRetrievalMapper.searchTopN(7L, queryEmbedding, 5, List.of(1L, 2L))).thenReturn(List.of(chunk));
+
+        List<RetrievedChunk> chunks = retrievalService.retrieveTopN(
+                "what is index?",
+                5,
+                Arrays.asList(1L, 1L, null, 0L, -1L, 2L));
+
+        assertThat(chunks).containsExactly(chunk);
+        verify(chunkRetrievalMapper).searchTopN(eq(7L), same(queryEmbedding), eq(5), eq(List.of(1L, 2L)));
+    }
+
+    @Test
+    void retrieveTopNUsesFullDatabaseWhenNoteIdsAreEmptyAfterNormalization() {
+        EmbeddingModel embeddingModel = embeddingModel(7L, 1024);
+        float[] queryEmbedding = embedding(1.0f);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel);
+        when(embeddingClient.embed("what is JVM?")).thenReturn(queryEmbedding);
+
+        retrievalService.retrieveTopN("what is JVM?", 5, Arrays.asList(null, 0L, -1L));
+
+        verify(chunkRetrievalMapper).searchTopN(eq(7L), same(queryEmbedding), eq(5), isNull());
+    }
+
+    @Test
+    void retrieveTopNFailsWhenNoteIdsExceedLimit() {
+        List<Long> noteIds = Collections.nCopies(RetrievalService.MAX_NOTE_SCOPE_SIZE + 1, 1L);
+
+        assertThatThrownBy(() -> retrievalService.retrieveTopN("question", 5, noteIds))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.INVALID_REQUEST);
+                    assertThat(exception).hasMessage("noteIds size must not be greater than 100");
+                });
+        verifyNoInteractions(embeddingClient, embeddingModelResolver, chunkRetrievalMapper);
     }
 
     @Test

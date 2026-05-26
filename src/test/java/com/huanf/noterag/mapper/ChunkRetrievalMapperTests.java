@@ -3,6 +3,7 @@ package com.huanf.noterag.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
+import java.util.List;
 
 import org.apache.ibatis.annotations.Select;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,7 @@ class ChunkRetrievalMapperTests {
 
     @Test
     void searchTopNSqlJoinsChunkEmbeddingChunkAndNoteWithPgvectorOrdering() throws NoSuchMethodException {
-        Method method = ChunkRetrievalMapper.class.getMethod("searchTopN", Long.class, float[].class, int.class);
+        Method method = ChunkRetrievalMapper.class.getMethod("searchTopN", Long.class, float[].class, int.class, List.class);
 
         Select select = method.getAnnotation(Select.class);
 
@@ -21,10 +22,13 @@ class ChunkRetrievalMapperTests {
         assertThat(sql).contains("JOIN note_chunks nc ON nc.id = ce.note_chunk_id");
         assertThat(sql).contains("JOIN notes n ON n.id = nc.note_id");
         assertThat(sql).contains("WHERE ce.embedding_model_id = #{embeddingModelId}");
-        assertThat(sql).contains("<=>");
-        assertThat(sql).contains("ORDER BY ce.embedding <=> query_vector.embedding");
+        assertThat(sql).contains("<if test='noteIds != null and noteIds.size() > 0'>");
+        assertThat(sql).contains("AND n.id IN");
+        assertThat(sql).contains("<foreach collection='noteIds' item='noteId'");
+        assertThat(sql).contains("&lt;=>");
+        assertThat(sql).contains("ORDER BY ce.embedding &lt;=> query_vector.embedding");
         assertThat(sql).contains("LIMIT #{topN}");
-        assertThat(sql).contains("1 - (ce.embedding <=> query_vector.embedding) AS score");
+        assertThat(sql).contains("1 - (ce.embedding &lt;=> query_vector.embedding) AS score");
         assertThat(sql).contains("n.id AS noteId");
         assertThat(sql).contains("nc.id AS chunkId");
         assertThat(sql).contains("n.title AS title");

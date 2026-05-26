@@ -3,6 +3,7 @@ package com.huanf.noterag.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.same;
 import static org.mockito.Mockito.verify;
@@ -30,7 +31,7 @@ class QueryServiceTests {
         List<RetrievedChunk> rerankedChunks = List.of(
                 chunk(222L, "MySQL", "Index", "second", 0.98),
                 chunk(111L, "Java", "JVM", "first", 0.76));
-        when(retrievalService.retrieveTopN("what is index?")).thenReturn(retrievedChunks);
+        when(retrievalService.retrieveTopN("what is index?", null)).thenReturn(retrievedChunks);
         when(rerankService.rerank("what is index?", retrievedChunks)).thenReturn(rerankedChunks);
 
         List<RetrievedChunk> response = queryService.querySources("  what is index?  ");
@@ -38,7 +39,7 @@ class QueryServiceTests {
         assertThat(response).hasSize(2);
         assertThat(response).extracting(RetrievedChunk::getChunkId).containsExactly(222L, 111L);
         assertThat(response).extracting(RetrievedChunk::getScore).containsExactly(0.98, 0.76);
-        verify(retrievalService).retrieveTopN(eq("what is index?"));
+        verify(retrievalService).retrieveTopN(eq("what is index?"), isNull());
         verify(rerankService).rerank(eq("what is index?"), same(retrievedChunks));
     }
 
@@ -55,13 +56,28 @@ class QueryServiceTests {
     void querySourcesPassesNormalizedQuestionToRetrievalAndRerank() {
         List<RetrievedChunk> retrievedChunks = List.of(chunk(1L, "MySQL", "Index", "retrieved", 0.91));
         List<RetrievedChunk> rerankedChunks = List.of(chunk(1L, "MySQL", "Index", "reranked", 0.88));
-        when(retrievalService.retrieveTopN("what is index?")).thenReturn(retrievedChunks);
+        when(retrievalService.retrieveTopN("what is index?", null)).thenReturn(retrievedChunks);
         when(rerankService.rerank("what is index?", retrievedChunks)).thenReturn(rerankedChunks);
 
         List<RetrievedChunk> response = queryService.querySources(" what is index? ");
 
         assertThat(response).containsExactlyElementsOf(rerankedChunks);
-        verify(retrievalService).retrieveTopN(eq("what is index?"));
+        verify(retrievalService).retrieveTopN(eq("what is index?"), isNull());
+        verify(rerankService).rerank(eq("what is index?"), same(retrievedChunks));
+    }
+
+    @Test
+    void querySourcesPassesNoteIdsToRetrievalOnly() {
+        List<Long> noteIds = List.of(1L, 2L);
+        List<RetrievedChunk> retrievedChunks = List.of(chunk(1L, "MySQL", "Index", "retrieved", 0.91));
+        List<RetrievedChunk> rerankedChunks = List.of(chunk(1L, "MySQL", "Index", "reranked", 0.88));
+        when(retrievalService.retrieveTopN("what is index?", noteIds)).thenReturn(retrievedChunks);
+        when(rerankService.rerank("what is index?", retrievedChunks)).thenReturn(rerankedChunks);
+
+        List<RetrievedChunk> response = queryService.querySources(" what is index? ", noteIds);
+
+        assertThat(response).containsExactlyElementsOf(rerankedChunks);
+        verify(retrievalService).retrieveTopN(eq("what is index?"), same(noteIds));
         verify(rerankService).rerank(eq("what is index?"), same(retrievedChunks));
     }
 

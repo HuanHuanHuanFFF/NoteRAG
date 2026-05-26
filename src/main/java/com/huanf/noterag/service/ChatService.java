@@ -83,9 +83,17 @@ public class ChatService {
      * 发送一条 chat 消息并完成单轮非流式回答。
      */
     public ChatResult sendMessage(Long sessionId, String content) {
+        return sendMessage(sessionId, content, null);
+    }
+
+    /**
+     * 发送一条限定笔记范围的 chat 消息并完成单轮非流式回答。
+     */
+    public ChatResult sendMessage(Long sessionId, String content, List<Long> noteIds) {
         ensureLlmEnabled();
         String normalizedContent = normalizeContent(content);
-        log.info("Chat 发送开始, sessionId={}, contentLength={}", sessionId, normalizedContent.length());
+        log.info("Chat 发送开始, sessionId={}, contentLength={}, noteScopeCount={}",
+                sessionId, normalizedContent.length(), noteScopeCount(noteIds));
         long startNanos = System.nanoTime();
 
         PendingChatContext pendingContext = transactionTemplate.execute(status ->
@@ -99,7 +107,7 @@ public class ChatService {
                     pendingContext.session().getId(),
                     pendingContext.userMessage().getId(),
                     HISTORY_LIMIT);
-            List<RetrievedChunk> rerankedSources = queryService.querySources(normalizedContent);
+            List<RetrievedChunk> rerankedSources = querySources(normalizedContent, noteIds);
             log.info("Chat 候选 source chunkIds, sessionId={}, userMessageId={}, sourceCount={}, chunkIds={}",
                     pendingContext.session().getId(),
                     pendingContext.userMessage().getId(),
@@ -175,6 +183,23 @@ public class ChatService {
                     .add(source.toRetrievedChunk());
         }
         return sourcesByMessageId;
+    }
+
+    /**
+     * 按可选 note 范围查询本轮候选 sources。
+     */
+    private List<RetrievedChunk> querySources(String question, List<Long> noteIds) {
+        if (noteIds == null) {
+            return queryService.querySources(question);
+        }
+        return queryService.querySources(question, noteIds);
+    }
+
+    /**
+     * 统计本轮请求传入的 note scope 数量，实际清理由 RetrievalService 完成。
+     */
+    private int noteScopeCount(List<Long> noteIds) {
+        return noteIds == null ? 0 : noteIds.size();
     }
 
     /**

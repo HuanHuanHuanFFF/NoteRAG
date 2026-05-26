@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -165,6 +166,26 @@ class ChatServiceTests {
         verify(queryService).querySources("continue");
         verify(chatPromptBuilder).build(any(), eq("continue"), eq(rerankedSources));
         verify(llmClient).chat(prompt);
+    }
+
+    @Test
+    void sendMessagePassesNoteIdsToQuerySources() {
+        ChatSession existingSession = new ChatSession(5L, "Old title", ChatSessionStatus.ACTIVE, null, null, null);
+        List<Long> noteIds = List.of(1L, 2L);
+        when(chatSessionMapper.findById(5L)).thenReturn(existingSession);
+        mockMessageInsert(211L, 212L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(5L, 211L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(301L, 31L, "Java", "JVM", "gc", 0.77));
+        when(queryService.querySources("continue", noteIds)).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("continue"), eq(rerankedSources))).thenReturn(prompt);
+        when(llmClient.chat(prompt)).thenReturn("answer" + CitationMarkers.format(31L));
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+
+        chatService.sendMessage(5L, " continue ", noteIds);
+
+        verify(queryService).querySources(eq("continue"), same(noteIds));
     }
 
     @Test

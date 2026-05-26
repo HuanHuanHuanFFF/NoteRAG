@@ -2,6 +2,7 @@ package com.huanf.noterag.controller;
 
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -55,7 +56,7 @@ class RetrievalSearchControllerIntegrationTests {
 
     @Test
     void searchWrapsRetrievedSources() throws Exception {
-        when(retrievalService.retrieveTopN("JVM GC 是什么?", 5))
+        when(retrievalService.retrieveTopN("JVM GC 是什么?", 5, List.of(1L, 2L)))
                 .thenReturn(List.of(new RetrievedChunk(
                         1L,
                         11L,
@@ -69,7 +70,8 @@ class RetrievalSearchControllerIntegrationTests {
                         .content("""
                                 {
                                   "question": "JVM GC 是什么?",
-                                  "topN": 5
+                                  "topN": 5,
+                                  "noteIds": [1, 2]
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -82,12 +84,12 @@ class RetrievalSearchControllerIntegrationTests {
                 .andExpect(jsonPath("$.data.sources[0].content").value("GC notes"))
                 .andExpect(jsonPath("$.data.sources[0].score").value(0.87));
 
-        verify(retrievalService).retrieveTopN(eq("JVM GC 是什么?"), eq(5));
+        verify(retrievalService).retrieveTopN(eq("JVM GC 是什么?"), eq(5), eq(List.of(1L, 2L)));
     }
 
     @Test
     void searchUsesConfiguredDefaultTopNWhenRequestOmitsTopN() throws Exception {
-        when(retrievalService.retrieveTopN("JVM GC 是什么?")).thenReturn(List.of());
+        when(retrievalService.retrieveTopN("JVM GC 是什么?", null)).thenReturn(List.of());
 
         mockMvc.perform(post("/api/retrieval/search")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -99,7 +101,7 @@ class RetrievalSearchControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sources").isArray());
 
-        verify(retrievalService).retrieveTopN(eq("JVM GC 是什么?"));
+        verify(retrievalService).retrieveTopN(eq("JVM GC 是什么?"), isNull());
     }
 
     @Test
@@ -135,8 +137,37 @@ class RetrievalSearchControllerIntegrationTests {
     }
 
     @Test
+    void searchRejectsTooManyNoteIds() throws Exception {
+        mockMvc.perform(post("/api/retrieval/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "question": "JVM GC 是什么?",
+                                  "topN": 5,
+                                  "noteIds": [
+                                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+                                    11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+                                    21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+                                    31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+                                    41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+                                    51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+                                    61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+                                    71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+                                    81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+                                    91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
+                                    101
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(40001))
+                .andExpect(jsonPath("$.message").isString())
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
     void searchWrapsBusinessException() throws Exception {
-        when(retrievalService.retrieveTopN("JVM GC 是什么?", 99))
+        when(retrievalService.retrieveTopN("JVM GC 是什么?", 99, null))
                 .thenThrow(new BusinessException(CodeStatus.INVALID_REQUEST, "topN must not be greater than 50"));
 
         mockMvc.perform(post("/api/retrieval/search")
