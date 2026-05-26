@@ -90,6 +90,7 @@ let healthCheckTimer: number | null = null;
 
 const loadedNoteDetailIds = new Set<number>();
 const loadingMessageSessionIds = ref<Set<number>>(new Set());
+const submittingSessionIds = ref<Set<string>>(new Set());
 
 const activeSession = computed<ChatSession | null>(
   () => sessions.value.find((s) => s.id === activeSessionId.value) ?? null
@@ -100,7 +101,7 @@ const activeSessionSubmitting = computed(() => {
   const session = activeSession.value;
   if (!session) return false;
   return (
-    session.turns.some((turn) => turn.loading) ||
+    submittingSessionIds.value.has(session.id) ||
     (session.backendSessionId != null && loadingMessageSessionIds.value.has(session.backendSessionId))
   );
 });
@@ -390,6 +391,16 @@ function setSessionMessagesLoading(sessionId: number, loading: boolean) {
   loadingMessageSessionIds.value = next;
 }
 
+function setSessionSubmitting(sessionId: string, submitting: boolean) {
+  const next = new Set(submittingSessionIds.value);
+  if (submitting) {
+    next.add(sessionId);
+  } else {
+    next.delete(sessionId);
+  }
+  submittingSessionIds.value = next;
+}
+
 function toHistoryTurns(messages: ChatHistoryMessageResponse[]): ChatTurn[] {
   const turns: ChatTurn[] = [];
   for (const message of [...messages].sort(compareHistoryMessages)) {
@@ -632,6 +643,7 @@ async function confirmDeleteSession() {
 function removeSessionLocally(id: string) {
   const wasActive = activeSessionId.value === id;
   sessions.value = sessions.value.filter((session) => session.id !== id);
+  setSessionSubmitting(id, false);
 
   if (!wasActive) return;
   closeSources();
@@ -652,6 +664,7 @@ async function handleSubmit(question: string) {
   if (sessionsLoading.value) return;
   const session = activeSession.value ?? createSessionInternal();
   activeSessionId.value = session.id;
+  if (submittingSessionIds.value.has(session.id)) return;
   const noteIds = selectedNoteIdList.value.length > 0 ? selectedNoteIdList.value : undefined;
   const turn: ChatTurn = {
     id: ++nextTurnId,
@@ -661,6 +674,7 @@ async function handleSubmit(question: string) {
     loading: true,
   };
   session.turns.push(turn);
+  setSessionSubmitting(session.id, true);
 
   try {
     const response =
@@ -683,6 +697,7 @@ async function handleSubmit(question: string) {
     turn.pending = false;
   } finally {
     turn.loading = false;
+    setSessionSubmitting(session.id, false);
   }
 }
 
