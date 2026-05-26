@@ -46,7 +46,7 @@ import com.huanf.noterag.util.EstimatedTokenCounter;
         "spring.ai.model.audio.transcription=none",
         "spring.ai.model.moderation=none"
 })
-class NoteImportServiceIntegrationTests {
+class NoteServiceIntegrationTests {
 
     @MockitoBean
     private EmbeddingModel embeddingModel;
@@ -55,7 +55,7 @@ class NoteImportServiceIntegrationTests {
     private NoteEmbeddingService noteEmbeddingService;
 
     @Autowired
-    private NoteImportService noteImportService;
+    private NoteService noteService;
 
     @Autowired
     private NoteMapper noteMapper;
@@ -85,7 +85,7 @@ class NoteImportServiceIntegrationTests {
                 """;
         String normalizedContent = rawContent.replace("\r\n", "\n").replace('\r', '\n');
 
-        ImportTextResponse response = noteImportService.importText(new ImportTextRequest("  Java Guide  ", rawContent));
+        ImportTextResponse response = noteService.importText(new ImportTextRequest("  Java Guide  ", rawContent));
 
         assertThat(response.getDocumentId()).isNotNull();
         assertThat(response.getChunkCount()).isEqualTo(2);
@@ -128,7 +128,7 @@ class NoteImportServiceIntegrationTests {
 
     @Test
     void importTextRejectsBlankTitleAfterNormalization() {
-        assertThatThrownBy(() -> noteImportService.importText(new ImportTextRequest("   ", "# Java\n\nnotes")))
+        assertThatThrownBy(() -> noteService.importText(new ImportTextRequest("   ", "# Java\n\nnotes")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("title must not be blank");
     }
@@ -140,7 +140,7 @@ class NoteImportServiceIntegrationTests {
                 "embedding failed");
         when(noteEmbeddingService.embedAndStore(any(), any())).thenThrow(embeddingException);
 
-        assertThatThrownBy(() -> noteImportService.importText(new ImportTextRequest(
+        assertThatThrownBy(() -> noteService.importText(new ImportTextRequest(
                 "Embedding Failure",
                 "# Java\n\nJava notes.")))
                 .isSameAs(embeddingException);
@@ -162,7 +162,7 @@ class NoteImportServiceIntegrationTests {
     void importTextRollsBackNoteWhenChunkInsertReturningDoesNotReturnSavedChunks() {
         doReturn(List.of()).when(noteChunkMapper).batchInsertReturning(any());
 
-        assertThatThrownBy(() -> noteImportService.importText(new ImportTextRequest(
+        assertThatThrownBy(() -> noteService.importText(new ImportTextRequest(
                 "Broken Returning",
                 "# Java\n\nJava notes.")))
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {

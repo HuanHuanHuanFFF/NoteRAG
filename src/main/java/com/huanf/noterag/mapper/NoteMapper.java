@@ -1,5 +1,7 @@
 package com.huanf.noterag.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -7,10 +9,17 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import com.huanf.noterag.entity.Note;
+import com.huanf.noterag.model.NoteListItem;
 
+/**
+ * Note 数据持久化。
+ */
 @Mapper
 public interface NoteMapper {
 
+    /**
+     * 插入 note 并返回主键。
+     */
     @Insert("""
             INSERT INTO notes (title, content, char_count, token_count)
             VALUES (#{title}, #{content}, #{charCount}, #{tokenCount})
@@ -18,6 +27,9 @@ public interface NoteMapper {
     @Options(useGeneratedKeys = true, keyProperty = "id", keyColumn = "id")
     int insert(Note note);
 
+    /**
+     * 按主键查询 note。
+     */
     @Select("""
             SELECT id,
                    title,
@@ -30,4 +42,21 @@ public interface NoteMapper {
             WHERE id = #{id}
             """)
     Note findById(@Param("id") Long id);
+
+    /**
+     * 查询笔记列表所需的摘要信息，按创建时间倒序返回。
+     */
+    @Select("""
+            SELECT n.id,
+                   n.title,
+                   n.char_count AS charCount,
+                   n.token_count AS tokenCount,
+                   CAST(COUNT(nc.id) AS INTEGER) AS chunkCount,
+                   n.created_at AS createdAt
+            FROM notes n
+            LEFT JOIN note_chunks nc ON nc.note_id = n.id
+            GROUP BY n.id, n.title, n.char_count, n.token_count, n.created_at
+            ORDER BY n.created_at DESC, n.id DESC
+            """)
+    List<NoteListItem> findSummaries();
 }

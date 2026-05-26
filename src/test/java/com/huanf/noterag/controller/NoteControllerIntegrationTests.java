@@ -44,7 +44,7 @@ import com.huanf.noterag.service.NoteEmbeddingService;
         "spring.ai.model.audio.transcription=none",
         "spring.ai.model.moderation=none"
 })
-class NoteImportControllerIntegrationTests {
+class NoteControllerIntegrationTests {
 
     @MockitoBean
     private EmbeddingModel embeddingModel;
@@ -100,6 +100,37 @@ class NoteImportControllerIntegrationTests {
                 .andExpect(jsonPath("$.code").value(40001))
                 .andExpect(jsonPath("$.message").isString())
                 .andExpect(jsonPath("$.data").value(Matchers.nullValue()));
+    }
+
+    @Test
+    void listNotesReturnsBasicNoteInfoWithChunkCount() throws Exception {
+        insertNote(1001L, "Read API", "# Read API", 10, 5);
+        insertChunk(1001L, 0, "Intro", "first chunk", 11, 6);
+        insertChunk(1001L, 1, "Detail", "second chunk", 12, 7);
+
+        mockMvc.perform(get("/api/notes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.notes[?(@.id == 1001)].title").value(Matchers.contains("Read API")))
+                .andExpect(jsonPath("$.data.notes[?(@.id == 1001)].charCount").value(Matchers.contains(10)))
+                .andExpect(jsonPath("$.data.notes[?(@.id == 1001)].tokenCount").value(Matchers.contains(5)))
+                .andExpect(jsonPath("$.data.notes[?(@.id == 1001)].chunkCount").value(Matchers.contains(2)))
+                .andExpect(jsonPath("$.data.notes[?(@.id == 1001)].createdAt").isNotEmpty());
+    }
+
+    @Test
+    void getNoteDetailReturnsOriginalContent() throws Exception {
+        insertNote(1002L, "Detail API", "# Detail API\n\ncontent", 21, 9);
+
+        mockMvc.perform(get("/api/notes/1002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id").value(1002))
+                .andExpect(jsonPath("$.data.title").value("Detail API"))
+                .andExpect(jsonPath("$.data.content").value("# Detail API\n\ncontent"))
+                .andExpect(jsonPath("$.data.charCount").value(21))
+                .andExpect(jsonPath("$.data.tokenCount").value(9))
+                .andExpect(jsonPath("$.data.createdAt").isString());
     }
 
     @Test
@@ -191,6 +222,20 @@ class NoteImportControllerIntegrationTests {
             chunk.setTokenCount(rs.getInt("token_count"));
             chunk.setCreatedAt(rs.getTimestamp("created_at").toInstant());
             return chunk;
-        }, chunks.get(0).getNoteId());
+                }, chunks.get(0).getNoteId());
+    }
+
+    private void insertNote(Long id, String title, String content, int charCount, int tokenCount) {
+        jdbcTemplate.update("""
+                INSERT INTO notes (id, title, content, char_count, token_count)
+                VALUES (?, ?, ?, ?, ?)
+                """, id, title, content, charCount, tokenCount);
+    }
+
+    private void insertChunk(Long noteId, int chunkIndex, String headingPath, String content, int charCount, int tokenCount) {
+        jdbcTemplate.update("""
+                INSERT INTO note_chunks (note_id, chunk_index, heading_path, content, char_count, token_count)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, noteId, chunkIndex, headingPath, content, charCount, tokenCount);
     }
 }

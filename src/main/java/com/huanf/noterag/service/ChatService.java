@@ -21,6 +21,8 @@ import com.huanf.noterag.entity.ChatMessage;
 import com.huanf.noterag.entity.ChatMessageRole;
 import com.huanf.noterag.entity.ChatMessageSource;
 import com.huanf.noterag.entity.ChatMessageStatus;
+import com.huanf.noterag.model.ChatMessageSourceChunk;
+import com.huanf.noterag.model.ChatMessageWithSources;
 import com.huanf.noterag.model.ChatResult;
 import com.huanf.noterag.entity.ChatSession;
 import com.huanf.noterag.entity.ChatSessionStatus;
@@ -46,7 +48,6 @@ public class ChatService {
     static final String ERROR_CODE_LLM_FAILED = "LLM_FAILED";
     static final String ERROR_CODE_LLM_RESULT_INVALID = "LLM_RESULT_INVALID";
     static final String ERROR_CODE_CHAT_FAILED = "CHAT_FAILED";
-    static final String ERROR_CODE_SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
     static final String UNABLE_TO_ANSWER = "根据当前笔记内容无法确定";
 
     private final ChatSessionMapper chatSessionMapper;
@@ -131,6 +132,49 @@ public class ChatService {
             markAssistantFailed(pendingContext.assistantMessage().getId(), ERROR_CODE_LLM_FAILED);
             throw exception;
         }
+    }
+
+    /**
+     * 查询所有 chat 会话，用于前端恢复会话列表。
+     */
+    public List<ChatSession> listSessions() {
+        return chatSessionMapper.findAll();
+    }
+
+    /**
+     * 查询指定会话的消息历史，并为 assistant 消息组装已落库的引用来源。
+     */
+    public List<ChatMessageWithSources> listMessages(Long sessionId) {
+        requireExistingSession(sessionId);
+        List<ChatMessage> messages = chatMessageMapper.findBySessionId(sessionId);
+        List<Long> assistantMessageIds = messages.stream()
+                .filter(message -> message.getRole() == ChatMessageRole.ASSISTANT)
+                .map(ChatMessage::getId)
+                .toList();
+
+        Map<Long, List<RetrievedChunk>> sourcesByMessageId = loadSourcesByMessageId(assistantMessageIds);
+        return messages.stream()
+                .map(message -> new ChatMessageWithSources(
+                        message,
+                        sourcesByMessageId.getOrDefault(message.getId(), List.of())))
+                .toList();
+    }
+
+    /**
+     * 按 assistant messageId 批量加载已持久化的引用来源，并组装成消息到 sources 的映射。
+     */
+    private Map<Long, List<RetrievedChunk>> loadSourcesByMessageId(List<Long> messageIds) {
+        Map<Long, List<RetrievedChunk>> sourcesByMessageId = new LinkedHashMap<>();
+        if (messageIds.isEmpty()) {
+            return sourcesByMessageId;
+        }
+        List<ChatMessageSourceChunk> chunksByMessageIds = chatMessageSourceMapper.findSourceChunksByMessageIds(messageIds);
+        for (ChatMessageSourceChunk source : chunksByMessageIds) {
+            sourcesByMessageId
+                    .computeIfAbsent(source.getMessageId(), ignored -> new ArrayList<>())
+                    .add(source.toRetrievedChunk());
+        }
+        return sourcesByMessageId;
     }
 
     /**
@@ -244,6 +288,9 @@ public class ChatService {
         return citedSources;
     }
 
+    /**
+     * 将候选 chunkId 压成单行日志文本，避免 INFO 日志输出完整 chunk 内容。
+     */
     private String formatChunkIdsForLog(List<RetrievedChunk> sources) {
         return sources.stream()
                 .map(RetrievedChunk::getChunkId)

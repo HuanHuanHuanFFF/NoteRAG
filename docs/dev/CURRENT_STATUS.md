@@ -1,6 +1,6 @@
 # NoteRAG 当前开发状态
 
-更新时间：2026-05-22
+更新时间：2026-05-26
 
 这份文档用于换电脑后通过 Git 恢复开发上下文。它描述当前主线状态、开发数据库快照、恢复步骤和下一步工作重点。
 
@@ -16,6 +16,8 @@ Markdown import -> chunking -> token estimate -> embedding -> pgvector storage -
 
 ```text
 8560d88 docs(dev): 记录前端后续事项
+817314c fix(frontend): 取消文本引用高亮
+c006195 feat(frontend): 支持选择 Markdown 文件导入
 971aaee feat(frontend): 接入同步聊天接口
 033bed5 fix(prompt): 优化聊天引用提示词
 d03d851 fix(chat): 允许回答不引用来源
@@ -25,6 +27,7 @@ d03d851 fix(chat): 允许回答不引用来源
 
 ```text
 docs/dev/CURRENT_STATUS.md
+docs/dev/FRONTEND_TODO.md
 docs/dev/db/noterag-dev-db-20260521.dump
 ```
 
@@ -33,6 +36,7 @@ docs/dev/db/noterag-dev-db-20260521.dump
 ## 已完成能力
 
 - Markdown 文本导入：`POST /api/note-imports/text`
+- Note 读取接口：`GET /api/notes`、`GET /api/notes/{noteId}`，用于前端笔记列表和原文详情。
 - 自定义 Markdown chunk：按标题 section 分组，保留 `headingPath`，估算 token，支持 overlap。
 - Embedding：通过 Spring AI 接入 OpenAI-compatible 接口，当前本地配置使用 DashScope。
 - 向量存储：PostgreSQL + pgvector，当前向量表为 `chunk_embeddings_1024`。
@@ -40,6 +44,7 @@ docs/dev/db/noterag-dev-db-20260521.dump
 - Rerank：接入 DashScope `qwen3-rerank`，默认从 retrieval top20 中重排到 top8。
 - Query 调试接口：`POST /api/query`，当前只返回 rerank 后的 `sources`，不再生成 answer。
 - Chat 主链路：已经支持同步单会话问答、历史消息入库、LLM 调用、引用解析和 sources 回写。
+- Chat 读取接口：`GET /api/chat-sessions`、`GET /api/chat-sessions/{sessionId}/messages`，用于会话列表和历史消息恢复。
 - 前端主 Q&A：已经从 mock answer 切到同步 chat API，可用来调试真实 LLM answer 和 citation sources。
 
 ## 当前 API
@@ -47,23 +52,31 @@ docs/dev/db/noterag-dev-db-20260521.dump
 ```text
 GET  /api/health
 POST /api/note-imports/text
+GET  /api/notes
+GET  /api/notes/{noteId}
 POST /api/retrieval/search
 POST /api/query
 POST /api/chat-sessions
 POST /api/chat-sessions/{sessionId}/messages
+GET  /api/chat-sessions
+GET  /api/chat-sessions/{sessionId}/messages
 ```
 
 接口定位：
 
+- `/api/notes`：前端笔记列表接口，返回基础统计和 chunk 数。
+- `/api/notes/{noteId}`：前端笔记详情接口，返回原始 Markdown 内容。
 - `/api/retrieval/search`：开发期检索调试接口。
 - `/api/query`：开发期 query sources 调试接口，只做 retrieval + rerank。
 - `/api/chat-sessions`：创建会话并发送第一条消息。
 - `/api/chat-sessions/{sessionId}/messages`：在已有会话中继续发送消息。
+- `GET /api/chat-sessions`：读取历史会话列表。
+- `GET /api/chat-sessions/{sessionId}/messages`：读取单个会话的历史消息和 assistant sources。
 
 ## 当前包结构
 
 - `controller/`：HTTP 边界，只接收请求并返回 DTO。
-- `service/`：业务编排，核心是 `NoteImportService`、`QueryService`、`ChatService`。
+- `service/`：业务编排，核心是 `NoteService`、`QueryService`、`ChatService`。
 - `chunk/`：Markdown 解析、section 分组、chunk 组装。
 - `client/`：Embedding、Rerank、LLM 外部 API 适配。
 - `entity/`：数据库实体，例如 `Note`、`NoteChunk`、`ChatSession`、`ChatMessage`。
@@ -115,8 +128,10 @@ POST /api/chat-sessions/{sessionId}/messages
 - 单个前端会话中只允许一个请求进行中，避免首条消息未返回时创建多个后端 session。
 - 成功后回填 `sessionTitle`、`userMessageId`、`assistantMessageId`、`answer`、`sources`。
 - 失败时只在当前 turn 上展示错误，不提前写入后端 session id。
-- 左侧 Notes 仍是 mock notes，chat 请求暂时不携带 note scope，顶部只显示跨全部笔记检索。
-- 刷新页面后前端本地会话会丢失，因为还没有会话列表和历史消息接口。
+- 导入弹窗已支持选择 `.md/.markdown` 文件，前端读取文件内容并用文件名生成可编辑标题，仍复用 `POST /api/note-imports/text`。
+- 左侧 Notes 仍未正式接入后端 `GET /api/notes`，chat 请求暂时不携带 note scope，顶部只显示跨全部笔记检索。
+- 后端已提供会话列表和历史消息接口，但前端尚未接入刷新后的历史恢复。
+- API client 已统一处理请求超时、fetch 网络错误、HTTP 错误、业务错误和 JSON 解析错误。
 
 ## 开发数据库快照
 
@@ -172,7 +187,7 @@ docker logs -f noterag-app
 - 调整后的 `ChatPromptBuilder` 明显改善了 citation marker 输出，但仍需要继续用真实前端交互观察。
 - 后端会根据 citation marker 过滤 sources；如果 LLM 没有标记，允许返回 answer，但 `sources=[]`。
 - 当前 citation marker 仍使用真实 `chunkId`，后续如果稳定性仍不够，可考虑改成 prompt 内局部 source 编号，再在后端映射回真实 chunkId。
-- 前端 API client 还没有统一请求超时；后端未启动或网络异常时，可能需要等浏览器 fetch 自己失败。
+- 前端还没有接入后端 notes 列表、note 详情、会话列表和历史消息恢复接口。
 
 暂时不是重点：
 
@@ -189,18 +204,23 @@ docker logs -f noterag-app
 
 优先顺序：
 
-1. 用前端主 Q&A 真实测试同步 chat，重点观察 answer、citation marker、sources panel 是否一致。
-2. 如果 citation 仍不稳定，优先考虑局部 source 编号方案，而不是继续堆长提示词。
-3. 补 API client 请求超时和网络错误包装，避免页面长时间 loading。
+1. 前端接入 `GET /api/notes`、`GET /api/notes/{noteId}`、`GET /api/chat-sessions`、`GET /api/chat-sessions/{sessionId}/messages`，恢复真实笔记列表和历史会话。
+2. 用前端主 Q&A 继续真实测试同步 chat，重点观察 answer、citation marker、sources panel 是否一致。
+3. 如果 citation 仍不稳定，优先考虑局部 source 编号方案，而不是继续堆长提示词。
 4. Chat 同步接口稳定后，再做 SSE 流式返回。
-5. SSE 后再做会话列表、历史消息查询、多会话切换。
+5. SSE 后再做多会话切换体验和连续输入策略。
+
+入库优化 TODO：
+
+- Note 原文入库时的 token 统计改用 Spring AI 自带 token 计算，编码使用 `EncodingType.CL100K_BASE`，替代当前估算逻辑。
+- 增加一个全局视角 chunk：把 Note 标题和原文交给 LLM 总结，将总结结果作为独立 chunk 做 embedding 并入库，用于补充全文级召回；具体边界和生成策略等实现前再确认。
 
 ## 常用命令
 
 运行后端测试：
 
 ```powershell
-.\mvnw.cmd -q "-Dtest=ChatServiceTests,ChatControllerIntegrationTests,ChatPromptBuilderTests" test
+.\mvnw.cmd -q "-Dtest=ChatServiceTests,ChatControllerIntegrationTests,NoteServiceIntegrationTests,NoteControllerIntegrationTests" test
 ```
 
 全量测试：

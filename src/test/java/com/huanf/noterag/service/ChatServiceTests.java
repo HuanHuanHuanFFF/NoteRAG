@@ -14,6 +14,8 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 
 import com.huanf.noterag.entity.ChatMessageSource;
+import com.huanf.noterag.model.ChatMessageSourceChunk;
+import com.huanf.noterag.model.ChatMessageWithSources;
 import com.huanf.noterag.model.ChatResult;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -275,6 +277,40 @@ class ChatServiceTests {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.NOT_FOUND);
                     assertThat(exception).hasMessage("chat session not found");
                 });
+    }
+
+    @Test
+    void listSessionsReturnsMapperResults() {
+        List<ChatSession> sessions = List.of(
+                new ChatSession(1L, "first", ChatSessionStatus.ACTIVE, null, null, null),
+                new ChatSession(2L, "second", ChatSessionStatus.ACTIVE, null, null, null));
+        when(chatSessionMapper.findAll()).thenReturn(sessions);
+
+        assertThat(chatService.listSessions()).isSameAs(sessions);
+    }
+
+    @Test
+    void listMessagesReturnsMessagesWithAssistantSources() {
+        ChatSession existingSession = new ChatSession(5L, "title", ChatSessionStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(5L)).thenReturn(existingSession);
+        ChatMessage userMessage = new ChatMessage(
+                10L, 5L, ChatMessageRole.USER, "question", ChatMessageStatus.COMPLETED, null, 8, null, null);
+        ChatMessage assistantMessage = new ChatMessage(
+                11L, 5L, ChatMessageRole.ASSISTANT, "answer", ChatMessageStatus.COMPLETED, null, 6, null, null);
+        when(chatMessageMapper.findBySessionId(5L)).thenReturn(List.of(userMessage, assistantMessage));
+        when(chatMessageSourceMapper.findSourceChunksByMessageIds(List.of(11L))).thenReturn(List.of(
+                new ChatMessageSourceChunk(11L, 101L, 201L, "MySQL", "Tx > MVCC", "undo log", 0.91),
+                new ChatMessageSourceChunk(11L, 101L, 202L, "MySQL", "Tx > MVCC", "read view", 0.82)));
+
+        List<ChatMessageWithSources> messages = chatService.listMessages(5L);
+
+        assertThat(messages).hasSize(2);
+        assertThat(messages.get(0).getMessage().getId()).isEqualTo(10L);
+        assertThat(messages.get(0).getSources()).isEmpty();
+        assertThat(messages.get(1).getMessage().getId()).isEqualTo(11L);
+        assertThat(messages.get(1).getSources())
+                .extracting(RetrievedChunk::getChunkId)
+                .containsExactly(201L, 202L);
     }
 
     private void mockSessionInsert(Long sessionId) {

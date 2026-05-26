@@ -1,6 +1,7 @@
 package com.huanf.noterag.mapper;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -39,6 +40,23 @@ public interface ChatSessionMapper {
             WHERE id = #{id}
             """)
     ChatSession findById(@Param("id") Long id);
+
+    /**
+     * 查询所有 chat 会话，按最近活跃时间倒序排列。
+     */
+    @Select("""
+            SELECT id,
+                   title,
+                   status,
+                   created_at AS createdAt,
+                   updated_at AS updatedAt,
+                   last_message_at AS lastMessageAt
+            FROM chat_sessions
+            ORDER BY last_message_at DESC NULLS LAST,
+                     updated_at DESC,
+                     id DESC
+            """)
+    List<ChatSession> findAll();
 
     /**
      * 更新会话标题。

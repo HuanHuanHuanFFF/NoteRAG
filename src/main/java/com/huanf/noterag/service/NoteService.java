@@ -17,11 +17,15 @@ import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
 import com.huanf.noterag.entity.Note;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.model.NoteListItem;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
+/**
+ * Note 导入与查询编排服务。
+ */
 @Slf4j
 @Service
-public class NoteImportService {
+public class NoteService {
 
     private final NoteMapper noteMapper;
     private final NoteChunkMapper noteChunkMapper;
@@ -29,7 +33,7 @@ public class NoteImportService {
     private final NoteEmbeddingService noteEmbeddingService;
     private final TransactionTemplate transactionTemplate;
 
-    public NoteImportService(
+    public NoteService(
             NoteMapper noteMapper,
             NoteChunkMapper noteChunkMapper,
             MarkdownChunkTransformer markdownChunkTransformer,
@@ -69,6 +73,27 @@ public class NoteImportService {
         return new ImportTextResponse(savedChunks.noteId(), savedChunks.chunks().size(), charCount, tokenCount);
     }
 
+    /**
+     * 查询前端左侧笔记列表所需的基础信息。
+     */
+    public List<NoteListItem> listNotes() {
+        return noteMapper.findSummaries();
+    }
+
+    /**
+     * 查询单篇笔记原文详情。
+     */
+    public Note getNoteDetail(Long noteId) {
+        Note note = noteMapper.findById(noteId);
+        if (note == null) {
+            throw new BusinessException(CodeStatus.DOCUMENT_NOT_FOUND, "note not found");
+        }
+        return note;
+    }
+
+    /**
+     * 在导入事务内保存 note 原文和切块结果。
+     */
     private SavedChunks saveNoteAndChunks(String title, String content, int charCount, int tokenCount) {
         Note note = new Note();
         note.setTitle(title);
@@ -97,6 +122,9 @@ public class NoteImportService {
         return new SavedChunks(note.getId(), savedChunks);
     }
 
+    /**
+     * 校验批量插入后的 chunk 数量和主键回填结果。
+     */
     private void validateSavedChunks(List<NoteChunk> chunks, List<NoteChunk> savedChunks) {
         if (savedChunks == null || savedChunks.size() != chunks.size()) {
             throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID,
@@ -127,6 +155,9 @@ public class NoteImportService {
         return noteChunk;
     }
 
+    /**
+     * 从 chunk metadata 读取 long 类型字段。
+     */
     private Long readLongMetadata(Map<String, Object> metadata, String key) {
         Object value = metadata.get(key);
         if (value instanceof Number number) {
@@ -135,6 +166,9 @@ public class NoteImportService {
         throw new IllegalStateException("Missing long metadata: " + key);
     }
 
+    /**
+     * 从 chunk metadata 读取 integer 类型字段。
+     */
     private Integer readIntegerMetadata(Map<String, Object> metadata, String key) {
         Object value = metadata.get(key);
         if (value instanceof Number number) {
@@ -143,6 +177,9 @@ public class NoteImportService {
         throw new IllegalStateException("Missing integer metadata: " + key);
     }
 
+    /**
+     * 规范化导入标题，并拒绝空标题。
+     */
     private String normalizeTitle(String title) {
         if (title == null) {
             throw new IllegalArgumentException("title must not be null");
@@ -154,6 +191,9 @@ public class NoteImportService {
         return normalized;
     }
 
+    /**
+     * 规范化导入内容换行，并拒绝空白内容。
+     */
     private String normalizeContent(String content) {
         if (content == null) {
             throw new IllegalArgumentException("content must not be null");
