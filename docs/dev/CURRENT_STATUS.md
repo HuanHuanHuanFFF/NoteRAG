@@ -1,8 +1,8 @@
 # NoteRAG 当前开发状态
 
-更新时间：2026-05-26
+更新时间：2026-05-27
 
-这份文档用于换电脑后通过 Git 恢复开发上下文。它描述当前主线状态、开发数据库快照、恢复步骤和下一步工作重点。
+这份文档用于换电脑后通过 Git 恢复开发上下文。它描述当前主线状态、恢复步骤和下一步工作重点。
 
 ## 快照说明
 
@@ -15,20 +15,19 @@ Markdown import -> chunking -> token estimate -> embedding -> pgvector storage -
 编写本文档时，`master` 已同步到远端，最近关键提交包括：
 
 ```text
-8560d88 docs(dev): 记录前端后续事项
-817314c fix(frontend): 取消文本引用高亮
-c006195 feat(frontend): 支持选择 Markdown 文件导入
-971aaee feat(frontend): 接入同步聊天接口
-033bed5 fix(prompt): 优化聊天引用提示词
-d03d851 fix(chat): 允许回答不引用来源
+2c25a49 refactor(frontend): 拆分工作区页面状态逻辑
+d84a378 fix(frontend): 修复会话输入框禁用状态
+5d2d75b feat(frontend): 接入笔记和会话管理
+93bae04 feat(chat): 支持笔记归档和会话管理
+617fb98 feat(retrieval): 支持按笔记范围检索
+f917b13 feat(chat): 增加会话历史和笔记读取接口
 ```
 
-当前新增的开发快照文件：
+当前主要开发状态文件：
 
 ```text
 docs/dev/CURRENT_STATUS.md
 docs/dev/FRONTEND_TODO.md
-docs/dev/db/noterag-dev-db-20260521.dump
 ```
 
 `.env` 不提交，需要手动拷贝到新电脑项目根目录。
@@ -45,7 +44,11 @@ docs/dev/db/noterag-dev-db-20260521.dump
 - Query 调试接口：`POST /api/query`，当前只返回 rerank 后的 `sources`，不再生成 answer。
 - Chat 主链路：已经支持同步单会话问答、历史消息入库、LLM 调用、引用解析和 sources 回写。
 - Chat 读取接口：`GET /api/chat-sessions`、`GET /api/chat-sessions/{sessionId}/messages`，用于会话列表和历史消息恢复。
-- 前端主 Q&A：已经从 mock answer 切到同步 chat API，可用来调试真实 LLM answer 和 citation sources。
+- Note scope：chat、query、retrieval 调试接口都支持 `noteIds`，后端在 SQL 检索阶段过滤，前端已把选中笔记传给 chat 请求。
+- 软归档：Note 和 ChatSession 支持归档，归档后列表/detail/send/rename 等路径表现为不可见或 404。
+- Chat 会话管理：支持会话列表、历史消息恢复、重命名和归档删除。
+- 前端主 Q&A：已经从 mock answer 切到同步 chat API，并完成 notes、历史会话、sources、导入、删除/重命名等基础交互接入。
+- 前端工作台重构：`WorkspacePage.vue` 已拆出 composables，降低页面状态耦合；最近一次 build/test 已通过。
 
 ## 当前 API
 
@@ -54,24 +57,30 @@ GET  /api/health
 POST /api/note-imports/text
 GET  /api/notes
 GET  /api/notes/{noteId}
+DELETE /api/notes/{noteId}
 POST /api/retrieval/search
 POST /api/query
 POST /api/chat-sessions
 POST /api/chat-sessions/{sessionId}/messages
 GET  /api/chat-sessions
 GET  /api/chat-sessions/{sessionId}/messages
+PATCH /api/chat-sessions/{sessionId}
+DELETE /api/chat-sessions/{sessionId}
 ```
 
 接口定位：
 
 - `/api/notes`：前端笔记列表接口，返回基础统计和 chunk 数。
 - `/api/notes/{noteId}`：前端笔记详情接口，返回原始 Markdown 内容。
+- `DELETE /api/notes/{noteId}`：归档笔记，归档后前端列表和 detail 不再展示。
 - `/api/retrieval/search`：开发期检索调试接口。
 - `/api/query`：开发期 query sources 调试接口，只做 retrieval + rerank。
 - `/api/chat-sessions`：创建会话并发送第一条消息。
 - `/api/chat-sessions/{sessionId}/messages`：在已有会话中继续发送消息。
 - `GET /api/chat-sessions`：读取历史会话列表。
 - `GET /api/chat-sessions/{sessionId}/messages`：读取单个会话的历史消息和 assistant sources。
+- `PATCH /api/chat-sessions/{sessionId}`：重命名 ACTIVE 会话。
+- `DELETE /api/chat-sessions/{sessionId}`：归档 ACTIVE 会话。
 
 ## 当前包结构
 
@@ -88,7 +97,7 @@ GET  /api/chat-sessions/{sessionId}/messages
 
 ## Chat 当前链路
 
-`ChatService.sendMessage(sessionId, content)` 当前流程：
+`ChatService.sendMessage(sessionId, content, noteIds)` 当前流程：
 
 ```text
 创建或校验 chat_session
@@ -96,7 +105,7 @@ GET  /api/chat-sessions/{sessionId}/messages
 -> 写入 ASSISTANT PENDING
 -> 更新 session.last_message_at
 -> 读取最近历史消息
--> QueryService.querySources(question)
+-> QueryService.querySources(question, noteIds)
 -> ChatPromptBuilder.build(...)
 -> LlmClient.chat(...)
 -> AnswerCitationExtractor 解析引用
@@ -112,6 +121,7 @@ GET  /api/chat-sessions/{sessionId}/messages
 - LLM 不输出 citation marker 时允许成功返回，最终 `sources=[]`。
 - LLM 输出非法 marker 或引用不存在的 sourceId 时，返回 `LLM_RESULT_INVALID`。
 - 当前日志会在 INFO 打印候选 `chunkIds`，DEBUG 会打印 LLM 原始 answer。
+- `noteIds` 最大 100 个，由前端和后端 retrieval 层共同限制；空列表等价于全库检索。
 
 ## 前端当前状态
 
@@ -125,46 +135,33 @@ GET  /api/chat-sessions/{sessionId}/messages
 当前前端行为：
 
 - `ChatSession.id` 仍是前端本地 string，后端 ID 存在 `backendSessionId`。
-- 单个前端会话中只允许一个请求进行中，避免首条消息未返回时创建多个后端 session。
+- 页面初始化会加载真实 notes、历史会话和首个会话历史消息。
+- 切换历史会话时按需懒加载消息，assistant sources 会恢复到对应 turn。
+- 单个前端会话中只允许一个发送请求进行中，避免首条消息未返回时创建多个后端 session。
 - 成功后回填 `sessionTitle`、`userMessageId`、`assistantMessageId`、`answer`、`sources`。
-- 失败时只在当前 turn 上展示错误，不提前写入后端 session id。
+- 失败时只在当前 turn 上展示错误；首条消息只有成功返回后才写入 `backendSessionId`。
 - 导入弹窗已支持选择 `.md/.markdown` 文件，前端读取文件内容并用文件名生成可编辑标题，仍复用 `POST /api/note-imports/text`。
-- 左侧 Notes 仍未正式接入后端 `GET /api/notes`，chat 请求暂时不携带 note scope，顶部只显示跨全部笔记检索。
-- 后端已提供会话列表和历史消息接口，但前端尚未接入刷新后的历史恢复。
+- 左侧 Notes 已接入后端列表和详情接口，选中笔记会作为 `noteIds` 传给首条和后续 chat 请求。
+- Note 详情、Note 归档、ChatSession 重命名/归档已经接入后端。
+- Sources panel 继续保持 280ms 延迟加载、引用高亮/展开、关闭动画结束后清理数据。
+- `WorkspacePage.vue` 的 notes、sessions、submit、sources、health、resize 逻辑已拆入 `frontend/src/composables/*`。
 - API client 已统一处理请求超时、fetch 网络错误、HTTP 错误、业务错误和 JSON 解析错误。
 
-## 开发数据库快照
-
-数据库快照在：
-
-```text
-docs/dev/db/noterag-dev-db-20260521.dump
-```
-
-它只是开发快照，用于换电脑后快速恢复当前 notes、chunks、embeddings、chat 测试数据。它不是正式 migration，也不是生产备份。
-
-新电脑恢复步骤：
+## 新电脑恢复步骤
 
 ```powershell
 # 1. clone/pull 仓库后，把本机拷贝的 .env 放到项目根目录
 
-# 2. 启动 PostgreSQL
-docker compose up -d db
+# 2. 启动数据库和应用
+docker compose up -d --build
 
-# 3. 把开发数据库快照复制到容器
-docker cp .\docs\dev\db\noterag-dev-db-20260521.dump noterag-db:/tmp/noterag-dev-db.dump
-
-# 4. 恢复数据库
-docker compose exec -T db sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner /tmp/noterag-dev-db.dump'
-
-# 5. 启动后端应用
-docker compose up -d app
-
-# 6. 查看日志
+# 3. 查看日志
 docker logs -f noterag-app
 ```
 
-如果本地已有旧 volume，`pg_restore --clean --if-exists` 会尝试清理旧对象后恢复。若恢复过程因旧连接或旧表状态失败，最简单的开发处理方式是删除本地 NoteRAG Docker volume 后重新执行恢复。
+当前仓库不再保留开发数据库 dump。旧的 `docs/dev/db/noterag-dev-db-20260521.dump` 已删除，不要再依赖它恢复 notes、chunks、embeddings 或 chat 测试数据。新环境需要重新导入 Markdown，重新生成 embedding。
+
+如果本地已有旧 volume，init SQL 不会自动迁移已有表结构。开发环境最简单的处理方式是删除本地 NoteRAG Docker volume 后重新启动，再重新导入测试笔记。
 
 ## 本地配置说明
 
@@ -180,14 +177,16 @@ docker logs -f noterag-app
 
 ## 当前已知问题
 
-最需要继续观察的是 chat 的引用协议稳定性和前端真实链路体验。
+最需要继续观察的是 chat 的引用协议稳定性、SSE 改造后的流式状态，以及真实链路下的失败恢复体验。
 
 已观察到：
 
 - 调整后的 `ChatPromptBuilder` 明显改善了 citation marker 输出，但仍需要继续用真实前端交互观察。
 - 后端会根据 citation marker 过滤 sources；如果 LLM 没有标记，允许返回 answer，但 `sources=[]`。
 - 当前 citation marker 仍使用真实 `chunkId`，后续如果稳定性仍不够，可考虑改成 prompt 内局部 source 编号，再在后端映射回真实 chunkId。
-- 前端还没有接入后端 notes 列表、note 详情、会话列表和历史消息恢复接口。
+- 当前 chat 仍是同步 HTTP 返回，长回答需要等待完整 LLM 响应；下一步是 SSE 流式返回。
+- 失败重试、取消生成、连续输入和重新生成回答还没有完整产品化设计。
+- 数据库 init SQL 适合新库初始化，已有 Docker volume 不会自动迁移；上线前仍需要正式 migration 方案。
 
 暂时不是重点：
 
@@ -204,11 +203,11 @@ docker logs -f noterag-app
 
 优先顺序：
 
-1. 前端接入 `GET /api/notes`、`GET /api/notes/{noteId}`、`GET /api/chat-sessions`、`GET /api/chat-sessions/{sessionId}/messages`，恢复真实笔记列表和历史会话。
-2. 用前端主 Q&A 继续真实测试同步 chat，重点观察 answer、citation marker、sources panel 是否一致。
-3. 如果 citation 仍不稳定，优先考虑局部 source 编号方案，而不是继续堆长提示词。
-4. Chat 同步接口稳定后，再做 SSE 流式返回。
-5. SSE 后再做多会话切换体验和连续输入策略。
+1. 做 Chat SSE 流式返回，保留现有同步接口作为 debug/兜底路径。
+2. SSE 下补齐前端增量渲染、完成回填、错误事件、请求取消和失败状态展示。
+3. 用真实前端回归 `answer + sources`、citation marker、sources panel 和 note scope。
+4. 如果 citation 仍不稳定，优先考虑局部 source 编号方案，而不是继续堆长提示词。
+5. SSE 稳定后，再设计连续输入、停止生成、重新生成回答和更完整的消息级操作。
 
 入库优化 TODO：
 
@@ -265,6 +264,10 @@ src/main/java/com/huanf/noterag/service/RerankService.java
 src/test/java/com/huanf/noterag/service/ChatServiceTests.java
 src/test/java/com/huanf/noterag/prompt/ChatPromptBuilderTests.java
 frontend/src/views/WorkspacePage.vue
+frontend/src/composables/useChatSessions.ts
+frontend/src/composables/useChatSubmit.ts
+frontend/src/composables/useNotes.ts
+frontend/src/composables/useSourcesPanel.ts
 frontend/src/components/ChatPanel.vue
 frontend/src/api/noterag.ts
 src/test/http/chat.http
@@ -276,11 +279,11 @@ src/test/http/chat.http
 先阅读 AGENTS.md 和 docs/dev/CURRENT_STATUS.md，了解当前 NoteRAG 开发状态。
 不要先改代码。
 重点检查当前 chat 主链路、prompt 构建、citation marker 解析、sources 过滤逻辑和前端同步 chat API 对接。
-当前首要目标是用前端真实测试 /api/chat-sessions 返回的 answer 和 sources 是否一致。
+当前首要目标是设计并实现 Chat SSE 流式返回，同时保留同步接口作为 debug/兜底路径。
 不要引入用户系统、权限、多租户、PDF/Word、Redis/MQ、Agent workflow 或复杂前端。
 如果要修改文件，先说明会改哪些文件和原因。
 ```
 
 ## 当前判断
 
-当前项目已经跑通核心 RAG 闭环、同步单会话 chat 主链路，并且前端主 Q&A 已接入同步 chat API。短期最值得投入的是用真实前端交互验证 `answer + sources` 是否稳定；这个基础可靠后，再推进 SSE、会话列表和历史恢复。
+当前项目已经跑通核心 RAG 闭环、同步单会话 chat 主链路，并且前端主 Q&A 已接入 notes、历史会话、note scope、sources 和基础会话管理。短期最值得投入的是 Chat SSE 流式返回，以及 SSE 下的错误、取消、完成回填和 sources 一致性。
