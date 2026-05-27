@@ -10,6 +10,7 @@ import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.http.server.ServletServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * 自动将普通成功返回包装为统一响应体。
@@ -32,6 +33,7 @@ public class ApiResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             ServerHttpResponse response) {
         if (shouldSkip(request, response)
                 || body instanceof ApiBody<?>
+                || body instanceof SseEmitter
                 || body instanceof String
                 || body instanceof byte[]
                 || body instanceof Resource) {
@@ -45,9 +47,15 @@ public class ApiResponseBodyAdvice implements ResponseBodyAdvice<Object> {
             String path = servletRequest.getServletRequest().getRequestURI();
             return !path.startsWith("/api/")
                     || "/api/health".equals(path)
+                    || isEventStreamResponse(response)
                     || isNonSuccessResponse(response);
         }
         return true;
+    }
+
+    private boolean isEventStreamResponse(ServerHttpResponse response) {
+        return response.getHeaders().getContentType() != null
+                && MediaType.TEXT_EVENT_STREAM.isCompatibleWith(response.getHeaders().getContentType());
     }
 
     private boolean isNonSuccessResponse(ServerHttpResponse response) {

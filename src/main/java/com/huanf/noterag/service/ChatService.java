@@ -91,6 +91,30 @@ public class ChatService {
      * 发送一条限定笔记范围的 chat 消息并完成单轮非流式回答。
      */
     public ChatResult sendMessage(Long sessionId, String content, List<Long> noteIds) {
+        return executeMessage(sessionId, content, noteIds, null, false);
+    }
+
+    /**
+     * 发送一条限定笔记范围的 chat 消息并完成单轮流式回答。
+     */
+    public ChatResult streamMessage(Long sessionId, String content, List<Long> noteIds, StreamCallbacks callbacks) {
+        if (callbacks == null) {
+            throw new IllegalArgumentException("callbacks must not be null");
+        }
+        return executeMessage(sessionId, content, noteIds, callbacks, true);
+    }
+
+    /**
+     * 复用同步与 SSE 的 chat 主链路，只在 LLM 调用和事件回调处区分执行方式。
+     */
+    private ChatResult executeMessage(
+            Long sessionId,
+            String content,
+            List<Long> noteIds,
+            StreamCallbacks callbacks,
+            boolean streaming
+    ) {
+        validateStreamCallbacks(streaming, callbacks);
         ensureLlmEnabled();
         String normalizedContent = normalizeContent(content);
         log.info("Chat 发送开始, sessionId={}, contentLength={}, noteScopeCount={}",
@@ -101,6 +125,9 @@ public class ChatService {
                 initializePendingContext(sessionId, normalizedContent));
         if (pendingContext == null) {
             throw new BusinessException(CodeStatus.INTERNAL_ERROR, "Chat init transaction returned no result");
+        }
+        if (callbacks != null) {
+            callbacks.onMeta(toStreamMeta(pendingContext));
         }
 
         try {
@@ -115,7 +142,9 @@ public class ChatService {
                     rerankedSources.size(),
                     formatChunkIdsForLog(rerankedSources));
             RagPrompt prompt = chatPromptBuilder.build(historyMessages, normalizedContent, rerankedSources);
-            String answer = llmClient.chat(prompt);
+            String answer = streaming
+                    ? llmClient.streamChat(prompt, callbacks::onDelta)
+                    : llmClient.chat(prompt);
             log.debug("LLM answer={}", answer);
             List<RetrievedChunk> citedSources = filterSourcesByAnswerCitations(answer, rerankedSources);
 
@@ -141,6 +170,29 @@ public class ChatService {
             markAssistantFailed(pendingContext.assistantMessage().getId(), ERROR_CODE_LLM_FAILED);
             throw exception;
         }
+    }
+
+    /**
+     * 校验同步/流式模式与回调参数一致，避免后续私有方法扩展时误传。
+     */
+    private void validateStreamCallbacks(boolean streaming, StreamCallbacks callbacks) {
+        if (streaming && callbacks == null) {
+            throw new IllegalArgumentException("callbacks must not be null when streaming is enabled");
+        }
+        if (!streaming && callbacks != null) {
+            throw new IllegalArgumentException("callbacks must be null when streaming is disabled");
+        }
+    }
+
+    /**
+     * 将已落库的 pending 上下文转换成 SSE meta 事件数据。
+     */
+    private StreamMeta toStreamMeta(PendingChatContext pendingContext) {
+        return new StreamMeta(
+                pendingContext.session().getId(),
+                pendingContext.session().getTitle(),
+                pendingContext.userMessage().getId(),
+                pendingContext.assistantMessage().getId());
     }
 
     /**
@@ -465,5 +517,15 @@ public class ChatService {
     }
 
     private record PendingChatContext(ChatSession session, ChatMessage userMessage, ChatMessage assistantMessage) {
+    }
+
+    public record StreamMeta(Long sessionId, String sessionTitle, Long userMessageId, Long assistantMessageId) {
+    }
+
+    public interface StreamCallbacks {
+
+        void onMeta(StreamMeta meta);
+
+        void onDelta(String delta);
     }
 }

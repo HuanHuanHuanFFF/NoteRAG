@@ -1,5 +1,7 @@
 package com.huanf.noterag.client;
 
+import java.util.function.Consumer;
+
 import com.huanf.noterag.rag.RagPrompt;
 
 /**
@@ -13,6 +15,17 @@ public class NoopLlmClient implements LlmClient {
     public String chat(RagPrompt prompt) {
         if (prompt == null) {
             throw new IllegalArgumentException("prompt must not be null");
+        }
+        return "";
+    }
+
+    @Override
+    public String streamChat(RagPrompt prompt, Consumer<String> onDelta) {
+        if (prompt == null) {
+            throw new IllegalArgumentException("prompt must not be null");
+        }
+        if (onDelta == null) {
+            throw new IllegalArgumentException("onDelta must not be null");
         }
         return "";
     }

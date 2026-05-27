@@ -1,22 +1,30 @@
 package com.huanf.noterag.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.IOException;
 import java.sql.Timestamp;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +37,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.huanf.noterag.entity.ChatMessage;
 import com.huanf.noterag.entity.ChatMessageRole;
@@ -40,6 +50,7 @@ import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.mapper.ChatMessageMapper;
 import com.huanf.noterag.mapper.ChatMessageSourceMapper;
 import com.huanf.noterag.mapper.ChatSessionMapper;
+import com.huanf.noterag.dto.ChatStreamDeltaResponse;
 import com.huanf.noterag.model.ChatMessageSourceChunk;
 import com.huanf.noterag.model.ChatMessageWithSources;
 import com.huanf.noterag.model.RetrievedChunk;
@@ -73,6 +84,9 @@ class ChatControllerIntegrationTests {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ChatController chatController;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -154,6 +168,133 @@ class ChatControllerIntegrationTests {
                 .andExpect(jsonPath("$.data.sources").isArray());
 
         verify(chatService).sendMessage(eq(7L), eq("follow up"), isNull());
+    }
+
+    @Test
+    void streamFirstMessageReturnsSseEventsWithoutApiBodyWrapping() throws Exception {
+        when(chatService.streamMessage(isNull(), eq("what is JVM?"), eq(List.of(1L, 2L)), any()))
+                .thenAnswer(invocation -> {
+                    ChatService.StreamCallbacks callbacks = invocation.getArgument(3);
+                    callbacks.onMeta(new ChatService.StreamMeta(1L, "what is JVM?", 11L, 12L));
+                    callbacks.onDelta("answer ");
+                    callbacks.onDelta("delta");
+                    return new ChatResult(
+                            1L,
+                            "what is JVM?",
+                            11L,
+                            12L,
+                            "answer delta",
+                            List.of(new RetrievedChunk(2L, 21L, "Java Guide", "JVM > GC", "GC notes", 0.97)));
+                });
+
+        MvcResult asyncResult = mockMvc.perform(post("/api/chat-sessions/stream")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .content("""
+                                {
+                                  "content": "what is JVM?",
+                                  "noteIds": [1, 2]
+                                }
+                                """))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        String body = dispatchSse(asyncResult);
+
+        assertThat(body).contains("event:meta");
+        assertThat(body).contains("\"sessionId\":1");
+        assertThat(body).contains("\"userMessageId\":11");
+        assertThat(body).contains("event:delta");
+        assertThat(body).contains("\"text\":\"answer \"");
+        assertThat(body).contains("\"text\":\"delta\"");
+        assertThat(body).contains("event:done");
+        assertThat(body).contains("\"answer\":\"answer delta\"");
+        assertThat(body).contains("\"sources\"");
+        assertThat(body).doesNotContain("\"code\":0");
+        verify(chatService).streamMessage(isNull(), eq("what is JVM?"), eq(List.of(1L, 2L)), any());
+    }
+
+    @Test
+    void streamMessageToExistingSessionReturnsErrorEvent() throws Exception {
+        when(chatService.streamMessage(eq(7L), eq("bad citation"), isNull(), any()))
+                .thenAnswer(invocation -> {
+                    ChatService.StreamCallbacks callbacks = invocation.getArgument(3);
+                    callbacks.onMeta(new ChatService.StreamMeta(7L, "title", 31L, 32L));
+                    throw new BusinessException(CodeStatus.LLM_RESULT_INVALID, "LLM 返回了非法引用信息，请重试");
+                });
+
+        MvcResult asyncResult = mockMvc.perform(post("/api/chat-sessions/7/messages/stream")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .content("""
+                                {
+                                  "content": "bad citation"
+                                }
+                                """))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        String body = dispatchSse(asyncResult);
+
+        assertThat(body).contains("event:meta");
+        assertThat(body).contains("\"sessionId\":7");
+        assertThat(body).contains("event:error");
+        assertThat(body).contains("\"code\":50206");
+        assertThat(body).contains("LLM 返回了非法引用信息");
+        assertThat(body).doesNotContain("event:done");
+        verify(chatService).streamMessage(eq(7L), eq("bad citation"), isNull(), any());
+    }
+
+    @Test
+    void streamMessageToExistingSessionReturnsLlmFailedErrorEvent() throws Exception {
+        when(chatService.streamMessage(eq(7L), eq("provider down"), isNull(), any()))
+                .thenAnswer(invocation -> {
+                    ChatService.StreamCallbacks callbacks = invocation.getArgument(3);
+                    callbacks.onMeta(new ChatService.StreamMeta(7L, "title", 31L, 32L));
+                    throw new BusinessException(CodeStatus.LLM_FAILED, "LLM 服务调用失败");
+                });
+
+        MvcResult asyncResult = mockMvc.perform(post("/api/chat-sessions/7/messages/stream")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .content("""
+                                {
+                                  "content": "provider down"
+                                }
+                                """))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+
+        String body = dispatchSse(asyncResult);
+
+        assertThat(body).contains("event:meta");
+        assertThat(body).contains("\"sessionId\":7");
+        assertThat(body).contains("event:error");
+        assertThat(body).contains("\"code\":50205");
+        assertThat(body).contains("LLM 服务调用失败");
+        assertThat(body).doesNotContain("event:done");
+        verify(chatService).streamMessage(eq(7L), eq("provider down"), isNull(), any());
+    }
+
+    @Test
+    void trySendMarksClientDisconnectedAndDoesNotThrowWhenEmitterSendFails() {
+        AtomicBoolean clientConnected = new AtomicBoolean(true);
+        FailingSseEmitter emitter = new FailingSseEmitter();
+
+        assertThat(chatController.trySend(
+                emitter,
+                clientConnected,
+                "delta",
+                new ChatStreamDeltaResponse("first"))).isFalse();
+
+        assertThat(clientConnected).isFalse();
+        assertThat(emitter.sendCount).isEqualTo(1);
+        assertThatCode(() -> chatController.trySend(
+                emitter,
+                clientConnected,
+                "delta",
+                new ChatStreamDeltaResponse("second"))).doesNotThrowAnyException();
+        assertThat(emitter.sendCount).isEqualTo(1);
     }
 
     @Test
@@ -596,7 +737,27 @@ class ChatControllerIntegrationTests {
                 id, messageId, noteChunkId, sourceOrder, score, timestamp(createdAt));
     }
 
+    private String dispatchSse(MvcResult asyncResult) throws Exception {
+        asyncResult.getAsyncResult(5000);
+        MvcResult dispatchedResult = mockMvc.perform(asyncDispatch(asyncResult))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM))
+                .andReturn();
+        return dispatchedResult.getResponse().getContentAsString(StandardCharsets.UTF_8);
+    }
+
     private static Timestamp timestamp(String value) {
         return Timestamp.from(Instant.parse(value));
+    }
+
+    private static class FailingSseEmitter extends SseEmitter {
+
+        private int sendCount;
+
+        @Override
+        public void send(SseEventBuilder builder) throws IOException {
+            sendCount++;
+            throw new IOException("client disconnected");
+        }
     }
 }

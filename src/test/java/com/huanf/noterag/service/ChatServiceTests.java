@@ -12,20 +12,28 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import com.huanf.noterag.client.SpringAiLlmClient;
 import com.huanf.noterag.entity.ChatMessageSource;
 import com.huanf.noterag.model.ChatMessageSourceChunk;
 import com.huanf.noterag.model.ChatMessageWithSources;
 import com.huanf.noterag.model.ChatResult;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.ai.chat.messages.AssistantMessage;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.model.Generation;
+import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
+import reactor.core.publisher.Flux;
 
 import com.huanf.noterag.client.LlmClient;
 import com.huanf.noterag.common.exception.BusinessException;
@@ -169,6 +177,51 @@ class ChatServiceTests {
     }
 
     @Test
+    void streamMessageSendsMetaAndDeltasAndReturnsCitedSources() {
+        ChatSession existingSession = new ChatSession(5L, "Old title", RecordStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(5L)).thenReturn(existingSession);
+        mockMessageInsert(221L, 222L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(5L, 221L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(301L, 31L, "Java", "JVM", "gc", 0.77));
+        when(queryService.querySources("continue")).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("continue"), eq(rerankedSources))).thenReturn(prompt);
+        when(llmClient.streamChat(eq(prompt), any())).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            java.util.function.Consumer<String> onDelta = invocation.getArgument(1);
+            onDelta.accept("answer");
+            onDelta.accept(CitationMarkers.format(31L));
+            return "answer" + CitationMarkers.format(31L);
+        });
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+        List<String> events = new ArrayList<>();
+
+        ChatResult result = chatService.streamMessage(5L, " continue ", null, new ChatService.StreamCallbacks() {
+            @Override
+            public void onMeta(ChatService.StreamMeta meta) {
+                events.add("meta:%d:%d:%d".formatted(meta.sessionId(), meta.userMessageId(), meta.assistantMessageId()));
+            }
+
+            @Override
+            public void onDelta(String delta) {
+                events.add("delta:" + delta);
+            }
+        });
+
+        assertThat(events).containsExactly(
+                "meta:5:221:222",
+                "delta:answer",
+                "delta:" + CitationMarkers.format(31L));
+        assertThat(result.getSessionId()).isEqualTo(5L);
+        assertThat(result.getUserMessageId()).isEqualTo(221L);
+        assertThat(result.getAssistantMessageId()).isEqualTo(222L);
+        assertThat(result.getSources()).extracting(RetrievedChunk::getChunkId).containsExactly(31L);
+        verify(llmClient).streamChat(eq(prompt), any());
+        verify(llmClient, never()).chat(any());
+    }
+
+    @Test
     void sendMessagePassesNoteIdsToQuerySources() {
         ChatSession existingSession = new ChatSession(5L, "Old title", RecordStatus.ACTIVE, null, null, null);
         List<Long> noteIds = List.of(1L, 2L);
@@ -216,6 +269,132 @@ class ChatServiceTests {
         assertThat(failedAssistant.getErrorCode()).isEqualTo(ChatService.ERROR_CODE_LLM_RESULT_INVALID);
         assertThat(failedAssistant.getContent()).isEmpty();
         verify(chatMessageSourceMapper, never()).batchInsert(any());
+    }
+
+    @Test
+    void streamMessageMarksAssistantFailedWhenCitationInvalid() {
+        ChatSession existingSession = new ChatSession(17L, "Old title", RecordStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(17L)).thenReturn(existingSession);
+        mockMessageInsert(1701L, 1702L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(17L, 1701L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(401L, 41L, "MySQL", "MVCC", "body", 0.88));
+        when(queryService.querySources("question")).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("question"), eq(rerankedSources))).thenReturn(prompt);
+        when(llmClient.streamChat(eq(prompt), any())).thenReturn("bad" + CitationMarkers.format(99L));
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+
+        assertThatThrownBy(() -> chatService.streamMessage(17L, "question", null, new ChatService.StreamCallbacks() {
+            @Override
+            public void onMeta(ChatService.StreamMeta meta) {
+            }
+
+            @Override
+            public void onDelta(String delta) {
+            }
+        }))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.LLM_RESULT_INVALID));
+
+        ArgumentCaptor<ChatMessage> failedAssistantCaptor = ArgumentCaptor.forClass(ChatMessage.class);
+        verify(chatMessageMapper).updateResult(failedAssistantCaptor.capture());
+        assertThat(failedAssistantCaptor.getValue().getId()).isEqualTo(1702L);
+        assertThat(failedAssistantCaptor.getValue().getStatus()).isEqualTo(ChatMessageStatus.FAILED);
+        assertThat(failedAssistantCaptor.getValue().getErrorCode()).isEqualTo(ChatService.ERROR_CODE_LLM_RESULT_INVALID);
+    }
+
+    @Test
+    void streamMessageMarksAssistantFailedWhenLlmProviderFails() {
+        ChatSession existingSession = new ChatSession(18L, "Old title", RecordStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(18L)).thenReturn(existingSession);
+        mockMessageInsert(1801L, 1802L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(18L, 1801L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(401L, 41L, "MySQL", "MVCC", "body", 0.88));
+        when(queryService.querySources("question")).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("question"), eq(rerankedSources))).thenReturn(prompt);
+        when(llmClient.streamChat(eq(prompt), any()))
+                .thenThrow(new BusinessException(CodeStatus.LLM_FAILED, "LLM 服务调用失败"));
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+        List<String> events = new ArrayList<>();
+
+        assertThatThrownBy(() -> chatService.streamMessage(18L, "question", null, new ChatService.StreamCallbacks() {
+            @Override
+            public void onMeta(ChatService.StreamMeta meta) {
+                events.add("meta:%d:%d:%d".formatted(meta.sessionId(), meta.userMessageId(), meta.assistantMessageId()));
+            }
+
+            @Override
+            public void onDelta(String delta) {
+                events.add("delta:" + delta);
+            }
+        }))
+                .isInstanceOfSatisfying(BusinessException.class, exception ->
+                        assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.LLM_FAILED));
+
+        assertThat(events).containsExactly("meta:18:1801:1802");
+        ArgumentCaptor<ChatMessage> failedAssistantCaptor = ArgumentCaptor.forClass(ChatMessage.class);
+        verify(chatMessageMapper).updateResult(failedAssistantCaptor.capture());
+        assertThat(failedAssistantCaptor.getValue().getId()).isEqualTo(1802L);
+        assertThat(failedAssistantCaptor.getValue().getStatus()).isEqualTo(ChatMessageStatus.FAILED);
+        assertThat(failedAssistantCaptor.getValue().getErrorCode()).isEqualTo(ChatService.ERROR_CODE_LLM_FAILED);
+        verify(chatMessageSourceMapper, never()).batchInsert(any());
+    }
+
+    @Test
+    void streamMessageCompletesWhenDeltaCallbackFails() {
+        ChatModel chatModel = mock(ChatModel.class);
+        ChatService callbackSafeChatService = new ChatService(
+                chatSessionMapper,
+                chatMessageMapper,
+                chatMessageSourceMapper,
+                queryService,
+                chatPromptBuilder,
+                new SpringAiLlmClient(chatModel),
+                llmProperties,
+                transactionTemplate);
+        ChatSession existingSession = new ChatSession(19L, "Old title", RecordStatus.ACTIVE, null, null, null);
+        when(chatSessionMapper.findById(19L)).thenReturn(existingSession);
+        mockMessageInsert(1901L, 1902L);
+        when(chatMessageMapper.findPromptHistoryBySessionId(19L, 1901L, ChatService.HISTORY_LIMIT))
+                .thenReturn(List.of());
+        List<RetrievedChunk> rerankedSources = List.of(chunk(401L, 41L, "MySQL", "MVCC", "body", 0.88));
+        when(queryService.querySources("question")).thenReturn(rerankedSources);
+        RagPrompt prompt = new RagPrompt("system", "user");
+        when(chatPromptBuilder.build(any(), eq("question"), eq(rerankedSources))).thenReturn(prompt);
+        when(chatModel.stream(any(Prompt.class))).thenReturn(Flux.just(
+                new ChatResponse(List.of(new Generation(new AssistantMessage("answer")))),
+                new ChatResponse(List.of(new Generation(new AssistantMessage(CitationMarkers.format(41L)))))));
+        when(chatMessageMapper.updateResult(any(ChatMessage.class))).thenReturn(1);
+
+        ChatResult result = callbackSafeChatService.streamMessage(19L, "question", null, new ChatService.StreamCallbacks() {
+            @Override
+            public void onMeta(ChatService.StreamMeta meta) {
+            }
+
+            @Override
+            public void onDelta(String delta) {
+                throw new RuntimeException("client disconnected");
+            }
+        });
+
+        assertThat(result.getAnswer()).isEqualTo("answer" + CitationMarkers.format(41L));
+        assertThat(result.getSources()).extracting(RetrievedChunk::getChunkId).containsExactly(41L);
+        ArgumentCaptor<ChatMessage> completedAssistantCaptor = ArgumentCaptor.forClass(ChatMessage.class);
+        verify(chatMessageMapper).updateResult(completedAssistantCaptor.capture());
+        assertThat(completedAssistantCaptor.getValue().getId()).isEqualTo(1902L);
+        assertThat(completedAssistantCaptor.getValue().getStatus()).isEqualTo(ChatMessageStatus.COMPLETED);
+        assertThat(completedAssistantCaptor.getValue().getErrorCode()).isNull();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<ChatMessageSource>> sourceCaptor = ArgumentCaptor.forClass(List.class);
+        verify(chatMessageSourceMapper).batchInsert(sourceCaptor.capture());
+        assertThat(sourceCaptor.getValue()).hasSize(1);
+        assertThat(sourceCaptor.getValue().get(0).getMessageId()).isEqualTo(1902L);
+        assertThat(sourceCaptor.getValue().get(0).getNoteChunkId()).isEqualTo(41L);
+        assertThat(sourceCaptor.getValue().get(0).getSourceOrder()).isEqualTo(1);
     }
 
     @Test
