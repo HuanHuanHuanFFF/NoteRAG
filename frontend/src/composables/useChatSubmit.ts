@@ -1,7 +1,12 @@
 import { computed, ref } from 'vue';
 import { ApiError } from '@/api/client';
-import { sendChatMessage, sendFirstChatMessage } from '@/api/noterag';
-import type { ChatMessageResponse, ChatSession, ChatTurn } from '@/api/types';
+import { streamChatMessage, streamFirstChatMessage } from '@/api/noterag';
+import type {
+  ChatMessageResponse,
+  ChatSession,
+  ChatStreamMetaResponse,
+  ChatTurn,
+} from '@/api/types';
 
 interface ReadonlyValue<T> {
   readonly value: T;
@@ -15,6 +20,8 @@ interface UseChatSubmitOptions {
   createSession: () => ChatSession;
   setActiveSessionId: (id: string) => void;
   appendPendingTurn: (session: ChatSession, question: string) => ChatTurn;
+  applyChatMeta: (session: ChatSession, turn: ChatTurn, meta: ChatStreamMetaResponse) => void;
+  appendAnswerDelta: (turn: ChatTurn, text: string) => void;
   applyChatResponse: (session: ChatSession, turn: ChatTurn, response: ChatMessageResponse) => void;
   applyChatFailure: (turn: ChatTurn, message: string) => void;
   finishTurn: (turn: ChatTurn) => void;
@@ -42,16 +49,46 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     const noteIds = options.selectedNoteIds.value.length > 0 ? options.selectedNoteIds.value : undefined;
     const turn = options.appendPendingTurn(session, question);
     setSessionSubmitting(session.id, true);
+    let failed = false;
+    let done = false;
 
     try {
-      const response =
-        session.backendSessionId == null
-          ? await sendFirstChatMessage(question, noteIds)
-          : await sendChatMessage(session.backendSessionId, question, noteIds);
+      const handlers = {
+        onMeta(meta: ChatStreamMetaResponse) {
+          if (failed || done) return;
+          options.applyChatMeta(session, turn, meta);
+        },
+        onDelta(delta: { text: string }) {
+          if (failed || done) return;
+          options.appendAnswerDelta(turn, delta.text);
+        },
+        onDone(response: ChatMessageResponse) {
+          if (failed || done) return;
+          done = true;
+          options.applyChatResponse(session, turn, response);
+        },
+        onError(error: { message: string }) {
+          if (failed || done) return;
+          failed = true;
+          options.applyChatFailure(turn, error.message || '发送失败，请稍后重试');
+        },
+      };
 
-      options.applyChatResponse(session, turn, response);
+      if (session.backendSessionId == null) {
+        await streamFirstChatMessage(question, noteIds, handlers);
+      } else {
+        await streamChatMessage(session.backendSessionId, question, noteIds, handlers);
+      }
+
+      if (!failed && !done) {
+        failed = true;
+        options.applyChatFailure(turn, '流式响应未正常完成');
+      }
     } catch (e) {
-      options.applyChatFailure(turn, e instanceof ApiError ? e.message : '发送失败，请稍后重试');
+      if (!failed && !done) {
+        failed = true;
+        options.applyChatFailure(turn, e instanceof ApiError ? e.message : '发送失败，请稍后重试');
+      }
     } finally {
       options.finishTurn(turn);
       setSessionSubmitting(session.id, false);

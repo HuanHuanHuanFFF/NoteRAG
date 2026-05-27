@@ -201,7 +201,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
               >A</span
             >
             <div class="min-w-0 flex-1 pt-0.5">
-              <div v-if="turn.loading" class="flex items-center gap-1.5 text-[13px] text-white/40">
+              <div v-if="turn.loading && !turn.answer" class="flex items-center gap-1.5 text-[13px] text-white/40">
                 <span class="inline-flex gap-1">
                   <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-accent/60"></span>
                   <span

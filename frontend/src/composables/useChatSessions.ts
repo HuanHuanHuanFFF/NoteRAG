@@ -11,6 +11,7 @@ import type {
   ChatMessageResponse,
   ChatSession,
   ChatSessionItemResponse,
+  ChatStreamMetaResponse,
   ChatTurn,
 } from '@/api/types';
 
@@ -100,6 +101,7 @@ export function useChatSessions(options: UseChatSessionsOptions) {
     if (
       backendSessionId == null ||
       session.messagesLoaded ||
+      hasLoadingTurn(session) ||
       loadingMessageSessionIds.value.has(backendSessionId)
     ) {
       return;
@@ -136,6 +138,10 @@ export function useChatSessions(options: UseChatSessionsOptions) {
       next.delete(sessionId);
     }
     loadingMessageSessionIds.value = next;
+  }
+
+  function hasLoadingTurn(session: ChatSession) {
+    return session.turns.some((turn) => turn.loading);
   }
 
   function toHistoryTurns(messages: ChatHistoryMessageResponse[]): ChatTurn[] {
@@ -343,6 +349,17 @@ export function useChatSessions(options: UseChatSessionsOptions) {
     return turn;
   }
 
+  function applyChatMeta(session: ChatSession, turn: ChatTurn, meta: ChatStreamMetaResponse) {
+    session.backendSessionId = meta.sessionId;
+    session.title = meta.sessionTitle?.trim() || session.title;
+    turn.userMessageId = meta.userMessageId;
+    turn.assistantMessageId = meta.assistantMessageId;
+  }
+
+  function appendAnswerDelta(turn: ChatTurn, text: string) {
+    turn.answer += text;
+  }
+
   function applyChatResponse(session: ChatSession, turn: ChatTurn, response: ChatMessageResponse) {
     session.backendSessionId = response.sessionId;
     session.title = response.sessionTitle?.trim() || session.title;
@@ -352,6 +369,7 @@ export function useChatSessions(options: UseChatSessionsOptions) {
     turn.answer = response.answer ?? '';
     turn.sources = response.sources ?? [];
     turn.pending = false;
+    turn.error = undefined;
   }
 
   function applyChatFailure(turn: ChatTurn, message: string) {
@@ -359,6 +377,7 @@ export function useChatSessions(options: UseChatSessionsOptions) {
     turn.answer = '';
     turn.sources = [];
     turn.pending = false;
+    turn.loading = false;
   }
 
   function finishTurn(turn: ChatTurn) {
@@ -389,6 +408,8 @@ export function useChatSessions(options: UseChatSessionsOptions) {
     setActiveSessionId,
     setWorkspaceError,
     appendPendingTurn,
+    applyChatMeta,
+    appendAnswerDelta,
     applyChatResponse,
     applyChatFailure,
     finishTurn,

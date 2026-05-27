@@ -38,6 +38,22 @@ export interface ChatMessageResponse {
   sources: SourceChunk[];
 }
 
+export interface ChatStreamMetaResponse {
+  sessionId: number;
+  sessionTitle: string;
+  userMessageId: number;
+  assistantMessageId: number;
+}
+
+export interface ChatStreamDeltaResponse {
+  text: string;
+}
+
+export interface ChatStreamErrorResponse {
+  code: number;
+  message: string;
+}
+
 export interface RetrievalSearchResponse {
   sources: SourceChunk[];
 }
