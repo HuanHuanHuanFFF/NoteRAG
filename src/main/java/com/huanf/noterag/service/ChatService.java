@@ -126,6 +126,10 @@ public class ChatService {
         if (pendingContext == null) {
             throw new BusinessException(CodeStatus.INTERNAL_ERROR, "Chat init transaction returned no result");
         }
+        log.info("Chat pending 初始化完成, sessionId={}, userMessageId={}, assistantMessageId={}",
+                pendingContext.session().getId(),
+                pendingContext.userMessage().getId(),
+                pendingContext.assistantMessage().getId());
         if (callbacks != null) {
             callbacks.onMeta(toStreamMeta(pendingContext));
         }
@@ -142,11 +146,24 @@ public class ChatService {
                     rerankedSources.size(),
                     formatChunkIdsForLog(rerankedSources));
             RagPrompt prompt = chatPromptBuilder.build(historyMessages, normalizedContent, rerankedSources);
+            log.info("Chat prompt 构建完成, sessionId={}, userMessageId={}, historyCount={}, sourceCount={}, systemPromptLength={}, userPromptLength={}",
+                    pendingContext.session().getId(),
+                    pendingContext.userMessage().getId(),
+                    historyMessages.size(),
+                    rerankedSources.size(),
+                    prompt.system().length(),
+                    prompt.user().length());
             String answer = streaming
                     ? llmClient.streamChat(prompt, callbacks::onDelta)
                     : llmClient.chat(prompt);
             log.debug("LLM answer={}", answer);
             List<RetrievedChunk> citedSources = filterSourcesByAnswerCitations(answer, rerankedSources);
+            log.info("Chat citation 过滤完成, sessionId={}, userMessageId={}, assistantMessageId={}, candidateSourceCount={}, citedSourceCount={}",
+                    pendingContext.session().getId(),
+                    pendingContext.userMessage().getId(),
+                    pendingContext.assistantMessage().getId(),
+                    rerankedSources.size(),
+                    citedSources.size());
 
             ChatResult result = transactionTemplate.execute(status ->
                     completeAssistantMessage(pendingContext, answer, citedSources));

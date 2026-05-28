@@ -43,6 +43,8 @@ public class SpringAiLlmClient implements LlmClient {
         Prompt springPrompt = toSpringPrompt(prompt);
 
         long startNanos = System.nanoTime();
+        log.info("LLM 调用开始, systemPromptLength={}, userPromptLength={}",
+                prompt.system().length(), prompt.user().length());
         try {
             ChatResponse response = chatModel.call(springPrompt);
             String answer = extractFullAnswer(response);
@@ -71,6 +73,8 @@ public class SpringAiLlmClient implements LlmClient {
         StringBuilder answer = new StringBuilder();
         AtomicBoolean deltaCallbackEnabled = new AtomicBoolean(true);
         long startNanos = System.nanoTime();
+        log.info("LLM 流式调用开始, systemPromptLength={}, userPromptLength={}",
+                prompt.system().length(), prompt.user().length());
         try {
             chatModel.stream(springPrompt)
                     .doOnNext(response -> {

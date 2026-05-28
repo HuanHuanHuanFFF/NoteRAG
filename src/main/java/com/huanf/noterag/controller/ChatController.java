@@ -3,6 +3,7 @@ package com.huanf.noterag.controller;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
@@ -152,10 +153,13 @@ public class ChatController {
             chatSseTaskExecutor.execute(() -> runChatStream(sessionId, request, emitter, clientConnected));
         } catch (RuntimeException exception) {
             log.error("Chat SSE 任务提交失败, sessionId={}", sessionId, exception);
-            trySend(emitter, clientConnected, "error",
-                    new ChatStreamErrorResponse(
-                            CodeStatus.INTERNAL_ERROR.getCode(),
-                            CodeStatus.INTERNAL_ERROR.getMessage()));
+            sendSseError(
+                    emitter,
+                    clientConnected,
+                    sessionId,
+                    null,
+                    CodeStatus.INTERNAL_ERROR.getCode(),
+                    CodeStatus.INTERNAL_ERROR.getMessage());
             emitter.complete();
         }
         return emitter;
@@ -189,6 +193,7 @@ public class ChatController {
             SseEmitter emitter,
             AtomicBoolean clientConnected
     ) {
+        AtomicReference<ChatService.StreamMeta> streamMetaRef = new AtomicReference<>();
         try {
             ChatResult result = chatService.streamMessage(
                     sessionId,
@@ -197,6 +202,7 @@ public class ChatController {
                     new ChatService.StreamCallbacks() {
                         @Override
                         public void onMeta(ChatService.StreamMeta meta) {
+                            streamMetaRef.set(meta);
                             trySend(emitter, clientConnected, "meta", new ChatStreamMetaResponse(
                                     meta.sessionId(),
                                     meta.sessionTitle(),
@@ -209,22 +215,57 @@ public class ChatController {
                             trySend(emitter, clientConnected, "delta", new ChatStreamDeltaResponse(delta));
                         }
                     });
+            log.info("Chat SSE done 发送, sessionId={}, userMessageId={}, assistantMessageId={}",
+                    result.getSessionId(), result.getUserMessageId(), result.getAssistantMessageId());
             trySend(emitter, clientConnected, "done", toResponse(result));
         } catch (BusinessException exception) {
-            trySend(emitter, clientConnected, "error",
-                    new ChatStreamErrorResponse(exception.getCodeStatus().getCode(), exception.getMessage()));
+            sendSseError(
+                    emitter,
+                    clientConnected,
+                    sessionId,
+                    streamMetaRef.get(),
+                    exception.getCodeStatus().getCode(),
+                    exception.getMessage());
         } catch (IllegalArgumentException exception) {
-            trySend(emitter, clientConnected, "error",
-                    new ChatStreamErrorResponse(CodeStatus.INVALID_REQUEST.getCode(), exception.getMessage()));
+            sendSseError(
+                    emitter,
+                    clientConnected,
+                    sessionId,
+                    streamMetaRef.get(),
+                    CodeStatus.INVALID_REQUEST.getCode(),
+                    exception.getMessage());
         } catch (RuntimeException exception) {
             log.error("Chat SSE 处理异常, sessionId={}", sessionId, exception);
-            trySend(emitter, clientConnected, "error",
-                    new ChatStreamErrorResponse(
-                            CodeStatus.INTERNAL_ERROR.getCode(),
-                            CodeStatus.INTERNAL_ERROR.getMessage()));
+            sendSseError(
+                    emitter,
+                    clientConnected,
+                    sessionId,
+                    streamMetaRef.get(),
+                    CodeStatus.INTERNAL_ERROR.getCode(),
+                    CodeStatus.INTERNAL_ERROR.getMessage());
         } finally {
             emitter.complete();
         }
+    }
+
+    /**
+     * 发送 SSE error 前记录结构化上下文，便于前后端联调定位失败发生在哪个消息。
+     */
+    private void sendSseError(
+            SseEmitter emitter,
+            AtomicBoolean clientConnected,
+            Long requestSessionId,
+            ChatService.StreamMeta streamMeta,
+            int code,
+            String message
+    ) {
+        log.info("Chat SSE error 发送, requestSessionId={}, sessionId={}, userMessageId={}, assistantMessageId={}, code={}",
+                requestSessionId,
+                streamMeta == null ? null : streamMeta.sessionId(),
+                streamMeta == null ? null : streamMeta.userMessageId(),
+                streamMeta == null ? null : streamMeta.assistantMessageId(),
+                code);
+        trySend(emitter, clientConnected, "error", new ChatStreamErrorResponse(code, message));
     }
 
     /**
