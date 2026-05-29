@@ -202,7 +202,7 @@ function resetFileInput() {
             </div>
             <button
               type="button"
-              class="inline-flex h-8 w-8 appearance-none items-center justify-center rounded-md border border-white/[0.06] bg-[#101016]/85 text-white/50 shadow-none transition-colors duration-150 hover:border-accent/35 hover:bg-accent/[0.1] hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 disabled:cursor-not-allowed disabled:opacity-40"
+              class="close-icon-button h-8 w-8 rounded-md"
               :disabled="busy"
               title="关闭"
               aria-label="关闭"
@@ -353,11 +353,11 @@ function resetFileInput() {
             <button
               type="button"
               :disabled="!canSubmit"
-              class="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-black transition-all duration-150 hover:bg-accent-hover active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+              class="send-button gap-1.5 rounded-lg px-4 py-2 text-[13px] font-semibold"
               @click="handleSubmit"
             >
               <span class="inline-flex h-3.5 w-3.5 items-center justify-center" v-if="busy">
-                <span class="block h-3 w-3 animate-spin rounded-full border-[1.5px] border-black/30 border-t-black"></span>
+                <span class="block h-3 w-3 animate-spin rounded-full border-[1.5px] border-current/30 border-t-current"></span>
               </span>
               {{ submitLabel }}
             </button>

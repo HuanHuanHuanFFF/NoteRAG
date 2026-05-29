@@ -53,7 +53,7 @@ function close() {
         >
           <header class="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.06] px-6 py-4">
             <div class="min-w-0">
-              <p class="text-[11px] font-medium uppercase text-white/35">Note detail</p>
+              <p class="text-[11px] font-medium uppercase text-white/35">Note</p>
               <h2 class="mt-1 truncate text-[17px] font-semibold text-white">
                 {{ note?.title ?? '查看笔记内容' }}
               </h2>
@@ -68,7 +68,7 @@ function close() {
             </div>
             <button
               type="button"
-              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white/45 transition-colors duration-150 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              class="close-icon-button h-10 w-10 shrink-0 rounded-lg"
               title="关闭"
               aria-label="关闭笔记详情"
               @click="close"

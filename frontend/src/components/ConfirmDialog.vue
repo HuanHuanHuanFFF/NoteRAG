@@ -45,11 +45,11 @@ function close() {
         appear
       >
         <section
-          class="w-full max-w-md overflow-hidden rounded-2xl border border-rose-300/20 bg-[#111116]/95 shadow-2xl ring-1 ring-white/[0.04]"
+          class="w-full max-w-md overflow-hidden rounded-2xl border border-[#4c0519]/55 bg-[#111116]/95 shadow-2xl ring-1 ring-white/[0.04]"
         >
           <header class="flex items-start gap-3 border-b border-white/[0.06] px-5 py-4">
             <span
-              class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-400/[0.08] text-rose-200"
+              class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#4c0519]/60 bg-[#2a1117] text-rose-200/90"
               aria-hidden="true"
             >
               <svg class="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +67,7 @@ function close() {
             </div>
             <button
               type="button"
-              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/45 transition-colors duration-150 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              class="close-icon-button h-9 w-9 shrink-0 rounded-lg"
               title="关闭"
               aria-label="关闭"
               :disabled="busy"
@@ -81,7 +81,7 @@ function close() {
 
           <div v-if="error" class="px-5 pt-4">
             <div
-              class="rounded-lg border border-rose-300/25 bg-rose-400/[0.08] px-3 py-2 text-[12px] leading-relaxed text-rose-100/80"
+              class="rounded-lg border border-[#4c0519]/70 bg-[#2a1117] px-3 py-2 text-[12px] leading-relaxed text-rose-100/80"
               role="alert"
             >
               {{ error }}
@@ -91,7 +91,7 @@ function close() {
           <footer class="flex justify-end gap-2 px-5 py-4">
             <button
               type="button"
-              class="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.08] bg-white/[0.02] px-4 text-[13px] font-medium text-white/70 transition-colors duration-150 hover:bg-white/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+              class="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.06] bg-[#101016]/85 px-4 text-[13px] font-medium text-white/65 transition-colors duration-150 hover:border-white/[0.12] hover:bg-[#171922] hover:text-white/85 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
               :disabled="busy"
               @click="close"
             >
@@ -99,7 +99,7 @@ function close() {
             </button>
             <button
               type="button"
-              class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-rose-300/35 bg-rose-400/[0.14] px-4 text-[13px] font-semibold text-rose-50 transition-colors duration-150 hover:border-rose-200/55 hover:bg-rose-400/[0.22] disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300/40"
+              class="danger-action-button h-10 gap-2 rounded-lg px-4 text-[13px] font-semibold"
               :disabled="busy"
               @click="emit('confirm')"
             >

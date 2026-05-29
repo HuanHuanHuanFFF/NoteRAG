@@ -384,25 +384,25 @@ function getScrollMetrics() {
 
     <div class="relative mt-4 shrink-0">
       <div
-        class="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl transition-colors duration-150 focus-within:border-accent/40 focus-within:bg-white/[0.03]"
+        class="group"
       >
         <textarea
           v-model="input"
           rows="2"
           maxlength="2000"
           placeholder="输入问题，Enter 发送，Shift+Enter 换行"
-          class="block w-full resize-none rounded-2xl bg-transparent px-4 py-3 text-[14px] leading-relaxed text-white placeholder-white/30 focus:outline-none"
+          class="chat-input-box block w-full resize-none rounded-2xl bg-white/[0.02] px-4 py-3 text-[14px] leading-relaxed text-white placeholder-white/30 focus:outline-none"
           :disabled="submitting"
           @keydown="handleKeydown"
         />
-        <div class="flex items-center justify-between px-4 pb-3">
-          <span class="font-mono text-[11px] tabular-nums text-white/30">
+        <div class="mt-2 flex items-center justify-between px-1">
+          <span class="-translate-y-1.5 font-mono text-[11px] tabular-nums text-white/30 transition-colors duration-150 group-focus-within:text-accent/80">
             {{ input.length }} / 2000
           </span>
           <button
             type="button"
             :disabled="!input.trim() || submitting"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-1.5 text-[13px] font-semibold text-black transition-all duration-150 hover:bg-accent-hover active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-white/[0.08] disabled:text-white/30 disabled:active:scale-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
+            class="send-button gap-1.5 rounded-lg px-3.5 py-1.5 text-[13px] font-semibold"
             @click="submit"
           >
             发送

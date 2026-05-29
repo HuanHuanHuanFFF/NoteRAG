@@ -84,6 +84,96 @@ input {
   font-family: inherit;
 }
 
+.chat-input-box {
+  border: 1px solid rgb(255 255 255 / 0.08);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.chat-input-box:focus {
+  border-color: rgb(45 212 191 / 0.78) !important;
+  box-shadow: inset 0 0 0 1px rgb(45 212 191 / 0.38);
+}
+
+.send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(45 212 191 / 0.48);
+  background-color: #123632;
+  color: rgb(153 246 228 / 0.95);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+.send-button:hover:not(:disabled) {
+  border-color: rgb(45 212 191 / 0.72);
+  background-color: #164a44;
+  color: rgb(204 251 241);
+}
+
+.send-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.send-button:focus {
+  outline: none;
+}
+
+.send-button:focus-visible {
+  outline: 2px solid rgb(45 212 191 / 0.45);
+  outline-offset: 2px;
+}
+
+.send-button:disabled {
+  cursor: not-allowed;
+  border-color: rgb(45 212 191 / 0.12);
+  background-color: #101016;
+  color: rgb(255 255 255 / 0.28);
+}
+
+.close-icon-button {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.06);
+  background-color: rgb(16 16 22 / 0.85);
+  color: rgb(255 255 255 / 0.5);
+  box-shadow: none;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.close-icon-button:hover:not(:disabled) {
+  border-color: rgb(45 212 191 / 0.35);
+  background-color: rgb(45 212 191 / 0.1);
+  color: rgb(45 212 191);
+}
+
+.close-icon-button:focus {
+  outline: none;
+}
+
+.close-icon-button:focus-visible {
+  outline: 2px solid rgb(45 212 191 / 0.4);
+  outline-offset: 2px;
+}
+
+.close-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
 .danger-icon-button {
   appearance: none;
   -webkit-appearance: none;
@@ -104,9 +194,9 @@ input {
     opacity 150ms ease;
 }
 
-.danger-icon-button:hover {
-  border-color: rgb(251 113 133 / 0.45);
-  background-color: rgb(251 113 133 / 0.16);
+.danger-icon-button:hover:not(:disabled) {
+  border-color: rgb(225 29 72 / 0.58);
+  background-color: #381019;
   color: rgb(255 228 230);
 }
 
@@ -122,4 +212,38 @@ input {
 .danger-icon-button:disabled {
   cursor: not-allowed;
   opacity: 0.3;
+}
+
+.danger-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(76 5 25 / 0.68);
+  background-color: #2a1117;
+  color: rgb(255 228 230 / 0.95);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.danger-action-button:hover:not(:disabled) {
+  border-color: rgb(225 29 72 / 0.65);
+  background-color: #381019;
+  color: rgb(255 241 242);
+}
+
+.danger-action-button:focus {
+  outline: none;
+}
+
+.danger-action-button:focus-visible {
+  outline: 2px solid rgb(253 164 175 / 0.45);
+  outline-offset: 2px;
+}
+
+.danger-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
