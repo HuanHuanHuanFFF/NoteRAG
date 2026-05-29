@@ -7,6 +7,8 @@ import type {
   ChatStreamMetaResponse,
   ChatTurn,
 } from '@/api/types';
+import { logStreamDebug } from '@/utils/streamDebug';
+import { useDeltaFlushBuffer } from './useDeltaFlushBuffer';
 
 interface ReadonlyValue<T> {
   readonly value: T;
@@ -51,25 +53,57 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
     setSessionSubmitting(session.id, true);
     let failed = false;
     let done = false;
+    const deltaBuffer = useDeltaFlushBuffer({
+      onFlush(text) {
+        logStreamDebug('submit', 'flush-to-turn', {
+          turnId: turn.id,
+          textLen: text.length,
+          answerLenBefore: turn.answer.length,
+        });
+        options.appendAnswerDelta(turn, text);
+      },
+    });
 
     try {
       const handlers = {
         onMeta(meta: ChatStreamMetaResponse) {
           if (failed || done) return;
+          logStreamDebug('submit', 'meta', {
+            turnId: turn.id,
+            sessionId: meta.sessionId,
+            userMessageId: meta.userMessageId,
+            assistantMessageId: meta.assistantMessageId,
+          });
           options.applyChatMeta(session, turn, meta);
         },
         onDelta(delta: { text: string }) {
           if (failed || done) return;
-          options.appendAnswerDelta(turn, delta.text);
+          logStreamDebug('submit', 'delta', {
+            turnId: turn.id,
+            textLen: delta.text.length,
+          });
+          deltaBuffer.append(delta.text);
         },
         onDone(response: ChatMessageResponse) {
           if (failed || done) return;
           done = true;
+          logStreamDebug('submit', 'done-before-apply', {
+            turnId: turn.id,
+            finalAnswerLen: response.answer?.length ?? 0,
+            sourceCount: response.sources?.length ?? 0,
+          });
+          deltaBuffer.flush();
           options.applyChatResponse(session, turn, response);
+          deltaBuffer.stop();
         },
         onError(error: { message: string }) {
           if (failed || done) return;
           failed = true;
+          logStreamDebug('submit', 'error-event', {
+            turnId: turn.id,
+            messageLen: error.message?.length ?? 0,
+          });
+          deltaBuffer.stop();
           options.applyChatFailure(turn, error.message || '发送失败，请稍后重试');
         },
       };
@@ -82,14 +116,22 @@ export function useChatSubmit(options: UseChatSubmitOptions) {
 
       if (!failed && !done) {
         failed = true;
+        logStreamDebug('submit', 'stream-ended-without-terminal', { turnId: turn.id });
+        deltaBuffer.stop();
         options.applyChatFailure(turn, '流式响应未正常完成');
       }
     } catch (e) {
+      logStreamDebug('submit', 'catch', {
+        turnId: turn.id,
+        errorType: e instanceof Error ? e.name : typeof e,
+      });
+      deltaBuffer.stop();
       if (!failed && !done) {
         failed = true;
         options.applyChatFailure(turn, e instanceof ApiError ? e.message : '发送失败，请稍后重试');
       }
     } finally {
+      deltaBuffer.stop();
       options.finishTurn(turn);
       setSessionSubmitting(session.id, false);
     }

@@ -1,3 +1,4 @@
+import { isReactive } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ChatSession } from '@/api/types';
 import { useChatSessions } from './useChatSessions';
@@ -16,6 +17,16 @@ afterEach(() => {
 });
 
 describe('useChatSessions', () => {
+  it('returns reactive sessions and turns for streaming mutations', () => {
+    const { createSessionInternal, appendPendingTurn } = useChatSessions({});
+
+    const session = createSessionInternal();
+    const turn = appendPendingTurn(session, 'question');
+
+    expect(isReactive(session)).toBe(true);
+    expect(isReactive(turn)).toBe(true);
+  });
+
   it('does not replace session turns while a streamed turn is loading', async () => {
     const session: ChatSession = {
       id: 'backend-session-1',

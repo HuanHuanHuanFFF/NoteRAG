@@ -314,7 +314,7 @@ export function useChatSessions(options: UseChatSessionsOptions) {
       turns: [],
     };
     sessions.value.unshift(session);
-    return session;
+    return sessions.value[0];
   }
 
   function initializeSessionCounters() {
@@ -346,7 +346,7 @@ export function useChatSessions(options: UseChatSessionsOptions) {
       loading: true,
     };
     session.turns.push(turn);
-    return turn;
+    return session.turns[session.turns.length - 1];
   }
 
   function applyChatMeta(session: ChatSession, turn: ChatTurn, meta: ChatStreamMetaResponse) {

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import type { ChatSession, ChatTurn } from '@/api/types';
 import MarkdownAnswer from '@/components/MarkdownAnswer.vue';
+import { isStreamDebugEnabled, logStreamDebug } from '@/utils/streamDebug';
 
 const props = defineProps<{
   session: ChatSession | null;
@@ -40,6 +41,20 @@ const loadingTexts = [
 ];
 
 const turns = computed<ChatTurn[]>(() => props.session?.turns ?? []);
+const scrollSignal = computed(() => {
+  const lastTurn = turns.value[turns.value.length - 1];
+  return [
+    turns.value.length,
+    lastTurn?.id ?? '',
+    lastTurn?.answer.length ?? 0,
+    lastTurn?.loading ? 1 : 0,
+    lastTurn?.pending ? 1 : 0,
+    lastTurn?.error ?? '',
+    lastTurn?.sources.length ?? 0,
+  ].join(':');
+});
+
+const shouldStickToBottom = ref(true);
 
 const healthMeta = computed(() => {
   switch (props.healthStatus) {
@@ -71,12 +86,23 @@ const healthMeta = computed(() => {
 });
 
 watch(
-  turns,
-  async () => {
-    await nextTick();
-    if (listRef.value) listRef.value.scrollTop = listRef.value.scrollHeight;
+  scrollSignal,
+  () => {
+    if (isStreamDebugEnabled()) {
+      const lastTurn = turns.value[turns.value.length - 1];
+      logStreamDebug('chat-panel', 'scroll-signal', {
+        turnCount: turns.value.length,
+        lastTurnId: lastTurn?.id ?? null,
+        answerLen: lastTurn?.answer.length ?? 0,
+        loading: lastTurn?.loading ?? false,
+        shouldStickToBottom: shouldStickToBottom.value,
+        ...getScrollMetrics(),
+      });
+    }
+    if (!shouldStickToBottom.value) return;
+    scheduleScrollToBottom();
   },
-  { deep: true, flush: 'post' }
+  { flush: 'post' }
 );
 
 onMounted(() => {
@@ -90,11 +116,16 @@ onBeforeUnmount(() => {
     window.clearInterval(loadingTextTimer);
     loadingTextTimer = null;
   }
+  if (pendingScrollFrame != null) {
+    window.cancelAnimationFrame(pendingScrollFrame);
+    pendingScrollFrame = null;
+  }
 });
 
 function submit() {
   const q = input.value.trim();
   if (!q || props.submitting) return;
+  shouldStickToBottom.value = true;
   emit('submit', q);
   input.value = '';
 }
@@ -112,6 +143,7 @@ function pick(question: string) {
 
 function retry(turn: ChatTurn) {
   if (props.submitting) return;
+  shouldStickToBottom.value = true;
   emit('retry', turn.question);
 }
 
@@ -129,6 +161,64 @@ function handleSourceButtonClick(turnId: number, index: number) {
     return;
   }
   emit('open-citation', turnId, index);
+}
+
+const AUTO_SCROLL_BOTTOM_THRESHOLD_PX = 48;
+let pendingScrollFrame: number | null = null;
+
+function handleMessageListScroll() {
+  const element = listRef.value;
+  if (!element) return;
+  shouldStickToBottom.value =
+    element.scrollHeight - element.scrollTop - element.clientHeight <= AUTO_SCROLL_BOTTOM_THRESHOLD_PX;
+  if (isStreamDebugEnabled()) {
+    logStreamDebug('chat-panel', 'user-scroll', {
+      shouldStickToBottom: shouldStickToBottom.value,
+      ...getScrollMetrics(),
+    });
+  }
+}
+
+function scheduleScrollToBottom() {
+  if (pendingScrollFrame != null) {
+    if (isStreamDebugEnabled()) {
+      logStreamDebug('chat-panel', 'scroll-skip-frame-pending', getScrollMetrics());
+    }
+    return;
+  }
+
+  pendingScrollFrame = window.requestAnimationFrame(async () => {
+    pendingScrollFrame = null;
+    await nextTick();
+    const element = listRef.value;
+    if (!element || !shouldStickToBottom.value) return;
+    if (isStreamDebugEnabled()) {
+      logStreamDebug('chat-panel', 'scroll-before', getScrollMetrics());
+    }
+    element.scrollTop = element.scrollHeight;
+    if (isStreamDebugEnabled()) {
+      logStreamDebug('chat-panel', 'scroll-after', getScrollMetrics());
+    }
+  });
+}
+
+function getScrollMetrics() {
+  const element = listRef.value;
+  if (!element) {
+    return {
+      scrollTop: null,
+      scrollHeight: null,
+      clientHeight: null,
+      bottomGap: null,
+    };
+  }
+
+  return {
+    scrollTop: Math.round(element.scrollTop),
+    scrollHeight: Math.round(element.scrollHeight),
+    clientHeight: Math.round(element.clientHeight),
+    bottomGap: Math.round(element.scrollHeight - element.scrollTop - element.clientHeight),
+  };
 }
 </script>
 
@@ -152,7 +242,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
       </div>
     </header>
 
-    <div ref="listRef" class="min-h-0 flex-1 overflow-y-auto pr-1">
+    <div ref="listRef" class="min-h-0 flex-1 overflow-y-auto pr-1" @scroll="handleMessageListScroll">
       <div
         v-if="turns.length === 0"
         class="flex h-full flex-col items-center justify-center px-8 text-center"
@@ -217,7 +307,7 @@ function handleSourceButtonClick(turnId: number, index: number) {
               </div>
 
               <div
-                v-else-if="turn.pending"
+                v-if="turn.pending"
                 class="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3.5 py-3 text-[13px] text-amber-100/80"
               >
                 回答仍在生成中，请稍后刷新会话查看。

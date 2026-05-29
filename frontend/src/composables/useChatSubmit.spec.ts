@@ -29,9 +29,86 @@ interface StreamHandlers {
 afterEach(() => {
   streamFirstChatMessageMock.mockReset();
   streamChatMessageMock.mockReset();
+  vi.useRealTimers();
 });
 
 describe('useChatSubmit', () => {
+  it('buffers deltas before flushing them to the answer', async () => {
+    vi.useFakeTimers();
+    let resolveStream!: () => void;
+
+    streamFirstChatMessageMock.mockImplementationOnce(async (...args: unknown[]) => {
+      const handlers = args[2] as StreamHandlers;
+      handlers.onDelta?.({ text: 'hello' });
+      handlers.onDelta?.({ text: ' world' });
+      await new Promise<void>((resolve) => {
+        resolveStream = resolve;
+      });
+      handlers.onDone?.(chatResponse('final answer'));
+    });
+
+    const harness = createSubmitHarness();
+    const submitPromise = harness.handleSubmit('question');
+    const turn = harness.session.value.turns[0];
+
+    expect(turn.answer).toBe('');
+    expect(harness.appendAnswerDelta).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(39);
+    expect(turn.answer).toBe('');
+
+    vi.advanceTimersByTime(1);
+    expect(turn.answer).toBe('hello world');
+    expect(harness.appendAnswerDelta).toHaveBeenCalledTimes(1);
+
+    resolveStream();
+    await submitPromise;
+
+    expect(turn.answer).toBe('final answer');
+  });
+
+  it('flushes pending deltas before applying the final response', async () => {
+    vi.useFakeTimers();
+    streamFirstChatMessageMock.mockImplementationOnce(async (...args: unknown[]) => {
+      const handlers = args[2] as StreamHandlers;
+      handlers.onDelta?.({ text: 'tail' });
+      handlers.onDone?.(chatResponse('final answer'));
+    });
+
+    const harness = createSubmitHarness();
+    await harness.handleSubmit('question');
+
+    const turn = harness.session.value.turns[0];
+    expect(harness.appendAnswerDelta).toHaveBeenCalledWith(turn, 'tail');
+    expect(harness.applyChatResponse).toHaveBeenCalled();
+    expect(harness.appendAnswerDelta.mock.invocationCallOrder[0]).toBeLessThan(
+      harness.applyChatResponse.mock.invocationCallOrder[0]
+    );
+    expect(turn.answer).toBe('final answer');
+
+    vi.advanceTimersByTime(40);
+    expect(harness.appendAnswerDelta).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops the delta buffer when an error event arrives', async () => {
+    vi.useFakeTimers();
+    streamFirstChatMessageMock.mockImplementationOnce(async (...args: unknown[]) => {
+      const handlers = args[2] as StreamHandlers;
+      handlers.onDelta?.({ text: 'partial' });
+      handlers.onError?.({ code: 50001, message: 'stream failed' });
+    });
+
+    const harness = createSubmitHarness();
+    await harness.handleSubmit('question');
+    vi.advanceTimersByTime(40);
+
+    const turn = harness.session.value.turns[0];
+    expect(harness.appendAnswerDelta).not.toHaveBeenCalled();
+    expect(turn.answer).toBe('');
+    expect(turn.error).toBe('stream failed');
+    expect(harness.activeSessionSubmitting.value).toBe(false);
+  });
+
   it('keeps a turn failed when a done event arrives after an error event', async () => {
     streamFirstChatMessageMock.mockImplementationOnce(async (...args: unknown[]) => {
       const handlers = args[2] as StreamHandlers;
@@ -50,6 +127,7 @@ describe('useChatSubmit', () => {
   });
 
   it('marks the turn failed when the stream fails after a partial delta', async () => {
+    vi.useFakeTimers();
     streamFirstChatMessageMock.mockImplementationOnce(async (...args: unknown[]) => {
       const handlers = args[2] as StreamHandlers;
       handlers.onDelta?.({ text: 'partial' });
@@ -60,6 +138,9 @@ describe('useChatSubmit', () => {
     await harness.handleSubmit('question');
 
     const turn = harness.session.value.turns[0];
+    vi.advanceTimersByTime(40);
+
+    expect(harness.appendAnswerDelta).not.toHaveBeenCalled();
     expect(turn.error).toBe('connection lost');
     expect(turn.answer).toBe('');
     expect(turn.loading).toBe(false);
@@ -144,6 +225,9 @@ function createSubmitHarness() {
   });
 
   const applyChatMeta = vi.fn();
+  const appendAnswerDelta = vi.fn((turn: ChatTurn, text: string) => {
+    turn.answer += text;
+  });
 
   const submit = useChatSubmit({
     sessionsLoading: ref(false),
@@ -154,9 +238,7 @@ function createSubmitHarness() {
     setActiveSessionId: vi.fn(),
     appendPendingTurn,
     applyChatMeta,
-    appendAnswerDelta: vi.fn((turn: ChatTurn, text: string) => {
-      turn.answer += text;
-    }),
+    appendAnswerDelta,
     applyChatResponse,
     applyChatFailure,
     finishTurn,
@@ -166,6 +248,7 @@ function createSubmitHarness() {
     session,
     activeSessionSubmitting: submit.activeSessionSubmitting,
     applyChatMeta,
+    appendAnswerDelta,
     applyChatResponse,
     handleSubmit: submit.handleSubmit,
   };

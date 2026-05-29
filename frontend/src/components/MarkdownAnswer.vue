@@ -1,13 +1,26 @@
 <script setup lang="ts">
-import { computed, provide } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import MarkdownRender, { setCustomComponents } from 'markstream-vue';
+import type { SmoothMarkdownStreamOptions } from 'markstream-vue';
 import type { SourceChunk } from '@/api/types';
 import CitationButton from '@/components/CitationButton.vue';
 import { citationContextKey } from '@/components/citationContext';
 import { transformCitationMarkers } from '@/utils/citationMarkers';
+import { isStreamDebugEnabled, logStreamDebug } from '@/utils/streamDebug';
 
 const CUSTOM_ID = 'noterag-chat-answer';
 const CUSTOM_HTML_TAGS = ['citation'];
+const SMOOTH_STREAMING_OPTIONS = {
+  startDelayMs: 0,
+  targetLatencyMs: 180,
+  catchUpLatencyMs: 80,
+  catchUpThreshold: 180,
+  minCharsPerSecond: 120,
+  maxCharsPerSecond: 1800,
+  maxCommitFps: 30,
+  maxCharsPerCommit: 48,
+  flushOnFinish: true,
+} satisfies SmoothMarkdownStreamOptions;
 
 setCustomComponents(CUSTOM_ID, { citation: CitationButton });
 
@@ -23,6 +36,9 @@ const emit = defineEmits<{
   (e: 'open-citation', index: number): void;
 }>();
 
+const rootRef = ref<HTMLElement | null>(null);
+let resizeObserver: ResizeObserver | null = null;
+
 provide(citationContextKey, {
   openCitation(index: number) {
     if (props.loading) return;
@@ -36,16 +52,59 @@ const renderedAnswer = computed(() =>
     sourceIds: props.loading ? undefined : props.sources.map((source) => source.chunkId),
   }).content
 );
+
+watch(
+  () => [props.answer.length, renderedAnswer.value.length, props.loading, props.sources.length],
+  async () => {
+    if (!isStreamDebugEnabled()) return;
+    await nextTick();
+    logStreamDebug('markdown-answer', 'input-change', getMarkdownMetrics());
+  },
+  { flush: 'post' }
+);
+
+onMounted(() => {
+  if (!isStreamDebugEnabled() || typeof ResizeObserver === 'undefined') return;
+
+  resizeObserver = new ResizeObserver(() => {
+    logStreamDebug('markdown-answer', 'resize', getMarkdownMetrics());
+  });
+  if (rootRef.value) resizeObserver.observe(rootRef.value);
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+});
+
+function getMarkdownMetrics() {
+  const element = rootRef.value;
+  return {
+    answerLen: props.answer.length,
+    renderedLen: renderedAnswer.value.length,
+    loading: props.loading,
+    sourceCount: props.sources.length,
+    domTextLen: element?.textContent?.length ?? null,
+    height: element ? Math.round(element.getBoundingClientRect().height) : null,
+  };
+}
 </script>
 
 <template>
-  <div class="markdown-answer">
+  <div ref="rootRef" class="markdown-answer">
     <MarkdownRender
       :content="renderedAnswer"
       :custom-html-tags="CUSTOM_HTML_TAGS"
       :final="!loading"
+      :max-live-nodes="0"
+      :batch-rendering="true"
+      :render-batch-size="16"
+      :render-batch-delay="8"
+      :render-batch-budget-ms="4"
+      :fade="false"
       :typewriter="true"
       smooth-streaming="auto"
+      :smooth-streaming-options="SMOOTH_STREAMING_OPTIONS"
       html-policy="escape"
       :custom-id="CUSTOM_ID"
       :is-dark="true"
