@@ -1,60 +1,80 @@
 # NoteRAG
 
-NoteRAG 是一个面向个人 Markdown 技术笔记的轻量级 RAG 问答系统。
+NoteRAG 是一个面向个人 Markdown 技术笔记的轻量级 RAG 问答系统，目标是把已有笔记变成可检索、可追问、可引用来源的个人知识库。
 
 项目只聚焦 RAG 核心链路：
 
 ```text
-Markdown -> 切块 -> 向量化 -> 存储 -> 提问 -> 检索 -> 拼接 Prompt -> 调用 LLM -> 返回答案
+Markdown import -> chunking -> token estimate -> embedding -> pgvector storage
+-> TopK retrieval -> rerank -> prompt assembly -> LLM answer -> answer + sources
 ```
 
-第一版目标保持简单：导入 Markdown 笔记，将文本切成 chunk，使用 Embedding 生成向量，存入 PostgreSQL + pgvector，查询时检索 TopK 相关片段，拼接 Prompt 调用 LLM，最终返回答案和来源。
+第一版不做复杂知识平台能力：不包含用户系统、权限、多租户、PDF/Word 导入、爬虫、Redis、MQ、对象存储、Agent workflow、复杂前端或高级多阶段检索。
 
-这个项目不做复杂知识平台能力。第一版不包含用户系统、权限、多租户、PDF/Word 解析、爬虫、Agent、工作流、Redis、消息队列、对象存储、高级 rerank 或复杂前端交互。
+## 当前阶段
 
-## 包结构
+当前已经跑通核心 RAG 闭环和单会话 Chat：
 
+- Markdown 导入：支持文本/文件内容导入，入库后切 chunk。
+- 自定义 chunk：按 Markdown 标题 section 分组，保留 `headingPath`，估算 token，支持 overlap。
+- Embedding：通过 Spring AI 接入 OpenAI-compatible embedding API。
+- 向量存储：PostgreSQL + pgvector，当前使用 `chunk_embeddings_1024`。
+- 检索与 rerank：pgvector TopK 召回后接入 rerank，`/api/query` 保留为 reranked sources 调试接口。
+- Chat：支持会话、历史消息、note scope、LLM 回答、citation 解析和 sources 回写。
+- SSE：前端正式发送走 Chat SSE，支持 `meta/delta/done/error` 流式事件。
+- 前端工作台：已接入 notes、历史会话、note scope、sources panel、Markdown 流式渲染和基础会话管理。
 
-主要目录：
+更详细的当前状态见 [`docs/dev/CURRENT_STATUS.md`](docs/dev/CURRENT_STATUS.md)，SSE 契约见 [`docs/dev/CHAT_SSE.md`](docs/dev/CHAT_SSE.md)。
+
+## 核心接口
 
 ```text
-controller/
-service/
-client/
-mapper/
-model/
-dto/
-config/
+GET    /api/health
+POST   /api/note-imports/text
+
+GET    /api/notes
+GET    /api/notes/{noteId}
+DELETE /api/notes/{noteId}
+
+POST   /api/retrieval/search
+POST   /api/query
+
+GET    /api/chat-sessions
+POST   /api/chat-sessions
+POST   /api/chat-sessions/stream
+GET    /api/chat-sessions/{sessionId}/messages
+POST   /api/chat-sessions/{sessionId}/messages
+POST   /api/chat-sessions/{sessionId}/messages/stream
+PATCH  /api/chat-sessions/{sessionId}
+DELETE /api/chat-sessions/{sessionId}
 ```
 
-## 包职责
+说明：
 
-`controller/` 放 HTTP 接口入口，例如健康检查、Markdown 导入和问答查询。
+- `/api/query` 当前只返回 rerank 后的 sources，用于调试检索结果。
+- 正式问答使用 Chat 接口；前端优先使用 SSE stream 接口。
+- `DELETE` 目前是软归档，归档后的 note/session 对列表和详情不可见。
 
-`service/` 放应用业务逻辑，负责组织 RAG 流程，包括文档导入、切块、检索、Prompt 拼接和答案生成。
+## 项目结构
 
-`client/` 放外部模型 API 适配，主要是 `EmbeddingClient` 和 `LlmClient`。
-
-`mapper/` 放 MyBatis Mapper，用于访问 PostgreSQL 和 pgvector。
-
-`model/` 放持久化领域对象，例如文档、文本块、向量和检索记录。
-
-`dto/` 放接口请求和响应对象。
-
-`config/` 放 Spring 配置、数据库配置、模型客户端配置和其他应用级配置。
-
-## 当前范围
-
-当前开发优先跑通最小后端：
+后端主包：`src/main/java/com/huanf/noterag`
 
 ```text
-GET  /api/health
-POST /api/note-imports/text
-POST /api/retrieval/search   # 开发期召回测试接口
-POST /api/query              # 后续完整问答接口
+controller/   HTTP 边界，保持薄 controller
+service/      业务编排，例如 NoteService、QueryService、ChatService
+chunk/        Markdown 解析、headingPath、chunk 组装
+client/       Embedding、Rerank、LLM 外部 API 适配
+entity/       数据库实体，例如 Note、NoteChunk、ChatSession
+model/        后端内部模型，例如 RetrievedChunk、ChatResult
+dto/          HTTP 请求和响应对象
+rag/          prompt 构建、citation marker、引用解析
+mapper/       MyBatis SQL 持久化
+config/       Spring、模型客户端、功能开关配置
 ```
 
-实现时先保持简单，先跑通完整 RAG 闭环，再逐步完善每个环节。
+前端代码位于 `frontend/`，当前主工作台使用 Vue 3 + composables 拆分状态逻辑。
+
+数据库初始化 SQL 位于 `docker/postgres/init/`。注意：`CREATE TABLE IF NOT EXISTS` 不会迁移已有 Docker volume，结构变化后开发环境通常需要重建 volume 或引入正式 migration。
 
 ## 切块策略
 
@@ -66,82 +86,40 @@ heading section -> paragraph merge -> estimated token control -> overlap -> head
 
 chunk 入向量时会临时拼入文档标题和章节路径，但数据库中的 `note_chunks.content` 仍保留原始正文。
 
-已完成一轮 retrieval baseline 对比：在 JavaGuide MySQL 文档上，自定义方案与 Spring AI `TokenTextSplitter` 调整到接近 chunk 数量后，二者 `Recall@5 / Recall@10` 均为 100%；自定义方案在排序和 source 可解释性上更好：
-
-| 方案 | chunks | Hit@1 | Hit@3 | Recall@5 | MRR@5 |
-|---|---:|---:|---:|---:|---:|
-| Spring AI TokenTextSplitter baseline | 69 | 80.0% | 93.3% | 100% | 0.883 |
-| NoteRAG heading-aware chunk | 71 | 93.3% | 100% | 100% | 0.967 |
+已完成一轮 retrieval baseline 对比：在 JavaGuide MySQL 文档上，自定义方案与 Spring AI `TokenTextSplitter` 调整到接近 chunk 数量后，二者 `Recall@5 / Recall@10` 均为 100%；自定义方案在排序和 source 可解释性上更好。
 
 完整实验记录见 [`retrieval-baseline-report.md`](src/test/http/responses/compare/retrieval-baseline-report.md)。
 
+## 本地运行
+
+`.env` 不提交，需要自行在项目根目录准备。不要把 API key、数据库密码或模型密钥写入代码或提交到 Git。
+
+```powershell
+# 启动数据库和应用
+docker compose up -d --build
+
+# 后端测试
+.\mvnw.cmd test
+
+# 前端
+cd frontend
+npm.cmd run test
+npm.cmd run build
+```
+
+新环境没有内置开发数据，需要先导入 Markdown，再生成 embedding，之后才能测试 retrieval/chat。
+
 ## English
 
-NoteRAG is a lightweight RAG question-answering system for personal Markdown technical notes.
-
-The project focuses on the core RAG pipeline only:
+NoteRAG is a lightweight RAG system for personal Markdown technical notes. It focuses on the core pipeline only:
 
 ```text
-Markdown -> chunking -> embedding -> storage -> query -> retrieval -> prompt -> LLM -> answer
+Markdown import -> chunking -> embedding -> pgvector storage
+-> retrieval -> rerank -> prompt -> LLM -> answer + sources
 ```
 
-The first version is intentionally small. It is designed to import Markdown notes, split them into chunks, store vectors in PostgreSQL with pgvector, retrieve TopK related chunks, call an LLM, and return an answer with sources.
+The current version has connected Markdown import, custom heading-aware chunking, embeddings through Spring AI, PostgreSQL + pgvector storage, TopK retrieval, rerank, chat sessions, source citation filtering, and SSE streaming chat.
 
-This project does not try to become a full knowledge platform. The first version does not include user accounts, permissions, multi-tenancy, PDF/Word parsing, crawlers, agents, workflow engines, Redis, message queues, object storage, advanced reranking, or complex frontend interactions.
+The project intentionally avoids user accounts, permissions, multi-tenancy, PDF/Word import, crawlers, Redis, MQ, object storage, agent workflows, complex frontend workflows, and advanced multi-stage retrieval in v1.
 
-## Package Structure
-
-Main package layout:
-
-```text
-controller/
-service/
-client/
-mapper/
-model/
-dto/
-config/
-```
-
-## Package Responsibilities
-
-`controller/` contains HTTP API endpoints, such as health checks, Markdown import, and query entry points.
-
-`service/` contains application logic and coordinates the RAG flow, including document import, chunking, retrieval, prompt building, and answer generation.
-
-`client/` contains external model API adapters, mainly `EmbeddingClient` and `LlmClient`.
-
-`mapper/` contains MyBatis mapper interfaces for PostgreSQL and pgvector access.
-
-`model/` contains persistent domain objects, such as documents, chunks, embeddings, and retrieval records.
-
-`dto/` contains request and response objects used by API endpoints.
-
-`config/` contains Spring configuration, database configuration, model client configuration, and other application-level settings.
-
-## Current Scope
-
-Current development should first make the minimal runnable backend work:
-
-```text
-GET  /api/health
-POST /api/note-imports/text
-POST /api/retrieval/search   # development retrieval test endpoint
-POST /api/query              # future full QA endpoint
-```
-
-Implementation should stay simple: run the core path first, then improve each step after the full RAG loop is connected.
-
-## Chunking Strategy
-
-NoteRAG currently uses a custom Markdown heading-aware chunking strategy:
-
-```text
-heading section -> paragraph merge -> estimated token control -> overlap -> headingPath
-```
-
-For embedding, each chunk is formatted with the note title and heading path, while `note_chunks.content` keeps the original chunk body.
-
-A retrieval baseline comparison has been added. On a JavaGuide MySQL document, the custom strategy and Spring AI `TokenTextSplitter` both reached 100% `Recall@5 / Recall@10` at similar chunk counts, while the custom strategy produced better ranking and source explainability.
-
-See [`retrieval-baseline-report.md`](src/test/http/responses/compare/retrieval-baseline-report.md) for details.
+See [`docs/dev/CURRENT_STATUS.md`](docs/dev/CURRENT_STATUS.md) for the latest development status and [`docs/dev/CHAT_SSE.md`](docs/dev/CHAT_SSE.md) for the SSE contract.
