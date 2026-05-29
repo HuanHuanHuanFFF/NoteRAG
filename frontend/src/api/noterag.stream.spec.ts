@@ -13,6 +13,31 @@ afterEach(() => {
 });
 
 describe('chat stream API', () => {
+  it('dispatches meta payloads', async () => {
+    postJsonSseMock.mockImplementationOnce(async (...args: unknown[]) => {
+      const onEvent = args[2] as (event: { event: string; data: unknown }) => void;
+      onEvent({
+        event: 'meta',
+        data: {
+          sessionId: 1,
+          sessionTitle: 'Chat',
+          userMessageId: 10,
+          assistantMessageId: 11,
+        },
+      });
+    });
+
+    const onMeta = vi.fn();
+    await streamFirstChatMessage('q', undefined, { onMeta });
+
+    expect(onMeta).toHaveBeenCalledWith({
+      sessionId: 1,
+      sessionTitle: 'Chat',
+      userMessageId: 10,
+      assistantMessageId: 11,
+    });
+  });
+
   it('dispatches strict delta text payloads', async () => {
     postJsonSseMock.mockImplementationOnce(async (...args: unknown[]) => {
       const onEvent = args[2] as (event: { event: string; data: unknown }) => void;
@@ -54,5 +79,34 @@ describe('chat stream API', () => {
       message: 'stream failed',
     });
     expect(onError).toHaveBeenCalledWith({ code: 50001, message: 'stream failed' });
+  });
+
+  it('dispatches done payloads', async () => {
+    postJsonSseMock.mockImplementationOnce(async (...args: unknown[]) => {
+      const onEvent = args[2] as (event: { event: string; data: unknown }) => void;
+      onEvent({
+        event: 'done',
+        data: {
+          sessionId: 1,
+          sessionTitle: 'Chat',
+          userMessageId: 10,
+          assistantMessageId: 11,
+          answer: 'final',
+          sources: [],
+        },
+      });
+    });
+
+    const onDone = vi.fn();
+    await streamFirstChatMessage('q', undefined, { onDone });
+
+    expect(onDone).toHaveBeenCalledWith({
+      sessionId: 1,
+      sessionTitle: 'Chat',
+      userMessageId: 10,
+      assistantMessageId: 11,
+      answer: 'final',
+      sources: [],
+    });
   });
 });

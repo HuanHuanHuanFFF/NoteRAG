@@ -1,7 +1,9 @@
+import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source';
 import { ApiError } from './client';
 
 const CLIENT_ERROR_CODE = -1;
 const NETWORK_HTTP_STATUS = 0;
+const TERMINAL_EVENTS = new Set(['done', 'error']);
 
 export interface SseEvent {
   event: string;
@@ -14,100 +16,62 @@ export async function postJsonSse(
   onEvent: (event: SseEvent) => void
 ): Promise<void> {
   const requestBody = stringifyRequestBody(body);
+  let terminalEventReceived = false;
 
   try {
-    const response = await fetch(path, {
+    await fetchEventSource(path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
+      headers: {
+        'Content-Type': 'application/json',
+        accept: EventStreamContentType,
+      },
       body: requestBody,
+      fetch: globalThis.fetch,
+      openWhenHidden: true,
+      async onopen(response) {
+        validateOpenResponse(response);
+      },
+      onmessage(message) {
+        const eventName = message.event || 'message';
+        if (TERMINAL_EVENTS.has(eventName)) {
+          terminalEventReceived = true;
+        }
+        onEvent(parseSseMessage(eventName, message.data));
+      },
+      onclose() {
+        if (!terminalEventReceived) {
+          throw new ApiError('流式响应未正常完成', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+        }
+      },
+      onerror(error) {
+        throw toApiError(error);
+      },
     });
-
-    if (!response.ok) {
-      throw new ApiError(`流式请求失败 (HTTP ${response.status})`, CLIENT_ERROR_CODE, response.status);
-    }
-    if (!response.body) {
-      throw new ApiError('服务器未返回可读取的流式响应', CLIENT_ERROR_CODE, response.status);
-    }
-
-    await readSseStream(response.body, onEvent);
   } catch (error) {
-    if (error instanceof ApiError) {
-      throw error;
-    }
-    throw new ApiError('流式连接失败，请稍后重试', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
+    throw toApiError(error);
   }
 }
 
-async function readSseStream(
-  body: ReadableStream<Uint8Array>,
-  onEvent: (event: SseEvent) => void
-) {
-  const reader = body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+function validateOpenResponse(response: Response) {
+  if (!response.ok) {
+    throw new ApiError(`流式请求失败 (HTTP ${response.status})`, CLIENT_ERROR_CODE, response.status);
+  }
 
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      buffer = dispatchCompleteEvents(buffer, onEvent);
-    }
+  const contentType = response.headers.get('content-type');
+  if (contentType == null || !contentType.toLowerCase().includes(EventStreamContentType)) {
+    throw new ApiError('服务端未返回 text/event-stream 响应', CLIENT_ERROR_CODE, response.status);
+  }
 
-    buffer += decoder.decode();
-    const remaining = buffer.trim();
-    if (remaining) {
-      onEvent(parseSseBlock(remaining));
-    }
-  } finally {
-    reader.releaseLock();
+  if (!response.body) {
+    throw new ApiError('服务端未返回可读取的流式响应', CLIENT_ERROR_CODE, response.status);
   }
 }
 
-function dispatchCompleteEvents(
-  buffer: string,
-  onEvent: (event: SseEvent) => void
-) {
-  let normalized = buffer.replace(/\r\n/g, '\n');
-  let boundary = normalized.indexOf('\n\n');
-
-  while (boundary >= 0) {
-    const block = normalized.slice(0, boundary);
-    normalized = normalized.slice(boundary + 2);
-    if (block.trim()) {
-      onEvent(parseSseBlock(block));
-    }
-    boundary = normalized.indexOf('\n\n');
-  }
-
-  return normalized;
-}
-
-function parseSseBlock(block: string): SseEvent {
-  let event = 'message';
-  const dataLines: string[] = [];
-
-  for (const line of block.split('\n')) {
-    if (!line || line.startsWith(':')) continue;
-    const separator = line.indexOf(':');
-    const field = separator >= 0 ? line.slice(0, separator) : line;
-    let value = separator >= 0 ? line.slice(separator + 1) : '';
-    if (value.startsWith(' ')) {
-      value = value.slice(1);
-    }
-
-    if (field === 'event') {
-      event = value;
-    } else if (field === 'data') {
-      dataLines.push(value);
-    }
-  }
-
-  if (dataLines.length === 0) {
+function parseSseMessage(event: string, rawData: string): SseEvent {
+  if (!rawData) {
     throw new ApiError(`SSE ${event} 事件缺少 data`, CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
   }
 
-  const rawData = dataLines.join('\n');
   try {
     return { event, data: JSON.parse(rawData) as unknown };
   } catch {
@@ -121,4 +85,11 @@ function stringifyRequestBody(body: unknown): string {
   } catch {
     throw new ApiError('请求参数序列化失败', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
   }
+}
+
+function toApiError(error: unknown): ApiError {
+  if (error instanceof ApiError) {
+    return error;
+  }
+  return new ApiError('流式连接失败，请稍后重试', CLIENT_ERROR_CODE, NETWORK_HTTP_STATUS);
 }
