@@ -170,8 +170,9 @@ Chat 同步与流式共用同一套主链路：
 当前优先级只保留三个方向：
 
 1. 上 Nginx：明确前后端部署方式、反向代理、静态资源托管、SSE 转发配置和本地/线上环境差异。
-2. 做 summary chunk：为每篇 Note 生成全局视角摘要 chunk，作为全文级召回补充；具体生成边界、落库结构和 embedding 时机实现前再确认。
-3. 做 LLM rewrite + 原始问题双路召回：对用户问题生成改写查询，同时保留原始问题检索，两路召回后合并去重，再进入 rerank。
+2. 替换入库 token 统计：Note 原文和 chunk 的 token 统计改用 Spring AI 自带 token 计算，使用通用编码 `EncodingType.CL100K_BASE`，替代当前估算逻辑。
+3. 做 summary chunk：为每篇 Note 生成全局视角摘要 chunk，作为全文级召回补充；具体生成边界、落库结构和 embedding 时机实现前再确认。
+4. 做 LLM rewrite + 原始问题双路召回：对用户问题生成改写查询，同时保留原始问题检索，两路召回后合并去重，再进入 rerank。
 
 暂不推进：
 
