@@ -1,66 +1,56 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, provide } from 'vue';
+import MarkdownRender, { setCustomComponents } from 'markstream-vue';
 import type { SourceChunk } from '@/api/types';
-import { markdown } from '@/utils/markdown';
+import CitationButton from '@/components/CitationButton.vue';
+import { citationContextKey } from '@/components/citationContext';
+import { transformCitationMarkers } from '@/utils/citationMarkers';
 
-const MARKER_PREFIX = '\uE200cite\uE202';
-const MARKER_END = '\uE201';
-const CITATION_PATTERN = new RegExp(`${MARKER_PREFIX}([1-9]\\d*)${MARKER_END}`, 'g');
+const CUSTOM_ID = 'noterag-chat-answer';
+const CUSTOM_HTML_TAGS = ['citation'];
 
-const props = defineProps<{
+setCustomComponents(CUSTOM_ID, { citation: CitationButton });
+
+const props = withDefaults(defineProps<{
   answer: string;
   sources: SourceChunk[];
-}>();
+  loading?: boolean;
+}>(), {
+  loading: false,
+});
 
 const emit = defineEmits<{
   (e: 'open-citation', index: number): void;
 }>();
 
-const sourceDisplayIndex = computed(() => {
-  const byChunkId = new Map<string, number>();
-  props.sources.forEach((source, index) => {
-    byChunkId.set(String(source.chunkId), index + 1);
-  });
-  return byChunkId;
+provide(citationContextKey, {
+  openCitation(index: number) {
+    if (props.loading) return;
+    emit('open-citation', index);
+  },
 });
 
-const renderedAnswer = computed(() => {
-  const replacements: Array<{ placeholder: string; displayIndex: number }> = [];
-  const preparedAnswer = (props.answer ?? '').replace(CITATION_PATTERN, (marker, sourceId: string) => {
-    const displayIndex = sourceDisplayIndex.value.get(sourceId);
-    if (displayIndex == null) {
-      return marker;
-    }
-
-    const placeholder = `NOTERAG_CITATION_${replacements.length}__`;
-    replacements.push({ placeholder, displayIndex });
-    return placeholder;
-  });
-
-  let html = markdown.render(preparedAnswer);
-  for (const replacement of replacements) {
-    html = html.split(replacement.placeholder).join(renderCitationButton(replacement.displayIndex));
-  }
-  return html;
-});
-
-function renderCitationButton(displayIndex: number): string {
-  return `<button type="button" class="markdown-answer__citation" data-citation-index="${displayIndex}" aria-label="View source ${displayIndex}">${displayIndex}</button>`;
-}
-
-function handleClick(event: MouseEvent) {
-  const target = event.target as HTMLElement | null;
-  const button = target?.closest<HTMLButtonElement>('button[data-citation-index]');
-  if (!button) return;
-
-  const index = Number(button.dataset.citationIndex);
-  if (!Number.isInteger(index) || index < 1) return;
-  emit('open-citation', index);
-}
+const renderedAnswer = computed(() =>
+  transformCitationMarkers(props.answer ?? '', {
+    disabled: props.loading,
+    sourceIds: props.loading ? undefined : props.sources.map((source) => source.chunkId),
+  }).content
+);
 </script>
 
 <template>
-  <div class="markdown-answer" v-html="renderedAnswer" @click="handleClick"></div>
+  <div class="markdown-answer">
+    <MarkdownRender
+      :content="renderedAnswer"
+      :custom-html-tags="CUSTOM_HTML_TAGS"
+      :final="!loading"
+      :typewriter="true"
+      smooth-streaming="auto"
+      html-policy="escape"
+      :custom-id="CUSTOM_ID"
+      :is-dark="true"
+    />
+  </div>
 </template>
 
 <style scoped>
@@ -200,8 +190,13 @@ function handleClick(event: MouseEvent) {
     color 150ms ease;
 }
 
-.markdown-answer :deep(.markdown-answer__citation:hover) {
+.markdown-answer :deep(.markdown-answer__citation:not(:disabled):hover) {
   background: rgb(45 212 191 / 0.15);
+}
+
+.markdown-answer :deep(.markdown-answer__citation:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 </style>
