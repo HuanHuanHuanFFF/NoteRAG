@@ -1,5 +1,6 @@
 package com.huanf.noterag.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
 import com.huanf.noterag.entity.Note;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.NoteChunkType;
 import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.model.NoteListItem;
 import com.huanf.noterag.util.EstimatedTokenCounter;
@@ -28,9 +30,12 @@ import com.huanf.noterag.util.EstimatedTokenCounter;
 @Service
 public class NoteService {
 
+    private static final String SUMMARY_HEADING_PATH = "全文摘要";
+
     private final NoteMapper noteMapper;
     private final NoteChunkMapper noteChunkMapper;
     private final MarkdownChunkTransformer markdownChunkTransformer;
+    private final NoteSummaryService noteSummaryService;
     private final NoteEmbeddingService noteEmbeddingService;
     private final TransactionTemplate transactionTemplate;
 
@@ -38,12 +43,14 @@ public class NoteService {
             NoteMapper noteMapper,
             NoteChunkMapper noteChunkMapper,
             MarkdownChunkTransformer markdownChunkTransformer,
+            NoteSummaryService noteSummaryService,
             NoteEmbeddingService noteEmbeddingService,
             TransactionTemplate transactionTemplate
     ) {
         this.noteMapper = noteMapper;
         this.noteChunkMapper = noteChunkMapper;
         this.markdownChunkTransformer = markdownChunkTransformer;
+        this.noteSummaryService = noteSummaryService;
         this.noteEmbeddingService = noteEmbeddingService;
         this.transactionTemplate = transactionTemplate;
     }
@@ -51,8 +58,9 @@ public class NoteService {
     /**
      * 导入 Markdown 原文。
      *
-     * <p>流程约束固定为：先入库 document，拿到持久化 ID，再把该 ID 放入 source metadata 后执行 chunk。
-     * 这样后续即使扩展为批处理或异步 chunk，chunk 结果也仍然可以通过 metadata 回溯到源 document。</p>
+     * <p>流程约束固定为：先生成 summary，再短事务入库 note/chunks，最后在事务外执行 embedding。
+     * chunk 阶段会把持久化 note ID 放入 source metadata，
+     * 这样后续即使扩展为批处理或异步 chunk，chunk 结果也仍然可以通过 metadata 回溯到源 note。</p>
      */
     public ImportTextResponse importText(ImportTextRequest request) {
         String title = normalizeTitle(request.getTitle());
@@ -61,13 +69,19 @@ public class NoteService {
         int tokenCount = EstimatedTokenCounter.estimate(content);
         log.info("Note 导入开始, titleLength={}, charCount={}, tokenCount={}", title.length(), charCount, tokenCount);
 
+        String summary = noteSummaryService.generateSummary(title, content);
         SavedChunks savedChunks = transactionTemplate.execute(status ->
-                saveNoteAndChunks(title, content, charCount, tokenCount));
+                saveNoteAndChunks(title, content, charCount, tokenCount, summary));
         if (savedChunks == null) {
             throw new BusinessException(CodeStatus.INTERNAL_ERROR, "Import transaction returned no result");
         }
 
-        noteEmbeddingService.embedAndStore(title, savedChunks.chunks());
+        try {
+            noteEmbeddingService.embedAndStore(title, savedChunks.chunks());
+        } catch (RuntimeException exception) {
+            cleanupImportedNote(savedChunks.noteId(), exception);
+            throw exception;
+        }
 
         log.info("Note 导入完成, noteId={}, chunkCount={}, charCount={}, tokenCount={}",
                 savedChunks.noteId(), savedChunks.chunks().size(), charCount, tokenCount);
@@ -106,7 +120,7 @@ public class NoteService {
     /**
      * 在导入事务内保存 note 原文和切块结果。
      */
-    private SavedChunks saveNoteAndChunks(String title, String content, int charCount, int tokenCount) {
+    private SavedChunks saveNoteAndChunks(String title, String content, int charCount, int tokenCount, String summary) {
         Note note = new Note();
         note.setTitle(title);
         note.setContent(content);
@@ -121,14 +135,18 @@ public class NoteService {
                         Map.of(MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY, note.getId()))
                 ));
 
-        List<NoteChunk> chunks = chunkDocuments
+        List<NoteChunk> contentChunks = chunkDocuments
                 .stream()
-                .map(this::toDocumentChunk)
+                .map(this::toContentChunk)
                 .toList();
 
-        if (chunks.isEmpty()) {
+        if (contentChunks.isEmpty()) {
             throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID, "Markdown chunker returned no chunks");
         }
+
+        List<NoteChunk> chunks = new ArrayList<>(contentChunks.size() + 1);
+        chunks.addAll(contentChunks);
+        chunks.add(toSummaryChunk(note.getId(), summary));
 
         List<NoteChunk> savedChunks = noteChunkMapper.batchInsertReturning(chunks);
         validateSavedChunks(chunks, savedChunks);
@@ -157,15 +175,44 @@ public class NoteService {
      * <p>documentId 统一从 chunk metadata 读取，而不是由外层额外传参，
      * 这样可以保持 chunk 归属关系跟随 chunk 一起流转。</p>
      */
-    private NoteChunk toDocumentChunk(Document chunk) {
+    private NoteChunk toContentChunk(Document chunk) {
         NoteChunk noteChunk = new NoteChunk();
         noteChunk.setNoteId(readLongMetadata(chunk.getMetadata(), MarkdownChunkTransformer.DOCUMENT_ID_METADATA_KEY));
+        noteChunk.setChunkType(NoteChunkType.CONTENT);
         noteChunk.setChunkIndex(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY));
         noteChunk.setHeadingPath((String) chunk.getMetadata().get(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY));
         noteChunk.setContent(chunk.getText());
         noteChunk.setCharCount(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY));
         noteChunk.setTokenCount(readIntegerMetadata(chunk.getMetadata(), MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY));
         return noteChunk;
+    }
+
+    /**
+     * 构造全文摘要 chunk，复用 note_chunks 和 embedding 入库链路。
+     */
+    private NoteChunk toSummaryChunk(Long noteId, String summary) {
+        NoteChunk noteChunk = new NoteChunk();
+        noteChunk.setNoteId(noteId);
+        noteChunk.setChunkType(NoteChunkType.SUMMARY);
+        noteChunk.setChunkIndex(0);
+        noteChunk.setHeadingPath(SUMMARY_HEADING_PATH);
+        noteChunk.setContent(summary);
+        noteChunk.setCharCount(summary.length());
+        noteChunk.setTokenCount(EstimatedTokenCounter.estimate(summary));
+        return noteChunk;
+    }
+
+    /**
+     * embedding 阶段失败后硬删除本次导入的 note，依赖 FK cascade 清理 chunks/embeddings。
+     */
+    private void cleanupImportedNote(Long noteId, RuntimeException originalException) {
+        try {
+            Integer deleted = transactionTemplate.execute(status -> noteMapper.deleteByIdForImportCleanup(noteId));
+            log.warn("Note 导入失败已清理, noteId={}, deleted={}", noteId, deleted == null ? 0 : deleted);
+        } catch (RuntimeException cleanupException) {
+            originalException.addSuppressed(cleanupException);
+            log.error("Note 导入失败清理异常, noteId={}", noteId, cleanupException);
+        }
     }
 
     /**

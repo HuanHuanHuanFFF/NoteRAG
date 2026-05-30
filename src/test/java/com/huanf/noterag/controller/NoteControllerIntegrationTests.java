@@ -26,7 +26,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.NoteChunkType;
 import com.huanf.noterag.service.NoteEmbeddingService;
+import com.huanf.noterag.service.NoteSummaryService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -54,6 +56,9 @@ class NoteControllerIntegrationTests {
     private NoteEmbeddingService noteEmbeddingService;
 
     @MockitoBean
+    private NoteSummaryService noteSummaryService;
+
+    @MockitoBean
     private NoteChunkMapper noteChunkMapper;
 
     @Autowired
@@ -66,6 +71,7 @@ class NoteControllerIntegrationTests {
     void setUpNoteChunkMapper() {
         when(noteChunkMapper.batchInsertReturning(any())).thenAnswer(invocation ->
                 insertChunksReturning(invocation.getArgument(0)));
+        when(noteSummaryService.generateSummary(any(), any())).thenReturn("Java Guide 全文摘要");
     }
 
     @Test
@@ -82,7 +88,7 @@ class NoteControllerIntegrationTests {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.message").value("success"))
                 .andExpect(jsonPath("$.data.documentId").isNumber())
-                .andExpect(jsonPath("$.data.chunkCount").value(1))
+                .andExpect(jsonPath("$.data.chunkCount").value(2))
                 .andExpect(jsonPath("$.data.charCount").isNumber())
                 .andExpect(jsonPath("$.data.tokenCount").isNumber());
     }
@@ -222,10 +228,11 @@ class NoteControllerIntegrationTests {
     private List<NoteChunk> insertChunksReturning(List<NoteChunk> chunks) {
         for (NoteChunk chunk : chunks) {
             jdbcTemplate.update("""
-                    INSERT INTO note_chunks (note_id, chunk_index, heading_path, content, char_count, token_count)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO note_chunks (note_id, chunk_type, chunk_index, heading_path, content, char_count, token_count)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     chunk.getNoteId(),
+                    chunk.getChunkType().name(),
                     chunk.getChunkIndex(),
                     chunk.getHeadingPath(),
                     chunk.getContent(),
@@ -235,6 +242,7 @@ class NoteControllerIntegrationTests {
         return jdbcTemplate.query("""
                 SELECT id,
                        note_id,
+                       chunk_type,
                        chunk_index,
                        heading_path,
                        content,
@@ -243,11 +251,12 @@ class NoteControllerIntegrationTests {
                        created_at
                 FROM note_chunks
                 WHERE note_id = ?
-                ORDER BY chunk_index
+                ORDER BY chunk_type, chunk_index
                 """, (rs, rowNum) -> {
             NoteChunk chunk = new NoteChunk();
             chunk.setId(rs.getLong("id"));
             chunk.setNoteId(rs.getLong("note_id"));
+            chunk.setChunkType(NoteChunkType.valueOf(rs.getString("chunk_type")));
             chunk.setChunkIndex(rs.getInt("chunk_index"));
             chunk.setHeadingPath(rs.getString("heading_path"));
             chunk.setContent(rs.getString("content"));
@@ -267,8 +276,8 @@ class NoteControllerIntegrationTests {
 
     private void insertChunk(Long noteId, int chunkIndex, String headingPath, String content, int charCount, int tokenCount) {
         jdbcTemplate.update("""
-                INSERT INTO note_chunks (note_id, chunk_index, heading_path, content, char_count, token_count)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO note_chunks (note_id, chunk_type, chunk_index, heading_path, content, char_count, token_count)
+                VALUES (?, 'CONTENT', ?, ?, ?, ?, ?)
                 """, noteId, chunkIndex, headingPath, content, charCount, tokenCount);
     }
 }

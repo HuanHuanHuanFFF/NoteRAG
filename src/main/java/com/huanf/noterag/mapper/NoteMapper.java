@@ -2,6 +2,7 @@ package com.huanf.noterag.mapper;
 
 import java.util.List;
 
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Options;
@@ -74,4 +75,13 @@ public interface NoteMapper {
               AND status = 'ACTIVE'
             """)
     int archiveById(@Param("id") Long id);
+
+    /**
+     * 导入后续链路失败时硬删除本次 note，依赖 FK cascade 清理 chunks 和 embeddings。
+     */
+    @Delete("""
+            DELETE FROM notes
+            WHERE id = #{id}
+            """)
+    int deleteByIdForImportCleanup(@Param("id") Long id);
 }

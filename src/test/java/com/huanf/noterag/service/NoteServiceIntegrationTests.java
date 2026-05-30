@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -28,6 +29,7 @@ import com.huanf.noterag.mapper.NoteChunkMapper;
 import com.huanf.noterag.mapper.NoteMapper;
 import com.huanf.noterag.entity.Note;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.NoteChunkType;
 import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 
@@ -55,6 +57,9 @@ class NoteServiceIntegrationTests {
     @MockitoBean
     private NoteEmbeddingService noteEmbeddingService;
 
+    @MockitoBean
+    private NoteSummaryService noteSummaryService;
+
     @Autowired
     private NoteService noteService;
 
@@ -71,6 +76,7 @@ class NoteServiceIntegrationTests {
     void setUpNoteChunkMapper() {
         when(noteChunkMapper.batchInsertReturning(any())).thenAnswer(invocation ->
                 insertChunksReturning(invocation.getArgument(0)));
+        when(noteSummaryService.generateSummary(any(), any())).thenReturn("Java Guide 全文摘要");
     }
 
     @Test
@@ -89,7 +95,7 @@ class NoteServiceIntegrationTests {
         ImportTextResponse response = noteService.importText(new ImportTextRequest("  Java Guide  ", rawContent));
 
         assertThat(response.getDocumentId()).isNotNull();
-        assertThat(response.getChunkCount()).isEqualTo(2);
+        assertThat(response.getChunkCount()).isEqualTo(3);
         assertThat(response.getCharCount()).isEqualTo(normalizedContent.length());
         assertThat(response.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
 
@@ -102,27 +108,37 @@ class NoteServiceIntegrationTests {
         assertThat(savedNote.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
 
         List<NoteChunk> savedChunks = findChunksByNoteId(response.getDocumentId());
-        assertThat(savedChunks).hasSize(2);
+        assertThat(savedChunks).hasSize(3);
         assertThat(savedChunks)
                 .extracting(NoteChunk::getNoteId)
                 .containsOnly(response.getDocumentId());
         assertThat(savedChunks)
+                .extracting(NoteChunk::getChunkType)
+                .containsExactly(NoteChunkType.CONTENT, NoteChunkType.CONTENT, NoteChunkType.SUMMARY);
+        assertThat(savedChunks)
                 .extracting(NoteChunk::getChunkIndex)
-                .containsExactly(0, 1);
+                .containsExactly(0, 1, 0);
         assertThat(savedChunks)
                 .extracting(NoteChunk::getHeadingPath)
-                .containsExactly("Java", "Java > Collections");
+                .containsExactly("Java", "Java > Collections", "全文摘要");
         assertThat(savedChunks.get(0).getContent()).isEqualTo("Java notes.");
         assertThat(savedChunks.get(0).getCharCount()).isEqualTo("Java notes.".length());
         assertThat(savedChunks.get(0).getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate("Java notes."));
         assertThat(savedChunks.get(1).getContent()).isEqualTo("HashMap notes.");
         assertThat(savedChunks.get(1).getCharCount()).isEqualTo("HashMap notes.".length());
         assertThat(savedChunks.get(1).getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate("HashMap notes."));
+        assertThat(savedChunks.get(2).getContent()).isEqualTo("Java Guide 全文摘要");
+        assertThat(savedChunks.get(2).getCharCount()).isEqualTo("Java Guide 全文摘要".length());
+        assertThat(savedChunks.get(2).getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate("Java Guide 全文摘要"));
 
+        verify(noteSummaryService).generateSummary("Java Guide", normalizedContent);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<NoteChunk>> chunksCaptor = ArgumentCaptor.forClass(List.class);
         verify(noteEmbeddingService).embedAndStore(eq("Java Guide"), chunksCaptor.capture());
-        assertThat(chunksCaptor.getValue()).hasSize(2);
+        assertThat(chunksCaptor.getValue()).hasSize(3);
+        assertThat(chunksCaptor.getValue())
+                .extracting(NoteChunk::getChunkType)
+                .containsExactly(NoteChunkType.CONTENT, NoteChunkType.CONTENT, NoteChunkType.SUMMARY);
         assertThat(chunksCaptor.getValue())
                 .extracting(NoteChunk::getId)
                 .doesNotContainNull();
@@ -136,7 +152,27 @@ class NoteServiceIntegrationTests {
     }
 
     @Test
-    void importTextKeepsNoteAndChunksWhenEmbeddingFails() {
+    void importTextDoesNotPersistNoteWhenSummaryFails() {
+        BusinessException summaryException = new BusinessException(
+                CodeStatus.LLM_RESULT_INVALID,
+                "summary failed");
+        when(noteSummaryService.generateSummary(eq("Summary Failure"), any())).thenThrow(summaryException);
+
+        assertThatThrownBy(() -> noteService.importText(new ImportTextRequest(
+                "Summary Failure",
+                "# Java\n\nJava notes.")))
+                .isSameAs(summaryException);
+
+        Integer noteCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notes WHERE title = ?",
+                Integer.class,
+                "Summary Failure");
+        assertThat(noteCount).isZero();
+        verifyNoInteractions(noteEmbeddingService);
+    }
+
+    @Test
+    void importTextCleansNoteAndChunksWhenEmbeddingFails() {
         BusinessException embeddingException = new BusinessException(
                 CodeStatus.EMBEDDING_FAILED,
                 "embedding failed");
@@ -147,17 +183,19 @@ class NoteServiceIntegrationTests {
                 "# Java\n\nJava notes.")))
                 .isSameAs(embeddingException);
 
-        Long noteId = jdbcTemplate.queryForObject(
-                "SELECT id FROM notes WHERE title = ?",
-                Long.class,
-                "Embedding Failure");
-        assertThat(noteId).isNotNull();
-
-        Integer chunkCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM note_chunks WHERE note_id = ?",
+        Integer noteCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notes WHERE title = ?",
                 Integer.class,
-                noteId);
-        assertThat(chunkCount).isEqualTo(1);
+                "Embedding Failure");
+        assertThat(noteCount).isZero();
+
+        Integer chunkCount = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM note_chunks nc
+                JOIN notes n ON n.id = nc.note_id
+                WHERE n.title = ?
+                """, Integer.class, "Embedding Failure");
+        assertThat(chunkCount).isZero();
     }
 
     @Test
@@ -216,10 +254,11 @@ class NoteServiceIntegrationTests {
     private List<NoteChunk> insertChunksReturning(List<NoteChunk> chunks) {
         for (NoteChunk chunk : chunks) {
             jdbcTemplate.update("""
-                    INSERT INTO note_chunks (note_id, chunk_index, heading_path, content, char_count, token_count)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO note_chunks (note_id, chunk_type, chunk_index, heading_path, content, char_count, token_count)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     chunk.getNoteId(),
+                    chunk.getChunkType().name(),
                     chunk.getChunkIndex(),
                     chunk.getHeadingPath(),
                     chunk.getContent(),
@@ -233,6 +272,7 @@ class NoteServiceIntegrationTests {
         return jdbcTemplate.query("""
                 SELECT id,
                        note_id,
+                       chunk_type,
                        chunk_index,
                        heading_path,
                        content,
@@ -241,11 +281,12 @@ class NoteServiceIntegrationTests {
                        created_at
                 FROM note_chunks
                 WHERE note_id = ?
-                ORDER BY chunk_index
+                ORDER BY chunk_type, chunk_index
                 """, (rs, rowNum) -> {
             NoteChunk chunk = new NoteChunk();
             chunk.setId(rs.getLong("id"));
             chunk.setNoteId(rs.getLong("note_id"));
+            chunk.setChunkType(NoteChunkType.valueOf(rs.getString("chunk_type")));
             chunk.setChunkIndex(rs.getInt("chunk_index"));
             chunk.setHeadingPath(rs.getString("heading_path"));
             chunk.setContent(rs.getString("content"));

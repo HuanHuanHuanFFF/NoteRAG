@@ -14,6 +14,7 @@ public class NoteChunk {
 
     private Long id;
     private Long noteId;
+    private NoteChunkType chunkType;
     private Integer chunkIndex;
     private String headingPath;
     private String content;

@@ -23,6 +23,7 @@ class ChunkRetrievalMapperTests {
         assertThat(sql).contains("JOIN notes n ON n.id = nc.note_id");
         assertThat(sql).contains("WHERE ce.embedding_model_id = #{embeddingModelId}");
         assertThat(sql).contains("AND n.status = 'ACTIVE'");
+        assertThat(sql).doesNotContain("nc.chunk_type = 'CONTENT'");
         assertThat(sql).contains("<if test='noteIds != null and noteIds.size() > 0'>");
         assertThat(sql).contains("AND n.id IN");
         assertThat(sql).contains("<foreach collection='noteIds' item='noteId'");

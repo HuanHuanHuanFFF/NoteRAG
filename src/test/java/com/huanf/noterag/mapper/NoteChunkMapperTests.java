@@ -19,9 +19,12 @@ class NoteChunkMapperTests {
 
         String sql = String.join("\n", select.value());
         assertThat(sql).contains("INSERT INTO note_chunks");
+        assertThat(sql).contains("chunk_type");
         assertThat(sql).contains("<foreach collection='chunks' item='chunk' separator=','>");
+        assertThat(sql).contains("#{chunk.chunkType}::note_chunk_type");
         assertThat(sql).contains("RETURNING id");
         assertThat(sql).contains("note_id AS noteId");
+        assertThat(sql).contains("chunk_type AS chunkType");
         assertThat(sql).contains("chunk_index AS chunkIndex");
         assertThat(sql).contains("heading_path AS headingPath");
         assertThat(sql).contains("content");

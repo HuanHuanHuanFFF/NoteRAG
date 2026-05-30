@@ -24,6 +24,7 @@ EXECUTE FUNCTION set_updated_at();
 CREATE TABLE IF NOT EXISTS note_chunks (
     id BIGSERIAL PRIMARY KEY,
     note_id BIGINT NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    chunk_type note_chunk_type NOT NULL DEFAULT 'CONTENT',
     chunk_index INTEGER NOT NULL,
     heading_path TEXT,
     content TEXT NOT NULL,
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS note_chunks (
     CONSTRAINT note_chunks_chunk_index_non_negative CHECK (chunk_index >= 0),
     CONSTRAINT note_chunks_char_count_non_negative CHECK (char_count >= 0),
     CONSTRAINT note_chunks_token_count_non_negative CHECK (token_count >= 0),
-    CONSTRAINT note_chunks_note_id_chunk_index_key UNIQUE (note_id, chunk_index)
+    CONSTRAINT note_chunks_note_id_type_chunk_index_key UNIQUE (note_id, chunk_type, chunk_index)
 );
 
 CREATE TABLE IF NOT EXISTS embedding_models (
