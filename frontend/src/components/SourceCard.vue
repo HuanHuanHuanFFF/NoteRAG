@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { SourceChunk } from '@/api/types';
+import MarkdownContent from '@/components/MarkdownContent.vue';
 
 const props = defineProps<{
   source: SourceChunk;
@@ -62,11 +63,12 @@ const scoreDisplay = computed(() => {
         </svg>
         {{ expanded ? '收起内容' : '展开完整内容' }}
       </button>
-      <pre
+      <div
         v-if="expanded"
-        class="mt-2 overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-white/[0.05] bg-black/30 p-3 font-mono text-[12px] leading-relaxed text-white/75"
-        >{{ source.content }}</pre
+        class="mt-2 overflow-x-auto rounded-md border border-white/[0.05] bg-black/30 p-3 text-white/75"
       >
+        <MarkdownContent :content="source.content" compact />
+      </div>
     </div>
   </article>
 </template>

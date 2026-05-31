@@ -2,15 +2,18 @@
 import { computed } from 'vue';
 import { markdown } from '@/utils/markdown';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   content: string;
-}>();
+  compact?: boolean;
+}>(), {
+  compact: false,
+});
 
 const renderedContent = computed(() => markdown.render(props.content ?? ''));
 </script>
 
 <template>
-  <div class="markdown-content" v-html="renderedContent"></div>
+  <div class="markdown-content" :class="{ 'markdown-content--compact': compact }" v-html="renderedContent"></div>
 </template>
 
 <style scoped>
@@ -135,5 +138,59 @@ const renderedContent = computed(() => markdown.render(props.content ?? ''));
   background: rgb(255 255 255 / 0.06);
   color: rgb(255 255 255 / 0.9);
   font-weight: 600;
+}
+
+.markdown-content--compact {
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.markdown-content--compact :deep(p),
+.markdown-content--compact :deep(ul),
+.markdown-content--compact :deep(ol),
+.markdown-content--compact :deep(pre),
+.markdown-content--compact :deep(blockquote),
+.markdown-content--compact :deep(table) {
+  margin: 0.55em 0;
+}
+
+.markdown-content--compact :deep(h1) {
+  font-size: 15px;
+}
+
+.markdown-content--compact :deep(h2) {
+  font-size: 14px;
+}
+
+.markdown-content--compact :deep(h3),
+.markdown-content--compact :deep(h4) {
+  font-size: 13px;
+}
+
+.markdown-content--compact :deep(pre) {
+  padding: 0.6rem 0.7rem;
+}
+
+.markdown-content--compact :deep(a) {
+  color: rgb(45 212 191 / 0.92);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content--compact :deep(a:hover) {
+  color: rgb(94 234 212);
+  text-decoration: underline;
+}
+
+.markdown-content--compact :deep(blockquote) {
+  border-left: 3px solid rgb(45 212 191 / 0.35);
+  background: rgb(255 255 255 / 0.03);
+  padding: 0.45rem 0.75rem;
+  color: rgb(255 255 255 / 0.68);
+}
+
+.markdown-content--compact :deep(th),
+.markdown-content--compact :deep(td) {
+  padding: 0.3rem 0.45rem;
 }
 </style>
