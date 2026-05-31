@@ -18,18 +18,19 @@ v1 继续坚持核心 RAG 闭环，不扩展用户系统、权限、多租户、
 最近关键提交：
 
 ```text
+8fb0294 refactor(rag): 移动 RagTextFormatter
+370701f feat(import): 使用 CL100K 统计 token
 4fbd866 feat(import): 优化摘要 chunk 向量文本
 76b2c1f feat(import): 添加摘要 chunk
 54321b7 feat(deploy): 接入 Nginx
 bf572f0 优化前端流式输出
-5c8b2f7 feat(frontend): 接入 markstream 渲染引用
-62df2bc feat(frontend): 使用 fetch-event-source 接收 SSE
 ```
 
 当前已完成：
 
 - Markdown 导入：`POST /api/note-imports/text`，导入后保存 Note、切 chunk、生成 embedding。
 - 自定义 chunk：按 Markdown 标题 section 分组，保留 `headingPath`，估算 token，支持 overlap。
+- Token 统计：入库、接口返回和 chunk metadata 的 `token_count` 已改用 Spring AI `CL100K_BASE` 统计；chunk 边界仍保留轻量估算，避免改变现有切块行为。
 - Summary chunk：导入时先用 LLM 为整篇 Note 生成全文摘要，落为 `SUMMARY` chunk，并参与 embedding/retrieval。
 - Embedding：通过 Spring AI 接入 OpenAI-compatible embedding API，当前向量表为 `chunk_embeddings_1024`。
 - Retrieval：PostgreSQL + pgvector cosine TopK，支持 `noteIds` 范围过滤。
@@ -83,7 +84,7 @@ DELETE /api/chat-sessions/{sessionId}
 - `entity/`：数据库实体，例如 `Note`、`NoteChunk`、`ChatSession`、`ChatMessage`。
 - `model/`：后端内部模型，例如 `RetrievedChunk`、`ChatResult`。
 - `dto/`：HTTP 请求和响应对象。
-- `rag/`：prompt 构建、citation marker、引用解析。
+- `rag/`：prompt 构建、RAG 文本格式化、citation marker、引用解析。
 - `mapper/`：MyBatis SQL 持久化。
 - `config/`：Spring、数据库、模型客户端和功能开关配置。
 
@@ -163,6 +164,7 @@ Chat 同步与流式共用同一套主链路：
 
 - Citation marker 仍使用真实 `chunkId`。如果后续仍不稳定，优先改为 prompt 内局部 source 编号，再由后端映射回真实 chunkId。
 - SSE 已修复一次“输出几行后卡住”的问题，真实前端长回答流式输出、自动滚动、Markdown 渲染、citation marker 和 sources panel 已完成阶段性回归。
+- 当前 token 统计是有意的双轨状态：持久化/展示用 `CL100K_BASE`，chunk 边界仍用 `EstimatedTokenCounter`。如果后续要让切块边界也严格按 tokenizer 控制，需要单独设计和回归 chunk 行为。
 - Summary chunk 已跑通，但还有较大优化空间：摘要 prompt、摘要长度、summary embedding text、summary chunk 是否需要单独权重或召回策略，都需要结合真实笔记和查询效果继续调。
 - 失败重试已经具备基础能力；停止生成、重新生成、连续输入、局部 source 编号暂不作为近期任务。
 - 数据库 init SQL 适合新库初始化，已有 Docker volume 不会自动迁移；上线前需要正式 migration 方案。
@@ -172,10 +174,9 @@ Chat 同步与流式共用同一套主链路：
 
 当前优先级先保留以下方向：
 
-1. 替换入库 token 统计：Note 原文和 chunk 的 token 统计改用 Spring AI 自带 token 计算，使用通用编码 `EncodingType.CL100K_BASE`，替代当前估算逻辑。
-2. 优化 summary chunk：基于真实召回效果继续调整摘要 prompt、summary embedding text 和召回表现；当前已完成基础链路，不再把它当成未开始任务。
-3. 做 LLM rewrite + 原始问题双路召回：对用户问题生成改写查询，同时保留原始问题检索，两路召回后合并去重，再进入 rerank。
-4. 优化前端布局：给右侧 Sources panel 增加可拖拽宽度，交互和左侧 Notes panel 保持一致，并设置合理的最小/最大宽度。
+1. 优化 summary chunk：基于真实召回效果继续调整摘要 prompt、summary embedding text 和召回表现；当前已完成基础链路，不再把它当成未开始任务。
+2. 做 LLM rewrite + 原始问题双路召回：对用户问题生成改写查询，同时保留原始问题检索，两路召回后合并去重，再进入 rerank。
+3. 优化前端布局：给右侧 Sources panel 增加可拖拽宽度，交互和左侧 Notes panel 保持一致，并设置合理的最小/最大宽度。
 
 暂不推进：
 
