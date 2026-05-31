@@ -26,6 +26,19 @@ public final class RagTextFormatter {
                 %s""".formatted(normalizedTitle, normalizedHeadingPath, normalizedContent);
     }
 
+    public static String formatSummaryChunkContext(String title, String summary) {
+        String normalizedTitle = stripToEmpty(title);
+        String normalizedSummary = summary == null ? "" : summary;
+
+        return """
+                文档标题: %s
+                内容类型: 笔记全文摘要
+                适用问题: 这篇笔记主要讲了什么？总结一下这篇笔记。这个笔记的核心内容是什么？
+
+                正文:
+                %s""".formatted(normalizedTitle, normalizedSummary);
+    }
+
     public static String formatQueryText(String question) {
         return stripToEmpty(question);
     }

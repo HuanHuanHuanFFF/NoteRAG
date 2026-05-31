@@ -7,8 +7,8 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "question": "HashMap如何避免冲突?",
-  "topN": 10
+  "question": "笔记主要内容是什么?",
+  "topN": 20
 }
 
 ### Retrieval search - HashMap structure

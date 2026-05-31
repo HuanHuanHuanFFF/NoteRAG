@@ -28,6 +28,7 @@ import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
 import com.huanf.noterag.entity.ChunkEmbedding1024;
 import com.huanf.noterag.entity.EmbeddingModel;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.NoteChunkType;
 
 class NoteEmbeddingServiceTests {
 
@@ -90,6 +91,41 @@ class NoteEmbeddingServiceTests {
     }
 
     @Test
+    void embedAndStoreUsesSummaryEmbeddingTextWithoutMutatingOriginalContent() {
+        NoteChunk contentChunk = noteChunk(11L, "content body", "Java > Collections");
+        NoteChunk summaryChunk = summaryChunk(12L, "summary body", "全文摘要");
+        float[] contentEmbedding = embedding(1.0f);
+        float[] summaryEmbedding = embedding(2.0f);
+        when(embeddingModelResolver.resolveRequired1024Model()).thenReturn(embeddingModel(7L, 1024));
+        when(embeddingClient.embedAll(any()))
+                .thenReturn(List.of(contentEmbedding, summaryEmbedding));
+        when(chunkEmbedding1024Mapper.insert(any(ChunkEmbedding1024.class))).thenReturn(1);
+
+        int inserted = noteEmbeddingService.embedAndStore("Java Guide", List.of(contentChunk, summaryChunk));
+
+        assertThat(inserted).isEqualTo(2);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<String>> embeddingTextsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(embeddingClient).embedAll(embeddingTextsCaptor.capture());
+        assertThat(embeddingTextsCaptor.getValue()).containsExactly(
+                """
+                        文档标题: Java Guide
+                        章节路径: Java > Collections
+
+                        正文:
+                        content body""",
+                """
+                        文档标题: Java Guide
+                        内容类型: 笔记全文摘要
+                        适用问题: 这篇笔记主要讲了什么？总结一下这篇笔记。这个笔记的核心内容是什么？
+
+                        正文:
+                        summary body""");
+        assertThat(summaryChunk.getContent()).isEqualTo("summary body");
+        assertThat(summaryChunk.getHeadingPath()).isEqualTo("全文摘要");
+    }
+
+    @Test
     void embedAndStoreCallsEmbeddingClientInConfiguredBatchesAndKeepsOrder() {
         embeddingProperties.setBatchSize(2);
         NoteChunk firstChunk = noteChunk(11L, "first");
@@ -149,6 +185,19 @@ class NoteEmbeddingServiceTests {
                 .isInstanceOfSatisfying(BusinessException.class, exception -> {
                     assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.CHUNK_METADATA_INVALID);
                     assertThat(exception).hasMessage("chunk[0].id must not be null before embedding");
+                });
+        verifyNoInteractions(embeddingClient, embeddingModelResolver, chunkEmbedding1024Mapper);
+    }
+
+    @Test
+    void embedAndStoreFailsWhenChunkTypeIsMissing() {
+        NoteChunk chunk = noteChunk(11L, "content");
+        chunk.setChunkType(null);
+
+        assertThatThrownBy(() -> noteEmbeddingService.embedAndStore("Java Guide", List.of(chunk)))
+                .isInstanceOfSatisfying(BusinessException.class, exception -> {
+                    assertThat(exception.getCodeStatus()).isEqualTo(CodeStatus.CHUNK_METADATA_INVALID);
+                    assertThat(exception).hasMessage("chunk[0].chunkType must not be null before embedding");
                 });
         verifyNoInteractions(embeddingClient, embeddingModelResolver, chunkEmbedding1024Mapper);
     }
@@ -234,6 +283,16 @@ class NoteEmbeddingServiceTests {
     private static NoteChunk noteChunk(Long id, String content, String headingPath) {
         NoteChunk chunk = new NoteChunk();
         chunk.setId(id);
+        chunk.setChunkType(NoteChunkType.CONTENT);
+        chunk.setHeadingPath(headingPath);
+        chunk.setContent(content);
+        return chunk;
+    }
+
+    private static NoteChunk summaryChunk(Long id, String content, String headingPath) {
+        NoteChunk chunk = new NoteChunk();
+        chunk.setId(id);
+        chunk.setChunkType(NoteChunkType.SUMMARY);
         chunk.setHeadingPath(headingPath);
         chunk.setContent(content);
         return chunk;

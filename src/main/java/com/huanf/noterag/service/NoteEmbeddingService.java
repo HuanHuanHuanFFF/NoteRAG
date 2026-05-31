@@ -15,6 +15,7 @@ import com.huanf.noterag.mapper.ChunkEmbedding1024Mapper;
 import com.huanf.noterag.entity.ChunkEmbedding1024;
 import com.huanf.noterag.entity.EmbeddingModel;
 import com.huanf.noterag.entity.NoteChunk;
+import com.huanf.noterag.entity.NoteChunkType;
 import com.huanf.noterag.util.RagTextFormatter;
 
 /**
@@ -62,10 +63,7 @@ public class NoteEmbeddingService {
         long startNanos = System.nanoTime();
 
         List<String> embeddingTexts = chunks.stream()
-                .map(chunk -> RagTextFormatter.formatChunkContext(
-                        title,
-                        chunk.getHeadingPath(),
-                        chunk.getContent()))
+                .map(chunk -> formatEmbeddingText(title, chunk))
                 .toList();
         List<float[]> embeddings = embedInBatches(embeddingTexts);
         validateEmbeddingResults(embeddings, chunks.size(), embeddingModel.getDimension());
@@ -75,6 +73,20 @@ public class NoteEmbeddingService {
         long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000L;
         log.info("Embedding 完成, noteId={}, inserted={}, elapsedMs={}", noteId, insertedCount, elapsedMs);
         return insertedCount;
+    }
+
+    /**
+     * 根据 chunk 类型构造临时 embedding text，不修改数据库中的原始 chunk 内容。
+     */
+    private String formatEmbeddingText(String title, NoteChunk chunk) {
+        if (chunk.getChunkType() == NoteChunkType.CONTENT) {
+            return RagTextFormatter.formatChunkContext(title, chunk.getHeadingPath(), chunk.getContent());
+        }
+        if (chunk.getChunkType() == NoteChunkType.SUMMARY) {
+            return RagTextFormatter.formatSummaryChunkContext(title, chunk.getContent());
+        }
+        throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID,
+                "chunk[%d].chunkType is unsupported before embedding".formatted(chunk.getId()));
     }
 
     /**
@@ -130,6 +142,10 @@ public class NoteEmbeddingService {
             if (chunk.getContent() == null || chunk.getContent().isBlank()) {
                 throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID,
                         "chunk[%d].content must not be null or blank before embedding".formatted(i));
+            }
+            if (chunk.getChunkType() == null) {
+                throw new BusinessException(CodeStatus.CHUNK_METADATA_INVALID,
+                        "chunk[%d].chunkType must not be null before embedding".formatted(i));
             }
         }
     }

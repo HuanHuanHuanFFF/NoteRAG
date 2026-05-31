@@ -29,7 +29,7 @@ class NoteSummaryServiceTests {
             noteSummaryPromptBuilder);
 
     @Test
-    void generateSummaryBuildsPlainSummaryPromptAndReturnsStrippedText() {
+    void generateSummaryBuildsMarkdownSummaryPromptAndReturnsStrippedText() {
         when(llmClient.chat(any())).thenReturn("  MySQL 事务摘要  ");
 
         String summary = noteSummaryService.generateSummary("MySQL", "# MySQL\n\nMVCC notes.");
@@ -38,8 +38,13 @@ class NoteSummaryServiceTests {
         ArgumentCaptor<RagPrompt> promptCaptor = ArgumentCaptor.forClass(RagPrompt.class);
         verify(llmClient).chat(promptCaptor.capture());
         RagPrompt prompt = promptCaptor.getValue();
-        assertThat(prompt.system()).contains("全文级技术摘要");
+        assertThat(prompt.system())
+                .contains("全文级摘要")
+                .contains("输出 Markdown 格式")
+                .contains("只输出摘要正文");
         assertThat(prompt.user())
+                .contains("### 概览")
+                .contains("### 核心内容")
                 .contains("<note_title>")
                 .contains("MySQL")
                 .contains("<note_markdown>")

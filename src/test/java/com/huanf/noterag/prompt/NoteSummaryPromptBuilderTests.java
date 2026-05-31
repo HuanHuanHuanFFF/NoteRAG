@@ -13,17 +13,20 @@ class NoteSummaryPromptBuilderTests {
     private final NoteSummaryPromptBuilder builder = new NoteSummaryPromptBuilder();
 
     @Test
-    void buildCreatesPlainSummaryPrompt() {
+    void buildCreatesMarkdownSummaryPrompt() {
         RagPrompt prompt = builder.build("  MySQL  ", "# MySQL\n\nMVCC notes.");
 
         assertThat(prompt.system())
-                .contains("全文级技术摘要")
-                .contains("不引入外部知识")
+                .contains("全文级摘要")
+                .contains("不补充外部知识")
+                .contains("输出 Markdown 格式")
                 .contains("只输出摘要正文")
                 .doesNotContain("JSON")
                 .doesNotContain("citation marker")
                 .doesNotContain("sourceId");
         assertThat(prompt.user())
+                .contains("### 概览")
+                .contains("### 核心内容")
                 .contains("<note_title>\nMySQL\n</note_title>")
                 .contains("<note_markdown>\n# MySQL\n\nMVCC notes.\n</note_markdown>");
     }
