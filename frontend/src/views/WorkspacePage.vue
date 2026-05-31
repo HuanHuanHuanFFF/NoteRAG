@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import NotesPanel from '@/components/NotesPanel.vue';
 import NoteDetailModal from '@/components/NoteDetailModal.vue';
@@ -11,12 +11,13 @@ import { useChatSessions } from '@/composables/useChatSessions';
 import { useChatSubmit } from '@/composables/useChatSubmit';
 import { useHealthStatus } from '@/composables/useHealthStatus';
 import { useNotes } from '@/composables/useNotes';
-import { useResizableNotesPanel } from '@/composables/useResizableNotesPanel';
+import { useResizableWorkspacePanels } from '@/composables/useResizableWorkspacePanels';
 import { useSourcesPanel } from '@/composables/useSourcesPanel';
 import { createWorkspaceSeed } from '@/utils/workspaceSeed';
 
 const layoutDemoEnabled = import.meta.env.VITE_ENABLE_LAYOUT_DEMO === 'true';
 const workspaceSeed = createWorkspaceSeed();
+const workspaceGridRef = ref<HTMLElement | null>(null);
 
 const {
   sessions,
@@ -101,11 +102,15 @@ const {
 const {
   notesResizable,
   notesResizing,
+  sourcesResizable,
+  sourcesResizing,
   workspaceGridColumns,
   workspaceMinWidth,
   startNotesResize,
   adjustNotesWidth,
-} = useResizableNotesPanel(computed(() => sourcesOpen.value || sourcesClosing.value));
+  startSourcesResize,
+  adjustSourcesWidth,
+} = useResizableWorkspacePanels(computed(() => sourcesOpen.value || sourcesClosing.value), workspaceGridRef);
 
 const { healthStatus } = useHealthStatus();
 
@@ -173,6 +178,7 @@ async function confirmDeleteSession() {
 <template>
   <div class="relative h-[calc(100vh-56px)] min-h-0 overflow-x-auto overflow-y-hidden">
     <div
+      ref="workspaceGridRef"
       class="grid h-full min-h-0 gap-3 overflow-y-hidden px-4 py-3 lg:gap-4 lg:px-6 lg:py-4"
       :style="{ gridTemplateColumns: workspaceGridColumns, minWidth: workspaceMinWidth }"
     >
@@ -198,8 +204,8 @@ async function confirmDeleteSession() {
           tabindex="0"
           class="group absolute -right-3 top-2 z-20 flex h-[calc(100%-1rem)] w-6 cursor-col-resize items-center justify-center rounded-full outline-none"
           @pointerdown.prevent="startNotesResize"
-          @keydown.left.prevent="adjustNotesWidth(-16)"
-          @keydown.right.prevent="adjustNotesWidth(16)"
+          @keydown.left.prevent="adjustNotesWidth(-1)"
+          @keydown.right.prevent="adjustNotesWidth(1)"
         >
           <span
             class="h-16 w-1 rounded-full bg-white/[0.08] transition-colors duration-150 group-hover:bg-accent/45 group-focus-visible:bg-accent/60"
@@ -257,16 +263,36 @@ async function confirmDeleteSession() {
       >
         <div
           v-if="sourcesOpen"
-          class="min-h-0 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
+          class="relative min-h-0 overflow-visible rounded-2xl border border-white/[0.06] bg-white/[0.015] backdrop-blur-sm"
         >
-          <SourcesPanel
-            :sources="sourcesData"
-            :highlight-index="activeCitation?.index ?? null"
-            :expanded-indices="expandedCitation?.indices ?? []"
-            :loading="sourcesLoading"
-            @close="closeSources"
-            @expanded-change="handleSourcesExpandedChange"
-          />
+          <div
+            v-if="sourcesResizable"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="调整 Sources 面板宽度"
+            title="调整 Sources 面板宽度"
+            tabindex="0"
+            class="group absolute -left-3 top-2 z-20 flex h-[calc(100%-1rem)] w-6 cursor-col-resize items-center justify-center rounded-full outline-none"
+            @pointerdown.prevent="startSourcesResize"
+            @keydown.left.prevent="adjustSourcesWidth(1)"
+            @keydown.right.prevent="adjustSourcesWidth(-1)"
+          >
+            <span
+              class="h-16 w-1 rounded-full bg-white/[0.08] transition-colors duration-150 group-hover:bg-accent/45 group-focus-visible:bg-accent/60"
+              :class="sourcesResizing ? 'bg-accent/70' : ''"
+              aria-hidden="true"
+            ></span>
+          </div>
+          <div class="h-full min-h-0 overflow-hidden rounded-2xl">
+            <SourcesPanel
+              :sources="sourcesData"
+              :highlight-index="activeCitation?.index ?? null"
+              :expanded-indices="expandedCitation?.indices ?? []"
+              :loading="sourcesLoading"
+              @close="closeSources"
+              @expanded-change="handleSourcesExpandedChange"
+            />
+          </div>
         </div>
       </transition>
     </div>
