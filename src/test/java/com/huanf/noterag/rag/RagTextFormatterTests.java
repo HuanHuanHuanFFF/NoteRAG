@@ -1,4 +1,4 @@
-package com.huanf.noterag.util;
+package com.huanf.noterag.rag;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

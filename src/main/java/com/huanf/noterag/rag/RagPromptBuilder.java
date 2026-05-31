@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.RagTextFormatter;
 
 @Slf4j
 @Component

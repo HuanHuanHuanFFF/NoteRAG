@@ -16,7 +16,7 @@ import com.huanf.noterag.entity.ChunkEmbedding1024;
 import com.huanf.noterag.entity.EmbeddingModel;
 import com.huanf.noterag.entity.NoteChunk;
 import com.huanf.noterag.entity.NoteChunkType;
-import com.huanf.noterag.util.RagTextFormatter;
+import com.huanf.noterag.rag.RagTextFormatter;
 
 /**
  * Note chunk 向量化编排服务。

@@ -12,7 +12,7 @@ import com.huanf.noterag.config.RetrievalProperties;
 import com.huanf.noterag.mapper.ChunkRetrievalMapper;
 import com.huanf.noterag.entity.EmbeddingModel;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.RagTextFormatter;
+import com.huanf.noterag.rag.RagTextFormatter;
 
 /**
  * 向量检索服务，负责把用户问题转换成 query embedding，并从 pgvector 中召回 TopN chunk。

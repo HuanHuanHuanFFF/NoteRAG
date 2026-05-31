@@ -1,4 +1,4 @@
-package com.huanf.noterag.util;
+package com.huanf.noterag.rag;
 
 public final class RagTextFormatter {
 

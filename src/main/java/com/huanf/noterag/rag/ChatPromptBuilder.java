@@ -11,7 +11,6 @@ import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.entity.ChatMessage;
 import com.huanf.noterag.entity.ChatMessageRole;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.RagTextFormatter;
 
 import lombok.extern.slf4j.Slf4j;
 

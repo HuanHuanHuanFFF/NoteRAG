@@ -14,7 +14,7 @@ import com.huanf.noterag.common.exception.BusinessException;
 import com.huanf.noterag.common.result.CodeStatus;
 import com.huanf.noterag.config.RerankProperties;
 import com.huanf.noterag.model.RetrievedChunk;
-import com.huanf.noterag.util.RagTextFormatter;
+import com.huanf.noterag.rag.RagTextFormatter;
 
 @Slf4j
 @Service
