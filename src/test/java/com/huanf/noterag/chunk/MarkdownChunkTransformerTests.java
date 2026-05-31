@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 
 import com.huanf.noterag.config.ChunkingProperties;
-import com.huanf.noterag.util.EstimatedTokenCounter;
+import com.huanf.noterag.util.TokenCounter;
 
 class MarkdownChunkTransformerTests {
 
@@ -37,12 +37,12 @@ class MarkdownChunkTransformerTests {
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java")
                 .containsEntry(MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY, 0)
                 .containsEntry(MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY, "Java notes.".length())
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate("Java notes."));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count("Java notes."));
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java > Collections")
                 .containsEntry(MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY, 1)
                 .containsEntry(MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY, "HashMap notes.".length())
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate("HashMap notes."));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count("HashMap notes."));
     }
 
     @Test
@@ -65,11 +65,11 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java")
                 .containsEntry(MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY, 0)
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate("Java notes."));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count("Java notes."));
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "MySQL")
                 .containsEntry(MarkdownChunkTransformer.CHUNK_INDEX_METADATA_KEY, 0)
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate("MySQL notes."));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count("MySQL notes."));
     }
 
     @Test
@@ -115,7 +115,7 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Soft Limit")
                 .containsEntry(MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY, 882)
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, 880);
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
     }
 
     @Test
@@ -128,7 +128,7 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "English")
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, 300);
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
     }
 
     @Test
@@ -146,11 +146,11 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Hard Limit")
                 .containsEntry(MarkdownChunkTransformer.CHAR_COUNT_METADATA_KEY, 1000)
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, chunkingProperties.getHardMaxTokens());
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
         assertThat(chunks.get(1).getText()).startsWith("中".repeat(chunkingProperties.getOverlapChars()));
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Hard Limit")
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, 280);
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(1).getText()));
     }
 
     @Test
@@ -167,7 +167,7 @@ class MarkdownChunkTransformerTests {
 
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, chunkingProperties.getHardMaxTokens());
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
         assertThat(chunks.get(1).getText())
                 .startsWith("中".repeat(35) + "😀".repeat(44) + "文");
     }
@@ -197,11 +197,11 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java")
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate(chunks.get(0).getText()));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
         assertThat(chunks.get(0).getText()).contains("# Not A Heading");
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java > Real Heading")
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate(chunks.get(1).getText()));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(1).getText()));
     }
 
     @Test
@@ -223,7 +223,7 @@ class MarkdownChunkTransformerTests {
 
         assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getMetadata())
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate(chunks.get(0).getText()));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
         assertThat(chunks.get(0).getText())
                 .contains("```java\nclass Demo {\n\n    void run()")
                 .contains("}\n```");
@@ -251,13 +251,13 @@ class MarkdownChunkTransformerTests {
         assertThat(chunks).hasSize(2);
         assertThat(chunks.get(0).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java")
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate(chunks.get(0).getText()));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(0).getText()));
         assertThat(chunks.get(0).getText())
                 .contains("# Not A Heading")
                 .contains("## Still Not A Heading");
         assertThat(chunks.get(1).getMetadata())
                 .containsEntry(MarkdownChunkTransformer.HEADING_PATH_METADATA_KEY, "Java > Real Heading")
-                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, EstimatedTokenCounter.estimate(chunks.get(1).getText()));
+                .containsEntry(MarkdownChunkTransformer.TOKEN_COUNT_METADATA_KEY, TokenCounter.count(chunks.get(1).getText()));
     }
 
     @Test

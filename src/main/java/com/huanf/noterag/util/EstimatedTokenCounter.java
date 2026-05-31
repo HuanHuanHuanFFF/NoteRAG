@@ -6,7 +6,9 @@ public final class EstimatedTokenCounter {
     }
 
     /**
-     * 直接返回文本的估算 token 数，适合写入文档或 chunk 的 metadata。
+     * 直接返回文本的估算 token 数，仅用于 Markdown chunk 边界判断。
+     *
+     * <p>不要把该结果写入数据库 token_count 或对外展示；持久化/展示用统计请使用 {@link TokenCounter}。</p>
      */
     public static int estimate(String text) {
         return count(text).estimate();

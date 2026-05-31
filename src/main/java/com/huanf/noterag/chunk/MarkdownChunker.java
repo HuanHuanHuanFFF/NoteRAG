@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import com.huanf.noterag.config.ChunkingProperties;
 import com.huanf.noterag.util.EstimatedTokenCounter;
 import com.huanf.noterag.util.EstimatedTokenCounter.TokenCounts;
+import com.huanf.noterag.util.TokenCounter;
 
 /**
  * 将 Markdown section 组装为 Spring AI chunk Document。
@@ -157,8 +158,7 @@ final class MarkdownChunker {
             return new EmitResult(chunkIndex, TokenCounts.EMPTY);
         }
 
-        TokenCounts chunkTokenCounts = EstimatedTokenCounter.count(chunkText);
-        int tokenCount = chunkTokenCounts.estimate();
+        int tokenCount = TokenCounter.count(chunkText);
         chunks.add(new Document(chunkText, buildMetadata(
                 sourceMetadata,
                 headingPath,

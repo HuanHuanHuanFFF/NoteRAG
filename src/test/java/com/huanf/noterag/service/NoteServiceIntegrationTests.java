@@ -31,7 +31,7 @@ import com.huanf.noterag.entity.Note;
 import com.huanf.noterag.entity.NoteChunk;
 import com.huanf.noterag.entity.NoteChunkType;
 import com.huanf.noterag.entity.RecordStatus;
-import com.huanf.noterag.util.EstimatedTokenCounter;
+import com.huanf.noterag.util.TokenCounter;
 
 @SpringBootTest
 @TestPropertySource(properties = {
@@ -97,7 +97,7 @@ class NoteServiceIntegrationTests {
         assertThat(response.getDocumentId()).isNotNull();
         assertThat(response.getChunkCount()).isEqualTo(3);
         assertThat(response.getCharCount()).isEqualTo(normalizedContent.length());
-        assertThat(response.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
+        assertThat(response.getTokenCount()).isEqualTo(TokenCounter.count(normalizedContent));
 
         Note savedNote = noteMapper.findById(response.getDocumentId());
         assertThat(savedNote).isNotNull();
@@ -105,7 +105,7 @@ class NoteServiceIntegrationTests {
         assertThat(savedNote.getContent()).isEqualTo(normalizedContent);
         assertThat(savedNote.getStatus()).isEqualTo(RecordStatus.ACTIVE);
         assertThat(savedNote.getCharCount()).isEqualTo(normalizedContent.length());
-        assertThat(savedNote.getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate(normalizedContent));
+        assertThat(savedNote.getTokenCount()).isEqualTo(TokenCounter.count(normalizedContent));
 
         List<NoteChunk> savedChunks = findChunksByNoteId(response.getDocumentId());
         assertThat(savedChunks).hasSize(3);
@@ -123,13 +123,13 @@ class NoteServiceIntegrationTests {
                 .containsExactly("Java", "Java > Collections", "全文摘要");
         assertThat(savedChunks.get(0).getContent()).isEqualTo("Java notes.");
         assertThat(savedChunks.get(0).getCharCount()).isEqualTo("Java notes.".length());
-        assertThat(savedChunks.get(0).getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate("Java notes."));
+        assertThat(savedChunks.get(0).getTokenCount()).isEqualTo(TokenCounter.count("Java notes."));
         assertThat(savedChunks.get(1).getContent()).isEqualTo("HashMap notes.");
         assertThat(savedChunks.get(1).getCharCount()).isEqualTo("HashMap notes.".length());
-        assertThat(savedChunks.get(1).getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate("HashMap notes."));
+        assertThat(savedChunks.get(1).getTokenCount()).isEqualTo(TokenCounter.count("HashMap notes."));
         assertThat(savedChunks.get(2).getContent()).isEqualTo("Java Guide 全文摘要");
         assertThat(savedChunks.get(2).getCharCount()).isEqualTo("Java Guide 全文摘要".length());
-        assertThat(savedChunks.get(2).getTokenCount()).isEqualTo(EstimatedTokenCounter.estimate("Java Guide 全文摘要"));
+        assertThat(savedChunks.get(2).getTokenCount()).isEqualTo(TokenCounter.count("Java Guide 全文摘要"));
 
         verify(noteSummaryService).generateSummary("Java Guide", normalizedContent);
         @SuppressWarnings("unchecked")

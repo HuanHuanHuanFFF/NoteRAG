@@ -21,7 +21,7 @@ import com.huanf.noterag.entity.NoteChunk;
 import com.huanf.noterag.entity.NoteChunkType;
 import com.huanf.noterag.entity.RecordStatus;
 import com.huanf.noterag.model.NoteListItem;
-import com.huanf.noterag.util.EstimatedTokenCounter;
+import com.huanf.noterag.util.TokenCounter;
 
 /**
  * Note 导入与查询编排服务。
@@ -66,7 +66,7 @@ public class NoteService {
         String title = normalizeTitle(request.getTitle());
         String content = normalizeContent(request.getContent());
         int charCount = content.length();
-        int tokenCount = EstimatedTokenCounter.estimate(content);
+        int tokenCount = TokenCounter.count(content);
         log.info("Note 导入开始, titleLength={}, charCount={}, tokenCount={}", title.length(), charCount, tokenCount);
 
         String summary = noteSummaryService.generateSummary(title, content);
@@ -198,7 +198,7 @@ public class NoteService {
         noteChunk.setHeadingPath(SUMMARY_HEADING_PATH);
         noteChunk.setContent(summary);
         noteChunk.setCharCount(summary.length());
-        noteChunk.setTokenCount(EstimatedTokenCounter.estimate(summary));
+        noteChunk.setTokenCount(TokenCounter.count(summary));
         return noteChunk;
     }
 
