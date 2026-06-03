@@ -1,6 +1,6 @@
 # NoteRAG 开发状态与规划
 
-更新时间：2026-05-31
+更新时间：2026-06-03
 
 ## 当前定位
 
@@ -18,12 +18,14 @@ v1 继续坚持核心 RAG 闭环，不扩展用户系统、权限、多租户、
 最近关键提交：
 
 ```text
+2e8e683 feat(frontend): 支持 Sources Markdown 渲染
+27b9c07 feat(frontend): 支持 Sources 面板拖拽
+1ac2545 docs: 同步当前开发状态
 8fb0294 refactor(rag): 移动 RagTextFormatter
 370701f feat(import): 使用 CL100K 统计 token
 4fbd866 feat(import): 优化摘要 chunk 向量文本
 76b2c1f feat(import): 添加摘要 chunk
 54321b7 feat(deploy): 接入 Nginx
-bf572f0 优化前端流式输出
 ```
 
 当前已完成：
@@ -39,7 +41,8 @@ bf572f0 优化前端流式输出
 - Chat：支持会话、历史消息、note scope、prompt 构建、LLM 回答、citation 解析和 sources 回写。
 - Chat SSE：支持 `meta/delta/done/error`，前端正式发送优先走 SSE，同步接口保留为 debug/兜底。
 - Notes 与会话管理：支持列表、详情、重命名、软归档删除。
-- 前端工作台：已接入 notes、历史会话、note scope、sources panel、Markdown 流式渲染和基础会话管理。
+- 前端工作台：已接入 notes、历史会话、note scope、sources panel、Markdown 流式渲染、左右面板拖拽和基础会话管理。
+- Sources Markdown：右侧 sources 展开内容已从纯文本展示改为普通 Markdown 渲染，复用 `MarkdownContent`，不接入 Chat citation 逻辑。
 - Nginx：已接入 Docker 一键启动，Nginx 负责前端静态资源、后端 API 代理和 Chat SSE 转发；本地先按 HTTP 验证，线上 HTTPS 后续放到服务器和真实证书环境处理。
 
 ## 当前 API
@@ -135,6 +138,8 @@ Chat 同步与流式共用同一套主链路：
 - streaming 阶段 citation 按钮禁用，done 后才允许点击并打开 sources。
 - done 后只对 `sources` 中存在的 chunkId 渲染引用按钮，避免点不开的无效引用。
 - Sources panel 保持 280ms 延迟加载、引用高亮/展开、关闭动画结束后清理数据。
+- Notes 和 Sources 面板都支持百分比拖拽宽度，宽度状态保存在 localStorage。
+- Sources 展开内容使用 `MarkdownContent` 渲染普通 Markdown；Chat 回答继续使用 `MarkdownAnswer` 处理流式和 citation。
 - stream debug 默认关闭，可在本地排查 delta、buffer、Markdown 渲染和滚动链路。
 
 前端状态拆分：
@@ -144,7 +149,7 @@ Chat 同步与流式共用同一套主链路：
 - `useChatSubmit`
 - `useDeltaFlushBuffer`
 - `useSourcesPanel`
-- `useResizableNotesPanel`
+- `useResizableWorkspacePanels`
 - `useHealthStatus`
 
 ## SSE 契约
@@ -174,9 +179,9 @@ Chat 同步与流式共用同一套主链路：
 
 当前优先级先保留以下方向：
 
-1. 优化 summary chunk：基于真实召回效果继续调整摘要 prompt、summary embedding text 和召回表现；当前已完成基础链路，不再把它当成未开始任务。
+1. 继续优化 summary chunk：基于真实召回效果调整摘要 prompt、summary embedding text 和召回表现；当前基础链路已完成，但仍有较大优化空间。
 2. 做 LLM rewrite + 原始问题双路召回：对用户问题生成改写查询，同时保留原始问题检索，两路召回后合并去重，再进入 rerank。
-3. 优化前端布局：给右侧 Sources panel 增加可拖拽宽度，交互和左侧 Notes panel 保持一致，并设置合理的最小/最大宽度。
+3. 准备部署上线后的运维细节：确认 HTTPS 证书/Nginx 真实环境配置、数据库初始化或迁移策略、环境变量和密钥管理。
 
 暂不推进：
 
